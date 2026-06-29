@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Search, Plus, ShieldCheck, ShieldX, KeyRound, Smartphone,
   Clock, CheckCircle2, AlertTriangle, UserCog, ChevronRight,
-  Users, Edit3, X, Save, Eye, EyeOff,
+  Users, Edit3, X, Save, Eye, EyeOff, Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../utils';
@@ -112,8 +112,8 @@ function UserModal({ user, onClose }: { user: SystemUser | null; onClose: () => 
             <div className="flex items-center gap-2">
               <Smartphone className="w-4 h-4 text-teal-600" />
               <div>
-                <p className="text-sm font-medium text-slate-800">Autenticação Multifator (MFA)</p>
-                <p className="text-xs text-slate-400">Exige MFA no próximo login</p>
+                <p className="text-sm font-medium text-slate-800">Solicitar Ativação de MFA</p>
+                <p className="text-xs text-slate-400">Solicita ao usuário para habilitar o MFA no sistema</p>
               </div>
             </div>
             <button
@@ -264,12 +264,12 @@ export function CGIUsuarios() {
           ))}
         </div>
 
-        {/* MFA warning */}
+        {/* MFA info banner */}
         {systemUsers.filter(u => !u.mfa && u.status === 'ativo').length > 0 && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-            <p className="text-sm text-amber-800">
-              <strong>{systemUsers.filter(u => !u.mfa && u.status === 'ativo').length}</strong> usuário(s) ativo(s) sem MFA habilitado. Recomende ativação imediata.
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-teal-100 bg-teal-50/50">
+            <Info className="w-4 h-4 text-teal-600 shrink-0" />
+            <p className="text-sm text-teal-800">
+              A autenticação multifator (MFA) é opcional. Você pode solicitar a ativação para os usuários no cadastro.
             </p>
           </div>
         )}
@@ -401,7 +401,7 @@ export function CGIUsuarios() {
                             </button>
                             {!u.mfa && (
                               <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-teal-200 text-teal-700 text-xs font-medium rounded-lg hover:bg-teal-50 transition-colors">
-                                <Smartphone className="w-3.5 h-3.5" /> Ativar MFA
+                                <Smartphone className="w-3.5 h-3.5" /> Solicitar MFA
                               </button>
                             )}
                             {u.status === 'ativo' ? (

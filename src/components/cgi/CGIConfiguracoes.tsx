@@ -335,8 +335,8 @@ export function CGIConfiguracoes() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Exigir MFA para todos os usuários</p>
-                    <p className="text-xs text-slate-400">Autenticação multifator obrigatória no login</p>
+                    <p className="text-sm font-medium text-slate-800">Solicitar MFA por padrão</p>
+                    <p className="text-xs text-slate-400">Novos usuários receberão solicitação para configurar MFA</p>
                   </div>
                   <ToggleSwitch checked={mfaRequired} onChange={setMfaRequired} />
                 </div>

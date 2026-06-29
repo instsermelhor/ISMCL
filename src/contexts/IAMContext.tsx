@@ -169,19 +169,8 @@ export function IAMProvider({ children }: { children: ReactNode }) {
         return { success: false, error: msgs[found.status] ?? 'Acesso negado.' };
       }
 
-      // Verificar se MFA é obrigatório
-      if (found.mfaEnabled) {
-        setPendingUserId(found.id);
-        setMfaPending(true);
-        setMfaMethod(found.mfaMethod ?? 'totp');
-        return {
-          success: true,
-          requiresMfa: true,
-          mfaMethod: found.mfaMethod ?? 'totp',
-        };
-      }
-
-      // Login direto sem MFA
+      // Login direto — MFA não bloqueia o login
+      // Se mfaRequired=true, o usuário será notificado após o login
       const updatedUser = {
         ...found,
         lastLogin: new Date().toISOString(),
@@ -192,7 +181,7 @@ export function IAMProvider({ children }: { children: ReactNode }) {
       persistUser(updatedUser);
 
       addAuditLog(generateAuditLog(updatedUser, 'login_success', {
-        details: { mfaUsed: false },
+        details: { mfaEnabled: found.mfaEnabled },
         severity: 'info',
       }));
 
@@ -205,10 +194,9 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     [users, addAuditLog]
   );
 
-  // ---- MFA ----
+  // ---- MFA — stubs para futura implementação com backend real ----
   const requestMfa = useCallback(
     async (_method: 'totp' | 'sms' | 'email'): Promise<boolean> => {
-      // Em produção: enviar código por SMS/email ou gerar TOTP
       await new Promise(r => setTimeout(r, 500));
       return true;
     },
@@ -216,48 +204,11 @@ export function IAMProvider({ children }: { children: ReactNode }) {
   );
 
   const verifyMfa = useCallback(
-    async (code: string): Promise<boolean> => {
+    async (_code: string): Promise<boolean> => {
       await new Promise(r => setTimeout(r, 700));
-
-      // Em produção: validar código real
-      // Para demo: qualquer código de 6 dígitos ou "123456" é válido
-      const isValid = code === '123456' || /^\d{6}$/.test(code);
-
-      if (!isValid || !pendingUserId) {
-        addAuditLog(generateAuditLog(currentUser, 'mfa_failure', {
-          details: { reason: 'invalid_code' },
-          severity: 'warning',
-        }));
-        return false;
-      }
-
-      const found = users.find(u => u.id === pendingUserId);
-      if (!found) return false;
-
-      const updatedUser = {
-        ...found,
-        lastLogin: new Date().toISOString(),
-        lastLoginIp: '127.0.0.1',
-        lastLoginDevice: 'Navegador',
-      };
-
-      setCurrentUser(updatedUser);
-      persistUser(updatedUser);
-      setMfaPending(false);
-      setPendingUserId(null);
-
-      addAuditLog(generateAuditLog(updatedUser, 'mfa_success', {
-        details: { method: mfaMethod },
-        severity: 'info',
-      }));
-      addAuditLog(generateAuditLog(updatedUser, 'login_success', {
-        details: { mfaUsed: true },
-        severity: 'info',
-      }));
-
       return true;
     },
-    [pendingUserId, users, currentUser, mfaMethod, addAuditLog]
+    []
   );
 
   // ---- Logout ----
@@ -505,6 +456,36 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     }));
   }, [currentUser, addAuditLog]);
 
+  // ---- Solicitar / Remover MFA (Super Admin) ----
+
+  const requestMfaForUser = useCallback(async (userId: string): Promise<void> => {
+    setUsers(prev =>
+      prev.map(u =>
+        u.id !== userId ? u : { ...u, mfaRequired: true, updatedAt: new Date().toISOString() }
+      )
+    );
+    addAuditLog(generateAuditLog(currentUser, 'permission_change', {
+      resourceId: userId,
+      details: { action: 'mfa_requested', requestedBy: currentUser?.name },
+      severity: 'warning',
+    }));
+  }, [currentUser, addAuditLog]);
+
+  const disableMfaForUser = useCallback(async (userId: string): Promise<void> => {
+    setUsers(prev =>
+      prev.map(u =>
+        u.id !== userId
+          ? u
+          : { ...u, mfaRequired: false, mfaEnabled: false, mfaMethod: undefined, updatedAt: new Date().toISOString() }
+      )
+    );
+    addAuditLog(generateAuditLog(currentUser, 'permission_change', {
+      resourceId: userId,
+      details: { action: 'mfa_disabled', disabledBy: currentUser?.name },
+      severity: 'warning',
+    }));
+  }, [currentUser, addAuditLog]);
+
   // ----------------------------------------------------------------
 
   const value: IAMContextType = {
@@ -524,6 +505,8 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     suspendUser,
     reactivateUser,
     resetPassword,
+    requestMfaForUser,
+    disableMfaForUser,
     addRole,
     removeRole,
     auditLogs,

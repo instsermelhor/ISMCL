@@ -137,6 +137,8 @@ function UserDetailModal({
   onSuspend,
   onReactivate,
   onResetPassword,
+  onRequestMfa,
+  onDisableMfa,
 }: {
   user: IAMUser;
   onClose: () => void;
@@ -144,6 +146,8 @@ function UserDetailModal({
   onSuspend: (id: string, reason: string) => void;
   onReactivate: (id: string) => void;
   onResetPassword: (id: string) => void;
+  onRequestMfa: (id: string) => void;
+  onDisableMfa: (id: string) => void;
 }) {
   const [actionReason, setActionReason] = useState('');
   const [showReasonInput, setShowReasonInput] = useState<'block' | 'suspend' | null>(null);
@@ -194,7 +198,22 @@ function UserDetailModal({
           <div className="grid grid-cols-2 gap-4">
             {[
               { label: 'Status', value: <StatusBadge status={user.status} /> },
-              { label: 'MFA', value: user.mfaEnabled ? <span className="flex items-center gap-1 text-emerald-600 text-sm font-medium"><CheckCircle2 className="w-4 h-4" />{user.mfaMethod?.toUpperCase()}</span> : <span className="text-slate-400 text-sm">Não configurado</span> },
+              {
+                label: 'MFA',
+                value: user.mfaEnabled ? (
+                  <span className="flex items-center gap-1 text-emerald-600 text-sm font-medium">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {user.mfaMethod?.toUpperCase()} (Ativo)
+                  </span>
+                ) : user.mfaRequired ? (
+                  <span className="flex items-center gap-1 text-amber-600 text-sm font-medium">
+                    <Clock className="w-4 h-4" />
+                    Solicitado por Admin
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-sm">Não solicitado</span>
+                ),
+              },
               { label: 'Último Acesso', value: <span className="text-sm text-slate-700">{user.lastLogin ? formatDate(user.lastLogin) : '—'}</span> },
               { label: 'Último IP', value: <span className="text-sm font-mono text-slate-700">{user.lastLoginIp ?? '—'}</span> },
               { label: 'Dispositivo', value: <span className="text-sm text-slate-700">{user.lastLoginDevice ?? '—'}</span> },
@@ -269,13 +288,32 @@ function UserDetailModal({
           {/* Ações */}
           <div className="border-t border-slate-100 pt-4">
             <p className="text-sm font-semibold text-slate-700 mb-3">Ações de Gestão</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <button
                 onClick={() => onResetPassword(user.id)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors"
               >
                 <Key className="w-4 h-4" /> Resetar Senha
               </button>
+
+              {user.mfaRequired ? (
+                <button
+                  onClick={() => onDisableMfa(user.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors"
+                >
+                  <Smartphone className="w-4 h-4 text-slate-500" /> Cancelar Solicitação MFA
+                </button>
+              ) : (
+                <button
+                  onClick={() => onRequestMfa(user.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-50 text-teal-700 text-sm font-medium hover:bg-teal-100 transition-colors"
+                >
+                  <Smartphone className="w-4 h-4 text-teal-600" /> Solicitar Ativação MFA
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               {user.status === 'active' ? (
                 <>
                   <button
@@ -294,7 +332,7 @@ function UserDetailModal({
               ) : (
                 <button
                   onClick={() => { onReactivate(user.id); onClose(); }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors col-span-2"
                 >
                   <Unlock className="w-4 h-4" /> Reativar
                 </button>
@@ -376,6 +414,8 @@ export function IAMCenter() {
     suspendUser,
     reactivateUser,
     resetPassword,
+    requestMfaForUser,
+    disableMfaForUser,
     revokeSession,
     revokeDevice,
     approveAISuggestion,
@@ -1071,6 +1111,8 @@ export function IAMCenter() {
             onSuspend={(id, reason) => { suspendUser(id, reason); setSelectedUser(null); }}
             onReactivate={(id) => { reactivateUser(id); setSelectedUser(null); }}
             onResetPassword={(id) => { resetPassword(id); }}
+            onRequestMfa={(id) => { requestMfaForUser(id); setSelectedUser(prev => prev ? { ...prev, mfaRequired: true } : null); }}
+            onDisableMfa={(id) => { disableMfaForUser(id); setSelectedUser(prev => prev ? { ...prev, mfaRequired: false, mfaEnabled: false, mfaMethod: undefined } : null); }}
           />
         )}
       </AnimatePresence>

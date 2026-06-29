@@ -10,13 +10,8 @@ import { useIAM } from '../../contexts/IAMContext';
  * - Compatível com múltiplos papéis (RBAC).
  */
 export function ProtectedRoute() {
-  const { isAuthenticated, mfaPending } = useIAM();
+  const { isAuthenticated } = useIAM();
   const location = useLocation();
-
-  // Se MFA estiver pendente, manter na tela de login
-  if (mfaPending) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -31,12 +26,7 @@ export function ProtectedRoute() {
  * Ao fazer login, redireciona para o ambiente correto do usuário.
  */
 export function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, getRedirectPath, mfaPending } = useIAM();
-
-  // Se estiver em processo de MFA, mantém na tela de login
-  if (mfaPending) {
-    return <>{children}</>;
-  }
+  const { isAuthenticated, getRedirectPath } = useIAM();
 
   if (isAuthenticated) {
     const redirectPath = getRedirectPath();

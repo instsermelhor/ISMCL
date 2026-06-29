@@ -106,8 +106,10 @@ export interface IAMUser {
   lastLoginIp?: string;
   lastLoginDevice?: string;
 
-  // MFA
+  // MFA — mfaRequired: solicitado pelo Super Admin no cadastro
+  //          mfaEnabled: habilitado pelo próprio usuário após solicitação
   mfaEnabled: boolean;
+  mfaRequired: boolean;   // Super Admin solicita ativação no próximo login
   mfaMethod?: 'totp' | 'sms' | 'email';
 
   // Sessão
@@ -339,6 +341,8 @@ export interface IAMContextType {
   suspendUser: (id: string, reason: string) => Promise<void>;
   reactivateUser: (id: string) => Promise<void>;
   resetPassword: (id: string) => Promise<void>;
+  requestMfaForUser: (id: string) => Promise<void>;  // Super Admin solicita MFA
+  disableMfaForUser: (id: string) => Promise<void>;  // Super Admin remove solicitação
   addRole: (userId: string, role: InstitutionalRole) => Promise<void>;
   removeRole: (userId: string, role: InstitutionalRole) => Promise<void>;
 

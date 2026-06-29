@@ -2,26 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Shield,
   Eye,
   EyeOff,
   ArrowRight,
-  KeyRound,
-  Smartphone,
   Mail,
   Lock,
-  RefreshCw,
-  ChevronLeft,
-  Info,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   Heart,
+  Shield,
+  Info,
 } from 'lucide-react';
 import { useIAM } from '../contexts/IAMContext';
 
 // ----------------------------------------------------------------
-// Sub-componentes
+// Campo de input reutilizável
 // ----------------------------------------------------------------
 
 function InputField({
@@ -86,106 +81,32 @@ function InputField({
   );
 }
 
-function MfaCodeInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const digits = value.padEnd(6, '').split('');
-
-  return (
-    <div className="flex gap-3 justify-center">
-      {digits.map((d, i) => (
-        <div
-          key={i}
-          className={`
-            w-12 h-14 rounded-xl border flex items-center justify-center
-            text-xl font-bold text-white transition-all duration-200
-            ${d ? 'bg-teal-500/20 border-teal-400/60' : 'bg-white/5 border-white/10'}
-          `}
-        >
-          {d || (i === value.length ? (
-            <span className="w-0.5 h-6 bg-teal-400 animate-pulse rounded-full" />
-          ) : null)}
-        </div>
-      ))}
-      <input
-        id="mfa-code-input"
-        type="tel"
-        inputMode="numeric"
-        maxLength={6}
-        value={value}
-        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        className="absolute opacity-0 pointer-events-none w-0 h-0"
-        aria-label="Código MFA"
-        autoFocus
-      />
-    </div>
-  );
-}
-
 // ----------------------------------------------------------------
-// Tela de Login Principal
+// Tela de Login
 // ----------------------------------------------------------------
 
-type LoginStep = 'credentials' | 'mfa' | 'success';
+type LoginStep = 'credentials' | 'success';
 
 export function IAMLogin() {
-  const { login, verifyMfa, mfaPending, mfaMethod, isAuthenticated, getRedirectPath } = useIAM();
+  const { login, isAuthenticated, getRedirectPath } = useIAM();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<LoginStep>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [mfaCode, setMfaCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showHints, setShowHints] = useState(false);
-  const [countdown, setCountdown] = useState(30);
-  const [canResend, setCanResend] = useState(false);
 
   // Redirecionar se já autenticado
   useEffect(() => {
     if (isAuthenticated) {
-      const path = getRedirectPath();
-      navigate(path, { replace: true });
+      navigate(getRedirectPath(), { replace: true });
     }
   }, [isAuthenticated, getRedirectPath, navigate]);
 
-  // Sync com estado MFA do contexto
-  useEffect(() => {
-    if (mfaPending) setStep('mfa');
-  }, [mfaPending]);
-
-  // Countdown para reenvio de MFA
-  useEffect(() => {
-    if (step !== 'mfa') return;
-    setCountdown(30);
-    setCanResend(false);
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setCanResend(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [step]);
-
-  // Auto-submit quando 6 dígitos MFA
-  useEffect(() => {
-    if (mfaCode.length === 6) {
-      handleMfaSubmit();
-    }
-  }, [mfaCode]);
-
-  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!email || !password) {
@@ -196,55 +117,16 @@ export function IAMLogin() {
     try {
       const result = await login(email, password);
       if (!result.success) {
-        setError(result.error ?? 'Erro ao autenticar. Tente novamente.');
-      } else if (result.requiresMfa) {
-        setStep('mfa');
-      } else if (result.redirectPath) {
+        setError(result.error ?? 'E-mail ou senha incorretos.');
+      } else {
         setStep('success');
-        setTimeout(() => navigate(result.redirectPath!, { replace: true }), 1200);
+        setTimeout(() => navigate(result.redirectPath ?? '/dashboard', { replace: true }), 1200);
       }
     } catch {
       setError('Erro de conexão. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleMfaSubmit = async () => {
-    if (mfaCode.length !== 6) return;
-    setError('');
-    setIsLoading(true);
-    try {
-      const ok = await verifyMfa(mfaCode);
-      if (!ok) {
-        setError('Código inválido. Verifique e tente novamente.');
-        setMfaCode('');
-      } else {
-        setStep('success');
-        const path = getRedirectPath();
-        setTimeout(() => navigate(path, { replace: true }), 1200);
-      }
-    } catch {
-      setError('Erro ao verificar código. Tente novamente.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleMfaCodeClick = () => {
-    document.getElementById('mfa-code-input')?.focus();
-  };
-
-  const mfaIcons = {
-    totp: <Smartphone className="w-5 h-5 text-teal-400" />,
-    sms: <Smartphone className="w-5 h-5 text-teal-400" />,
-    email: <Mail className="w-5 h-5 text-teal-400" />,
-  };
-
-  const mfaLabels = {
-    totp: 'Abra o aplicativo autenticador e insira o código.',
-    sms: `Um código foi enviado para o número cadastrado.`,
-    email: 'Um código foi enviado para o seu e-mail cadastrado.',
   };
 
   return (
@@ -254,27 +136,16 @@ export function IAMLogin() {
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f2027 100%)',
       }}
     >
-      {/* Background decorativo */}
+      {/* Decoração de fundo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
           className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-10"
-          style={{
-            background: 'radial-gradient(circle, #14b8a6 0%, transparent 70%)',
-          }}
+          style={{ background: 'radial-gradient(circle, #14b8a6 0%, transparent 70%)' }}
         />
         <div
           className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-10"
-          style={{
-            background: 'radial-gradient(circle, #0ea5e9 0%, transparent 70%)',
-          }}
+          style={{ background: 'radial-gradient(circle, #0ea5e9 0%, transparent 70%)' }}
         />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5"
-          style={{
-            background: 'radial-gradient(circle, #14b8a6 0%, transparent 70%)',
-          }}
-        />
-        {/* Grid pattern */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -286,7 +157,7 @@ export function IAMLogin() {
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo e título */}
+        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -301,12 +172,12 @@ export function IAMLogin() {
           <div className="flex items-center justify-center gap-2 mt-3">
             <Shield className="w-3.5 h-3.5 text-teal-400" />
             <span className="text-xs text-teal-400 font-medium tracking-wide uppercase">
-              Central de Identidade Institucional
+              Acesso Seguro e Centralizado
             </span>
           </div>
         </motion.div>
 
-        {/* Card principal */}
+        {/* Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -319,14 +190,15 @@ export function IAMLogin() {
           }}
         >
           <AnimatePresence mode="wait">
-            {/* ---- STEP: CREDENTIALS ---- */}
+
+            {/* ---- STEP: LOGIN ---- */}
             {step === 'credentials' && (
               <motion.div
                 key="credentials"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
                 className="p-8"
               >
                 <div className="mb-6">
@@ -336,7 +208,7 @@ export function IAMLogin() {
                   </p>
                 </div>
 
-                <form onSubmit={handleCredentialsSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-5">
                   <InputField
                     id="email"
                     label="E-mail institucional"
@@ -436,7 +308,7 @@ export function IAMLogin() {
                     className="w-full flex items-center justify-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors py-2"
                   >
                     <Info className="w-3.5 h-3.5" />
-                    {showHints ? 'Ocultar credenciais de acesso' : 'Ver credenciais de acesso de teste'}
+                    {showHints ? 'Ocultar credenciais de acesso' : 'Ver credenciais de acesso (demo)'}
                   </button>
 
                   <AnimatePresence>
@@ -445,17 +317,18 @@ export function IAMLogin() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-3 rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3 overflow-hidden"
+                        className="mt-3 rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2 overflow-hidden"
                       >
-                        <p className="text-xs font-semibold text-slate-300">Perfis de Acesso — Demo:</p>
+                        <p className="text-xs font-semibold text-slate-300 mb-3">Perfis de Acesso — Demo:</p>
                         {[
-                          { label: 'Super Admin', email: 'ism@ism.org', password: 'teste', color: 'bg-slate-700 text-white' },
-                          { label: 'Prof. Voluntária', email: 'voluntario@institutosermelhor.org', password: 'senha123', color: 'bg-emerald-900/50 text-emerald-300' },
-                          { label: 'Auditora', email: 'auditora@institutosermelhor.org', password: 'auditoria123', color: 'bg-zinc-800 text-zinc-300' },
-                          { label: 'Coordenadora', email: 'coordenadora@institutosermelhor.org', password: 'coord123', color: 'bg-orange-900/50 text-orange-300' },
-                          { label: 'Gestora', email: 'gestor@institutosermelhor.org', password: 'gestor123', color: 'bg-rose-900/50 text-rose-300' },
-                          { label: 'Beneficiário', email: 'beneficiario@exemplo.com', password: 'beneficiario123', color: 'bg-sky-900/50 text-sky-300' },
-                          { label: 'Diretora', email: 'diretora@institutosermelhor.org', password: 'diretora123', color: 'bg-purple-900/50 text-purple-300' },
+                          { label: 'Super Admin',       email: 'ism@ism.org',                                 password: 'teste',            color: 'bg-slate-700 text-white' },
+                          { label: 'Prof. Voluntária',  email: 'voluntario@institutosermelhor.org',            password: 'senha123',         color: 'bg-emerald-900/60 text-emerald-300' },
+                          { label: 'Auditora',          email: 'auditora@institutosermelhor.org',              password: 'auditoria123',     color: 'bg-zinc-800 text-zinc-300' },
+                          { label: 'Coordenadora',      email: 'coordenadora@institutosermelhor.org',          password: 'coord123',         color: 'bg-orange-900/60 text-orange-300' },
+                          { label: 'Gestor',            email: 'gestor@institutosermelhor.org',                password: 'gestor123',        color: 'bg-rose-900/60 text-rose-300' },
+                          { label: 'Diretora',          email: 'diretora@institutosermelhor.org',              password: 'diretora123',      color: 'bg-purple-900/60 text-purple-300' },
+                          { label: 'Vol. Administrativa', email: 'admin.voluntario@institutosermelhor.org',   password: 'voluntario123',    color: 'bg-lime-900/60 text-lime-300' },
+                          { label: 'Beneficiário',      email: 'beneficiario@exemplo.com',                    password: 'beneficiario123',  color: 'bg-sky-900/60 text-sky-300' },
                         ].map(u => (
                           <button
                             key={u.email}
@@ -468,7 +341,7 @@ export function IAMLogin() {
                             </span>
                             <div className="min-w-0">
                               <p className="text-xs text-slate-400 truncate">{u.email}</p>
-                              <p className="text-xs text-slate-600">{u.password}</p>
+                              <p className="text-xs text-slate-600 font-mono">{u.password}</p>
                             </div>
                           </button>
                         ))}
@@ -479,111 +352,7 @@ export function IAMLogin() {
               </motion.div>
             )}
 
-            {/* ---- STEP: MFA ---- */}
-            {step === 'mfa' && (
-              <motion.div
-                key="mfa"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="p-8"
-              >
-                <button
-                  type="button"
-                  onClick={() => { setStep('credentials'); setError(''); setMfaCode(''); }}
-                  className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Voltar
-                </button>
-
-                <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-teal-500/20 border border-teal-500/30 mb-4">
-                    {mfaIcons[mfaMethod ?? 'totp']}
-                  </div>
-                  <h2 className="text-xl font-bold text-white">Verificação em 2 Etapas</h2>
-                  <p className="text-slate-400 text-sm mt-2">
-                    {mfaLabels[mfaMethod ?? 'totp']}
-                  </p>
-                </div>
-
-                {/* Código MFA */}
-                <div
-                  className="cursor-text mb-6"
-                  onClick={handleMfaCodeClick}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && handleMfaCodeClick()}
-                  aria-label="Campo de código MFA"
-                >
-                  <MfaCodeInput value={mfaCode} onChange={setMfaCode} />
-                </div>
-
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 mb-4"
-                    >
-                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-300">{error}</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <button
-                  type="button"
-                  onClick={handleMfaSubmit}
-                  disabled={isLoading || mfaCode.length !== 6}
-                  className="
-                    w-full flex items-center justify-center gap-2 rounded-xl py-3.5
-                    bg-gradient-to-r from-teal-500 to-teal-600
-                    text-white font-semibold text-sm
-                    shadow-lg shadow-teal-500/25
-                    hover:from-teal-400 hover:to-teal-500
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    transition-all duration-200 active:scale-[0.98] mb-4
-                  "
-                >
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      Verificar Código
-                      <KeyRound className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-
-                {/* Reenviar código */}
-                <div className="text-center">
-                  {canResend ? (
-                    <button
-                      type="button"
-                      className="flex items-center gap-2 text-sm text-teal-400 hover:text-teal-300 transition-colors mx-auto"
-                      onClick={() => { setCountdown(30); setCanResend(false); }}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Reenviar código
-                    </button>
-                  ) : (
-                    <p className="flex items-center gap-2 text-sm text-slate-500 justify-center">
-                      <Clock className="w-3.5 h-3.5" />
-                      Reenviar em {countdown}s
-                    </p>
-                  )}
-                </div>
-
-                <p className="text-center text-xs text-slate-600 mt-4">
-                  Código de demonstração: <span className="text-slate-400 font-mono">123456</span>
-                </p>
-              </motion.div>
-            )}
-
-            {/* ---- STEP: SUCCESS ---- */}
+            {/* ---- STEP: SUCESSO ---- */}
             {step === 'success' && (
               <motion.div
                 key="success"
@@ -597,7 +366,7 @@ export function IAMLogin() {
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2">Acesso confirmado!</h2>
                 <p className="text-slate-400 text-sm">
-                  Redirecionando para o seu ambiente de trabalho...
+                  Identificando seu perfil e redirecionando...
                 </p>
                 <div className="flex justify-center gap-1 mt-6">
                   {[0, 1, 2].map(i => (
@@ -611,6 +380,7 @@ export function IAMLogin() {
                 </div>
               </motion.div>
             )}
+
           </AnimatePresence>
         </motion.div>
 
@@ -623,7 +393,7 @@ export function IAMLogin() {
         >
           <div className="flex items-center justify-center gap-4 text-xs text-slate-600">
             <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-teal-600" />
+              <Shield className="w-3.5 h-3.5 text-teal-700" />
               <span>Zero Trust Architecture</span>
             </div>
             <span>•</span>
