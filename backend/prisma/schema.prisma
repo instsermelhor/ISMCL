@@ -19,21 +19,66 @@ model Beneficiary {
   status              String   @default("ACTIVE")
   cases               Case[]
   triageQueues        TriageQueue[]
+  appointments        Appointment[]
+  waitlistEntries     WaitlistQueue[]
   createdAt           DateTime @default(now())
 }
 
-model Volunteer {
+model Professional {
   id                  String   @id @default(uuid())
+  userId              String   @unique @default(uuid())// Vinculo com credenciais de login
   fullName            String
+  socialName          String?
+  cpf                 String   @unique
+  birthDate           DateTime?
+  gender              String?
+  phone               String?
   email               String   @unique
-  professionalCouncil String?  // Ex: CRP 00/00000
-  specialty           String?
-  status              String   @default("PENDING_APPROVAL") // PENDING, ACTIVE, INACTIVE
   
-  projects            VolunteerProject[]
-  cases               CaseVolunteer[]
+  // Vínculo
+  bondType            String   @default("VOLUNTEER") // VOLUNTEER, EMPLOYEE, PARTNER
+  status              String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, ACTIVE, SUSPENDED, INACTIVE
+  joinedAt            DateTime @default(now())
+  terminatedAt        DateTime?
+  
+  // Dados Clínicos/Técnicos
+  profession          String?   // PSYCHOLOGIST, SOCIAL_WORKER, etc
+  specialty           String?
+  councilNumber       String?  // CRP, CRM
+  councilState        String?
+  councilStatus       String?
+  
+  // Relacionamentos
+  documents           ProfessionalDocument[]
+  availabilities      Availability[]
+  
+  projects            ProfessionalProject[]
+  cases               CaseProfessional[]
+  appointments        Appointment[]
   
   createdAt           DateTime @default(now())
+}
+
+model ProfessionalDocument {
+  id                  String   @id @default(uuid())
+  professionalId      String
+  type                String   // ID, DIPLOMA, COUNCIL_REGISTRY, ADDRESS
+  fileUrl             String
+  validUntil          DateTime?
+  status              String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  
+  professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+}
+
+model Availability {
+  id                  String   @id @default(uuid())
+  professionalId      String
+  dayOfWeek           Int      // 0-6
+  startTime           String   // HH:mm
+  endTime             String   // HH:mm
+  modality            String   // ONLINE, IN_PERSON, HYBRID
+  
+  professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 }
 
 model Project {
@@ -41,19 +86,20 @@ model Project {
   name                String   // Ex: Projeto Mulheres
   description         String?
   
-  volunteers          VolunteerProject[]
+  professionals       ProfessionalProject[]
   cases               Case[]
   triageQueue         TriageQueue[]
+  appointments        Appointment[]
 }
 
 // Relacionamento N:N - Quais voluntários atuam em quais projetos
-model VolunteerProject {
-  volunteerId         String
+model ProfessionalProject {
+  professionalId      String
   projectId           String
-  volunteer           Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   project             Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
-  @@id([volunteerId, projectId])
+  @@id([professionalId, projectId])
 }
 
 // Fila de Triagem - Beneficiários aguardando atendimento
@@ -79,18 +125,76 @@ model Case {
   
   beneficiary         Beneficiary @relation(fields: [beneficiaryId], references: [id])
   project             Project     @relation(fields: [projectId], references: [id])
-  assignedVolunteers  CaseVolunteer[]
+  assignedProfessionals CaseProfessional[]
 }
 
 // Relacionamento N:N - Quais profissionais estão alocados num caso
-model CaseVolunteer {
+model CaseProfessional {
   caseId              String
-  volunteerId         String
+  professionalId      String
   role                String   @default("PRIMARY_CLINICIAN") // PRIMARY, SUPPORT, SOCIAL_WORKER
   assignedAt          DateTime @default(now())
   
   case                Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  volunteer           Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   
-  @@id([caseId, volunteerId])
+  @@id([caseId, professionalId])
+}
+
+// =========================================================================
+// MÓDULO 03: AGENDA INTELIGENTE E CENTRAL DE AGENDAMENTOS
+// =========================================================================
+
+model Appointment {
+  id                  String   @id @default(uuid())
+  title               String?  // Ex: "Primeiro Atendimento - Triagem"
+  type                String   // THERAPY, PSYCHIATRY, SOCIAL_WORK, TRIAGE, EVENT
+  modality            String   // ONLINE, IN_PERSON, HYBRID
+  
+  status              String   @default("SCHEDULED") // SCHEDULED, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW
+  priority            String   @default("NORMAL")    // URGENT, HIGH, NORMAL, LOW
+  
+  scheduledStart      DateTime
+  scheduledEnd        DateTime
+  
+  // Relacionamentos Principais
+  beneficiaryId       String?
+  professionalId      String
+  projectId           String?
+  resourceRoomId      String?  // Para salas físicas
+  
+  // Teleatendimento
+  meetingLink         String?  // Link gerado automaticamente
+  
+  // Rastreabilidade
+  cancellationReason  String?
+  cancelledBy         String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  beneficiary         Beneficiary? @relation(fields: [beneficiaryId], references: [id])
+  professional        Professional @relation(fields: [professionalId], references: [id])
+  project             Project?     @relation(fields: [projectId], references: [id])
+  resourceRoom        ResourceRoom? @relation(fields: [resourceRoomId], references: [id])
+}
+
+model ResourceRoom {
+  id                  String   @id @default(uuid())
+  name                String   // Ex: Consultório 1
+  type                String   // CLINICAL, AUDITORIUM, MEETING
+  isActive            Boolean  @default(true)
+  
+  appointments        Appointment[]
+}
+
+model WaitlistQueue {
+  id                  String   @id @default(uuid())
+  beneficiaryId       String
+  requestedSpecialty  String   // Ex: PSYCHOLOGY
+  priorityScore       Int      // Algoritmo de IA calcula o peso
+  status              String   @default("WAITING") // WAITING, INVITED, RESOLVED
+  enteredAt           DateTime @default(now())
+  
+  beneficiary         Beneficiary @relation(fields: [beneficiaryId], references: [id])
 }

@@ -19,9 +19,9 @@ export class EmrEvolutionService {
   /**
    * Salva um Rascunho (Auto-save) da evolução de forma transparente, criptografando o conteúdo.
    */
-  async saveDraft(caseId: string, volunteerId: string, beneficiaryId: string, plainTextContent: string) {
-    // 1. Validação de Vínculo: O Voluntário pertence a este caso?
-    await this.verifyVolunteerCaseAccess(caseId, volunteerId);
+  async saveDraft(caseId: string, professionalId: string, beneficiaryId: string, plainTextContent: string) {
+    // 1. Validação de Vínculo: O Profissional pertence a este caso?
+    await this.verifyProfessionalCaseAccess(caseId, professionalId);
 
     // 2. Criptografia em Nível de Aplicação (Nenhum texto claro vai para o Banco)
     const encryptedContent = await this.encryption.encrypt(plainTextContent, { 
@@ -30,12 +30,12 @@ export class EmrEvolutionService {
 
     // 3. Salva ou atualiza a tabela emr_evolutions com status 'DRAFT'
     const draft = await this.db.emrEvolutions.upsert({
-      where: { caseId_volunteerId_status: { caseId, volunteerId, status: 'DRAFT' } },
+      where: { caseId_professionalId_status: { caseId, professionalId, status: 'DRAFT' } },
       update: { contentEncrypted: encryptedContent, updatedAt: new Date() },
       create: {
         caseId,
         beneficiaryId,
-        volunteerId,
+        professionalId,
         contentEncrypted: encryptedContent,
         status: 'DRAFT',
         clinicalDate: new Date(),
@@ -49,13 +49,13 @@ export class EmrEvolutionService {
   /**
    * Assina e Tranca a Evolução. Torna-a imutável.
    */
-  async signAndLockEvolution(evolutionId: string, volunteerId: string, plainTextContent: string) {
+  async signAndLockEvolution(evolutionId: string, professionalId: string, plainTextContent: string) {
     const evolution = await this.db.emrEvolutions.findById(evolutionId);
 
     if (evolution.status !== 'DRAFT') {
       throw new BadRequestException('Apenas evoluções em rascunho podem ser assinadas.');
     }
-    if (evolution.volunteerId !== volunteerId) {
+    if (evolution.professionalId !== professionalId) {
       throw new ForbiddenException('Apenas o autor pode assinar esta evolução.');
     }
 
@@ -80,7 +80,7 @@ export class EmrEvolutionService {
 
     // 4. Trilha de Auditoria Estrita
     await this.audit.logStrict({
-      actorId: volunteerId,
+      actorId: professionalId,
       portalOrigin: 'CLINIC',
       actionType: 'SIGN_MEDICAL_RECORD',
       targetEntity: 'MEDICAL_RECORD',
@@ -93,9 +93,9 @@ export class EmrEvolutionService {
   /**
    * Verifica se o profissional tem acesso de leitura/escrita no Caso
    */
-  private async verifyVolunteerCaseAccess(caseId: string, volunteerId: string) {
-    const caseLink = await this.db.caseVolunteers.findUnique({
-      where: { caseId_volunteerId: { caseId, volunteerId } }
+  private async verifyProfessionalCaseAccess(caseId: string, professionalId: string) {
+    const caseLink = await this.db.caseProfessionals.findUnique({
+      where: { caseId_professionalId: { caseId, professionalId } }
     });
     if (!caseLink) {
       throw new ForbiddenException('Violação de Sigilo: Profissional não vinculado ao caso.');

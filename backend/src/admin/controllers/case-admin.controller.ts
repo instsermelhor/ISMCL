@@ -8,7 +8,7 @@ export const RequirePortal = (portal: 'ADMIN' | 'CLINIC') => SetMetadata('portal
 interface MatchPayload {
   beneficiaryId: string;
   projectId: string;
-  volunteerId: string;
+  professionalId: string;
   priority: 'NORMAL' | 'HIGH' | 'URGENT';
 }
 
@@ -33,7 +33,7 @@ export class CaseAdminController {
     const clinicalCase = await this.caseMatchingService.createCaseMatch(
       data.beneficiaryId,
       data.projectId,
-      data.volunteerId,
+      data.professionalId,
       adminId,
       data.priority
     );

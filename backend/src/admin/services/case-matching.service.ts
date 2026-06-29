@@ -19,7 +19,7 @@ export class CaseMatchingService {
   async createCaseMatch(
     beneficiaryId: string, 
     projectId: string, 
-    volunteerId: string, 
+    professionalId: string, 
     adminId: string,
     priorityLevel: 'NORMAL' | 'HIGH' | 'URGENT' = 'NORMAL'
   ) {
@@ -30,16 +30,16 @@ export class CaseMatchingService {
     }
 
     // 2. Validar Voluntário e sua Capacitação (Vínculo com o Projeto)
-    const volunteer = await this.db.volunteer.findUnique({ 
-      where: { id: volunteerId },
+    const professional = await this.db.professional.findUnique({ 
+      where: { id: professionalId },
       include: { projects: true }
     });
     
-    if (!volunteer || volunteer.status !== 'ACTIVE') {
-      throw new BadRequestException('Voluntário inativo, pendente de aprovação ou não encontrado.');
+    if (!professional || professional.status !== 'ACTIVE') {
+      throw new BadRequestException('Profissional inativo, pendente de aprovação ou não encontrado.');
     }
     
-    const isAllocatedToProject = volunteer.projects.some((p: any) => p.projectId === projectId);
+    const isAllocatedToProject = professional.projects.some((p: any) => p.projectId === projectId);
     if (!isAllocatedToProject) {
       throw new BadRequestException('Violação de Regra: Este profissional não está capacitado ou alocado para atuar neste projeto social específico.');
     }
@@ -54,8 +54,8 @@ export class CaseMatchingService {
           projectId,
           status: 'ACTIVE',
           priority: priorityLevel,
-          assignedVolunteers: {
-            create: [{ volunteerId, role: 'PRIMARY_CLINICIAN' }]
+          assignedProfessionals: {
+            create: [{ professionalId, role: 'PRIMARY_CLINICIAN' }]
           }
         }
       });

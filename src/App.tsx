@@ -6,6 +6,8 @@ import { Dashboard } from './pages/Dashboard';
 import { Patients } from './pages/Patients';
 import { PatientRecord } from './pages/PatientRecord';
 import { TriageForm } from './pages/TriageForm';
+import { Professionals } from './pages/Professionals';
+import { ProfessionalProfile } from './pages/ProfessionalProfile';
 import { Telehealth } from './pages/Telehealth';
 import { Settings } from './pages/Settings';
 import { Calendar } from './pages/Calendar';
@@ -25,6 +27,8 @@ export default function App() {
           <Route path="patients" element={<Patients />} />
           <Route path="patients/new" element={<TriageForm />} />
           <Route path="patients/:id" element={<PatientRecord />} />
+          <Route path="professionals" element={<Professionals />} />
+          <Route path="professionals/:id" element={<ProfessionalProfile />} />
           <Route path="calendar" element={<Calendar />} />
           <Route path="messages" element={<Messages />} />
           <Route path="records" element={<Records />} />

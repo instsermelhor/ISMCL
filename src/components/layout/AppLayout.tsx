@@ -9,7 +9,8 @@ import {
   Settings, 
   LogOut,
   Heart,
-  DollarSign
+  DollarSign,
+  BriefcaseMedical
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { QuickExitButton } from '../QuickExitButton';
@@ -17,6 +18,7 @@ import { QuickExitButton } from '../QuickExitButton';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Beneficiários', href: '/patients', icon: Users },
+  { name: 'Equipe Técnica', href: '/professionals', icon: BriefcaseMedical },
   { name: 'Agenda', href: '/calendar', icon: Calendar },
   { name: 'Prontuários', href: '/records', icon: FileText },
   { name: 'Mensagens', href: '/messages', icon: MessageCircle },
