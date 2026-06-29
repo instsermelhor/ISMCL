@@ -34,6 +34,10 @@ import { IAMCenter } from './pages/IAMCenter';
 // BPMS
 import { BPMSCenter } from './pages/BPMSCenter';
 
+// ARE — Cadastro Inteligente Adaptativo
+import AdaptiveRegistration from './pages/AdaptiveRegistration';
+import AdaptiveRegistrationAdmin from './pages/AdaptiveRegistrationAdmin';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -47,6 +51,9 @@ export default function App() {
             </PublicRoute>
           }
         />
+
+        {/* Rota pública: Cadastro Inteligente Adaptativo */}
+        <Route path="/registro" element={<AdaptiveRegistration />} />
 
         {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>
@@ -73,6 +80,9 @@ export default function App() {
 
             {/* BPMS — Central de Processos e Workflows */}
             <Route path="processos" element={<BPMSCenter />} />
+
+            {/* ARE — Central do Cadastro Inteligente Adaptativo */}
+            <Route path="cadastro-adaptativo" element={<AdaptiveRegistrationAdmin />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />

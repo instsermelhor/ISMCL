@@ -46,6 +46,7 @@ const adminNavigation = [
   { name: 'MCSI — Segurança', href: '/seguranca', icon: ShieldAlert },
   { name: 'IAM — Identidades', href: '/iam', icon: Shield },
   { name: 'BPM — Processos', href: '/processos', icon: GitBranch },
+  { name: 'ARE — Cadastro', href: '/cadastro-adaptativo', icon: Activity },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {

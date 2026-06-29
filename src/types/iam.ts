@@ -108,8 +108,8 @@ export interface IAMUser {
 
   // MFA — mfaRequired: solicitado pelo Super Admin no cadastro
   //          mfaEnabled: habilitado pelo próprio usuário após solicitação
-  mfaEnabled: boolean;
-  mfaRequired: boolean;   // Super Admin solicita ativação no próximo login
+  mfaEnabled?: boolean;
+  mfaRequired?: boolean;   // Super Admin solicita ativação no próximo login
   mfaMethod?: 'totp' | 'sms' | 'email';
 
   // Sessão

@@ -186,7 +186,7 @@ export interface BPMSAuditEvent {
   timestamp: string;
   userId: string;
   userName: string;
-  action: 'create_workflow' | 'publish_workflow' | 'execute_workflow' | 'node_completed' | 'rule_updated';
+  action: 'create_workflow' | 'publish_workflow' | 'execute_workflow' | 'node_completed' | 'rule_updated' | 'ai_suggestion_approved' | 'ai_suggestion_rejected' | 'config_changed';
   workflowId?: string;
   instanceId?: string;
   details: string;
