@@ -8,6 +8,7 @@ import { BPMSProvider } from './contexts/BPMSContext.tsx';
 import { AdaptiveRegistrationProvider } from './contexts/AdaptiveRegistrationContext.tsx';
 import { SATAIProvider } from './contexts/SATAIContext.tsx';
 import { PiaraveProvider } from './contexts/PiaraveContext.tsx';
+import { PlatformHealthProvider } from './contexts/PlatformHealthContext.tsx';
 import './index.css';
 
 // Hierarquia de providers:
@@ -17,7 +18,9 @@ import './index.css';
 //       BPMSProvider (workflows e automação) →
 //         AdaptiveRegistrationProvider (ARE) →
 //           SATAIProvider (acolhimento/triagem) →
-//             App
+//             PiaraveProvider (programa PIARAVE) →
+//               PlatformHealthProvider (observabilidade e auditoria) →
+//                 App
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -28,7 +31,9 @@ createRoot(document.getElementById('root')!).render(
             <AdaptiveRegistrationProvider>
               <SATAIProvider>
                 <PiaraveProvider>
-                  <App />
+                  <PlatformHealthProvider>
+                    <App />
+                  </PlatformHealthProvider>
                 </PiaraveProvider>
               </SATAIProvider>
             </AdaptiveRegistrationProvider>

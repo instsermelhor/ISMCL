@@ -21,6 +21,7 @@ import {
   ChevronUp,
   Activity,
   GitBranch,
+  Monitor,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { QuickExitButton } from '../QuickExitButton';
@@ -49,6 +50,7 @@ const adminNavigation = [
   { name: 'ARE — Cadastro', href: '/cadastro-adaptativo', icon: Activity },
   { name: 'SATAI — Triagem', href: '/satai', icon: Heart },
   { name: 'PIARAVE — Casos', href: '/piarave', icon: Heart },
+  { name: 'Platform Health Center', href: '/auditoria-plataforma', icon: Monitor },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {

@@ -47,6 +47,9 @@ import PiaraveAcolhimento from './pages/PiaraveAcolhimento';
 import PiaraveBiblioteca from './pages/PiaraveBiblioteca';
 import PiaraveAdmin from './pages/PiaraveAdmin';
 
+// Platform Health & Audit Center
+import PlatformHealthCenter from './pages/PlatformHealthCenter';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -105,6 +108,9 @@ export default function App() {
 
             {/* PIARAVE — Painel Administrativo de Casos */}
             <Route path="piarave" element={<PiaraveAdmin />} />
+
+            {/* Platform Health & Audit Center */}
+            <Route path="auditoria-plataforma" element={<PlatformHealthCenter />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />
