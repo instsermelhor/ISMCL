@@ -31,6 +31,9 @@ import { ProfessionalPortal } from './pages/ProfessionalPortal';
 // IAM
 import { IAMCenter } from './pages/IAMCenter';
 
+// BPMS
+import { BPMSCenter } from './pages/BPMSCenter';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -67,6 +70,9 @@ export default function App() {
 
             {/* IAM — Central de Identidade */}
             <Route path="iam" element={<IAMCenter />} />
+
+            {/* BPMS — Central de Processos e Workflows */}
+            <Route path="processos" element={<BPMSCenter />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />

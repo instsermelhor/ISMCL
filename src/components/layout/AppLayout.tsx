@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   Activity,
+  GitBranch,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { QuickExitButton } from '../QuickExitButton';
@@ -44,6 +45,7 @@ const adminNavigation = [
   { name: 'CGI — Gestão', href: '/cgi', icon: Building2 },
   { name: 'MCSI — Segurança', href: '/seguranca', icon: ShieldAlert },
   { name: 'IAM — Identidades', href: '/iam', icon: Shield },
+  { name: 'BPM — Processos', href: '/processos', icon: GitBranch },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {
