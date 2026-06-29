@@ -28,8 +28,8 @@ export class EmrEvolutionService {
       contextId: beneficiaryId 
     });
 
-    // 3. Salva ou atualiza a tabela emr_evolutions com status 'DRAFT'
-    const draft = await this.db.emrEvolutions.upsert({
+    // 3. Salva ou atualiza a tabela clinicalEvolution com status 'DRAFT'
+    const draft = await this.db.clinicalEvolution.upsert({
       where: { caseId_professionalId_status: { caseId, professionalId, status: 'DRAFT' } },
       update: { contentEncrypted: encryptedContent, updatedAt: new Date() },
       create: {
@@ -50,7 +50,7 @@ export class EmrEvolutionService {
    * Assina e Tranca a Evolução. Torna-a imutável.
    */
   async signAndLockEvolution(evolutionId: string, professionalId: string, plainTextContent: string) {
-    const evolution = await this.db.emrEvolutions.findById(evolutionId);
+    const evolution = await this.db.clinicalEvolution.findById(evolutionId);
 
     if (evolution.status !== 'DRAFT') {
       throw new BadRequestException('Apenas evoluções em rascunho podem ser assinadas.');
@@ -68,7 +68,7 @@ export class EmrEvolutionService {
     const integrityHash = CryptoUtils.generateSHA256Hash(encryptedContent + evolutionId + new Date().toISOString());
 
     // 3. Atualiza status e assina
-    const lockedEvolution = await this.db.emrEvolutions.update({
+    const lockedEvolution = await this.db.clinicalEvolution.update({
       where: { id: evolutionId },
       data: {
         contentEncrypted: encryptedContent,
@@ -94,7 +94,7 @@ export class EmrEvolutionService {
    * Verifica se o profissional tem acesso de leitura/escrita no Caso
    */
   private async verifyProfessionalCaseAccess(caseId: string, professionalId: string) {
-    const caseLink = await this.db.caseProfessionals.findUnique({
+    const caseLink = await this.db.caseProfessional.findUnique({
       where: { caseId_professionalId: { caseId, professionalId } }
     });
     if (!caseLink) {

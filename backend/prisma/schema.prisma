@@ -21,6 +21,15 @@ model Beneficiary {
   triageQueues        TriageQueue[]
   appointments        Appointment[]
   waitlistEntries     WaitlistQueue[]
+  
+  // Módulo 05: Prontuário Eletrônico
+  anamnesis           Anamnesis[]
+  evolutions          ClinicalEvolution[]
+  diagnoses           Diagnosis[]
+  documents           ClinicalDocument[]
+  attachments         ClinicalAttachment[]
+  scales              ClinicalScale[]
+
   createdAt           DateTime @default(now())
 }
 
@@ -55,6 +64,27 @@ model Professional {
   projects            ProfessionalProject[]
   cases               CaseProfessional[]
   appointments        Appointment[]
+  
+  // Módulo 05: Prontuário Eletrônico
+  anamnesis           Anamnesis[]
+  evolutions          ClinicalEvolution[]
+  erratas             EvolutionErrata[]
+  diagnoses           Diagnosis[]
+  documents           ClinicalDocument[]
+  attachments         ClinicalAttachment[]
+  documentAccessLogs  DocumentAccessLog[]
+  attachmentAccessLogs AttachmentAccessLog[]
+  scales              ClinicalScale[]
+  
+  // Módulo 06: Gestão de Casos e PIC
+  casesOpened         Case[]                 @relation("CasesOpened")
+  casesClosed         Case[]                 @relation("CasesClosed")
+  casesReopened       Case[]                 @relation("CasesReopened")
+  individualCarePlans IndividualCarePlan[]
+  picGoals            PicGoal[]
+  picVersions         PicVersion[]
+  meetingsAttended    CaseMeetingParticipant[]
+  referralsCreated    Referral[]
   
   createdAt           DateTime @default(now())
 }
@@ -114,18 +144,53 @@ model TriageQueue {
   project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
-// O CASO CLÍNICO/SOCIAL - Entidade que destrava o sigilo e agenda
 model Case {
   id                  String   @id @default(uuid())
   beneficiaryId       String
   projectId           String
-  status              String   @default("ACTIVE") // ACTIVE, CLOSED, TRANSFERRED
-  priority            String   @default("NORMAL")
-  createdAt           DateTime @default(now())
+  status              String   @default("ACTIVE") // ACTIVE, CLOSED, REOPENED, TRANSFERRED
+  priority            String   @default("NORMAL") // EMERGENTIAL, VERY_HIGH, HIGH, NORMAL, LOW
   
-  beneficiary         Beneficiary @relation(fields: [beneficiaryId], references: [id])
-  project             Project     @relation(fields: [projectId], references: [id])
+  // Módulo 06: Detalhes de Abertura e Controle
+  openedById          String
+  origin              String               // TRIAGE, INTERNAL_REFERRAL, EXTERNAL_REFERRAL, SPONTANEOUS_DEMAND, SOCIAL_PROJECT, JUDICIAL_DETERMINATION, INSTITUTIONAL_PARTNERSHIP
+  reason              String
+  classification      String               // DOMESTIC_VIOLENCE, PSYCHIC_DISTRESS, DEPRESSION, DRUG_DEPENDENCY, SOCIAL_VULNERABILITY, etc.
+  
+  // Alta e Reabertura
+  closedAt            DateTime?
+  closedById          String?
+  closureReason       String?              // PLAN_COMPLETED, PATIENT_REQUEST, DEF_REFERRAL, LOST_CONTACT, OTHER
+  evolutionSummary    String?              // Resumo final do caso para a alta (Criptografado)
+  resultsAchieved     String?              // Resultados alcançados
+  finalInstructions   String?              // Orientações para pós-alta
+  reopenedAt          DateTime?
+  reopenedById        String?
+  
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  // Relações
+  beneficiary         Beneficiary          @relation(fields: [beneficiaryId], references: [id])
+  project             Project              @relation(fields: [projectId], references: [id])
   assignedProfessionals CaseProfessional[]
+  openedBy            Professional         @relation("CasesOpened", fields: [openedById], references: [id])
+  closedBy            Professional?        @relation("CasesClosed", fields: [closedById], references: [id])
+  reopenedBy          Professional?        @relation("CasesReopened", fields: [reopenedById], references: [id])
+
+  // Relações Clínicas existentes
+  anamnesis           Anamnesis[]
+  evolutions          ClinicalEvolution[]
+  diagnoses           Diagnosis[]
+  documents           ClinicalDocument[]
+  attachments         ClinicalAttachment[]
+  scales              ClinicalScale[]
+
+  // Relações do Módulo 06
+  individualCarePlans IndividualCarePlan[]
+  caseMeetings        CaseMeeting[]
+  referrals           Referral[]
+  caseAlerts          CaseAlert[]
 }
 
 // Relacionamento N:N - Quais profissionais estão alocados num caso
@@ -177,6 +242,9 @@ model Appointment {
   professional        Professional @relation(fields: [professionalId], references: [id])
   project             Project?     @relation(fields: [projectId], references: [id])
   resourceRoom        ResourceRoom? @relation(fields: [resourceRoomId], references: [id])
+  
+  // Módulo 05: Prontuário Eletrônico
+  evolutions          ClinicalEvolution[]
 }
 
 model ResourceRoom {
@@ -198,3 +266,301 @@ model WaitlistQueue {
   
   beneficiary         Beneficiary @relation(fields: [beneficiaryId], references: [id])
 }
+
+// =========================================================================
+// MÓDULO 05: PRONTUÁRIO ELETRÔNICO INTELIGENTE (PEI) E GESTÃO CLÍNICA
+// =========================================================================
+
+model Anamnesis {
+  id                String       @id @default(uuid())
+  caseId            String
+  beneficiaryId     String
+  professionalId    String       // Profissional que realizou o preenchimento
+  chiefComplaint    String       // Queixa principal (Criptografada)
+  historyPersonal   String?      // Histórico Pessoal (Criptografada)
+  historyFamily     String?      // Histórico Familiar (Criptografada)
+  historySocial     String?      // Histórico Social/Econômico (Criptografada)
+  historySchool     String?      // Histórico Escolar (Criptografada)
+  historyOcupational String?     // Histórico Ocupacional (Criptografada)
+  medicinesAlergies String?      // Uso de Medicamentos / Alergias (Criptografada)
+  structuredData    Json?        // Armazena campos customizáveis ou escores aplicados
+  status            String       @default("DRAFT") // DRAFT, FINALIZED
+  version           Int          @default(1)
+  createdAt         DateTime     @default(now())
+  finalizedAt       DateTime?
+  
+  case              Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiary       Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  professional      Professional @relation(fields: [professionalId], references: [id])
+}
+
+model ClinicalEvolution {
+  id                  String             @id @default(uuid())
+  caseId              String
+  beneficiaryId       String
+  professionalId      String             // Autor da nota clínica
+  appointmentId       String?            // Vínculo opcional com agendamento
+  clinicalDate        DateTime           // Data e hora real da sessão
+  durationMinutes     Int
+  modality            String             // ONLINE, IN_PERSON, HYBRID
+  contentEncrypted    String             // Conteúdo rico da sessão criptografado
+  summary             String?            // Resumo de visibilidade pública/compartilhada
+  formatType          String             @default("FREE_TEXT") // FREE_TEXT, SOAP
+  visibility          String             @default("PRIVATE_TO_AUTHOR") // PRIVATE_TO_AUTHOR, SHARED_WITH_CASE_TEAM, GLOBAL_CLINICAL
+  status              String             @default("DRAFT") // DRAFT, SIGNED, AMENDED
+  digitalSignatureHash String?
+  signatureMetadata   Json?              // IP, timestamp e certificado utilizado
+  signedAt            DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  case                Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiary         Beneficiary        @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  professional        Professional       @relation(fields: [professionalId], references: [id])
+  appointment         Appointment?       @relation(fields: [appointmentId], references: [id])
+  erratas             EvolutionErrata[]
+  documents           ClinicalDocument[]
+}
+
+model EvolutionErrata {
+  id                      String            @id @default(uuid())
+  evolutionId             String
+  professionalId          String
+  correctionTextEncrypted String
+  justification           String
+  digitalSignatureHash    String?
+  createdAt               DateTime          @default(now())
+
+  evolution               ClinicalEvolution @relation(fields: [evolutionId], references: [id], onDelete: Cascade)
+  professional            Professional      @relation(fields: [professionalId], references: [id])
+}
+
+model Diagnosis {
+  id                   String       @id @default(uuid())
+  caseId               String
+  beneficiaryId        String
+  professionalId       String
+  classificationSystem String       // CID_10, CID_11, DSM_5
+  code                 String       // Ex: F41.1
+  description          String       // Transtorno de ansiedade generalizada
+  diagnosticStatus     String       @default("ACTIVE") // ACTIVE, RESOLVED, RULED_OUT
+  clinicalNotes        String?
+  createdAt            DateTime     @default(now())
+  resolvedAt           DateTime?
+
+  case                 Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiary          Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  professional         Professional @relation(fields: [professionalId], references: [id])
+}
+
+model ClinicalDocument {
+  id                   String              @id @default(uuid())
+  caseId               String
+  beneficiaryId        String
+  professionalId       String
+  evolutionId          String?
+  type                 String              // PRESCRIPTION, ATTESTATION, REPORT, DECLARATION, FORWARDING, THERAPEUTIC_PLAN
+  title                String
+  contentEncrypted     String
+  digitalSignatureHash String?
+  signedAt             DateTime?
+  pdfUrl               String?             // Link para bucket S3 privado
+  status               String              @default("DRAFT") // DRAFT, SIGNED, REVOKED
+  version              Int                 @default(1)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  case                 Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiary          Beneficiary         @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  professional         Professional        @relation(fields: [professionalId], references: [id])
+  evolution            ClinicalEvolution?  @relation(fields: [evolutionId], references: [id])
+  accessLogs           DocumentAccessLog[]
+}
+
+model ClinicalAttachment {
+  id             String                 @id @default(uuid())
+  caseId         String
+  beneficiaryId  String
+  professionalId String
+  title          String
+  documentType   String                 // EXAM_RESULT, EXTERNAL_REPORT, PATIENT_ART, CONSENT_FORM, OTHER
+  fileS3Key      String                 // Caminho privado no S3
+  mimeType       String
+  fileSize       Int
+  visibility     String                 @default("PRIVATE_TO_AUTHOR") // PRIVATE_TO_AUTHOR, SHARED_WITH_CASE_TEAM
+  uploadedAt     DateTime               @default(now())
+  retentionUntil DateTime?
+
+  case           Case                   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiary    Beneficiary            @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  professional   Professional           @relation(fields: [professionalId], references: [id])
+  accessLogs     AttachmentAccessLog[]
+}
+
+model DocumentAccessLog {
+  id             String           @id @default(uuid())
+  documentId     String
+  professionalId String
+  action         String           // VIEW, DOWNLOAD, EXPORT, PRINT
+  justification  String?          // Justificativa se for acesso via break-glass
+  ipAddress      String
+  userAgent      String
+  timestamp      DateTime         @default(now())
+
+  document       ClinicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  professional   Professional     @relation(fields: [professionalId], references: [id])
+}
+
+model AttachmentAccessLog {
+  id             String             @id @default(uuid())
+  attachmentId   String
+  professionalId String
+  action         String             // VIEW, DOWNLOAD
+  justification  String?
+  ipAddress      String
+  userAgent      String
+  timestamp      DateTime           @default(now())
+
+  attachment     ClinicalAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  professional   Professional       @relation(fields: [professionalId], references: [id])
+}
+
+model ClinicalScale {
+  id             String       @id @default(uuid())
+  caseId         String
+  beneficiaryId  String
+  professionalId String
+  scaleName      String       // GAD-7, PHQ-9, BECK, SOCIAL_SCREENING
+  version        String
+  score          Int
+  answers        Json         // Contém as respostas em formato estruturado
+  interpretation String
+  appliedAt      DateTime     @default(now())
+
+  case           Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiary    Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  professional   Professional @relation(fields: [professionalId], references: [id])
+}
+
+model SecurityAuditLog {
+  id             String   @id @default(uuid())
+  actorId        String
+  actorName      String
+  role           String
+  action         String   // BREAK_GLASS_OVERRIDE, UNAUTHORIZED_ACCESS_ATTEMPT, READ_RECORD, SIGN_RECORD, EXPORT_RECORD
+  targetEntity   String   // BENEFICIARY, EVOLUTION, DOCUMENT, ATTACHMENT
+  targetEntityId String
+  justification  String?
+  ipAddress      String
+  userAgent      String
+  timestamp      DateTime @default(now())
+}
+
+model IndividualCarePlan {
+  id                  String               @id @default(uuid())
+  caseId              String
+  generalObjectives   String               // Objetivos gerais do cuidado
+  specificObjectives  String               // Objetivos específicos do cuidado
+  familyCommitments   String?              // Responsabilidades da família/beneficiário
+  status              String               @default("ACTIVE") // ACTIVE, COMPLETED, REVISED, SUSPENDED
+  version             Int                  @default(1)
+  
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  signedById          String
+  signedAt            DateTime?
+
+  case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  signedBy            Professional         @relation(fields: [signedById], references: [id])
+  goals               PicGoal[]
+  history             PicVersion[]
+}
+
+model PicGoal {
+  id                  String               @id @default(uuid())
+  picId               String
+  description         String               // Detalhes da meta
+  intervention        String               // Intervenção associada
+  indicator           String               // Indicador de sucesso
+  targetDate          DateTime
+  status              String               @default("PENDING") // PENDING, IN_PROGRESS, ACHIEVED, NOT_ACHIEVED
+  responsibleId       String               // Profissional ou beneficiário responsável
+  
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  pic                 IndividualCarePlan   @relation(fields: [picId], references: [id], onDelete: Cascade)
+  responsible         Professional         @relation(fields: [responsibleId], references: [id])
+}
+
+model PicVersion {
+  id                  String               @id @default(uuid())
+  picId               String
+  version             Int
+  changedById         String
+  changeSummary       String
+  contentSnapshot     Json                 // Estado completo do PIC em formato JSON
+  createdAt           DateTime             @default(now())
+
+  pic                 IndividualCarePlan   @relation(fields: [picId], references: [id], onDelete: Cascade)
+  changedBy           Professional         @relation(fields: [changedById], references: [id])
+}
+
+model CaseMeeting {
+  id                  String               @id @default(uuid())
+  caseId              String
+  meetingDate         DateTime
+  agenda              String               // Pauta da reunião
+  minutes             String               // Ata e discussões clínicas/sociais
+  decisions           String               // Decisões tomadas
+  pendingTasks        Json?                // Lista de tarefas estruturadas: { task, responsibleId, deadline }
+  
+  createdAt           DateTime             @default(now())
+
+  case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  participants        CaseMeetingParticipant[]
+}
+
+model CaseMeetingParticipant {
+  meetingId           String
+  professionalId      String
+  role                String?              // Papel na reunião
+  attended            Boolean              @default(true)
+
+  meeting             CaseMeeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  professional        Professional         @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, professionalId])
+}
+
+model Referral {
+  id                  String               @id @default(uuid())
+  caseId              String
+  professionalId      String               // Autor do encaminhamento
+  type                String               // INTERNAL, EXTERNAL
+  destination         String               // CAPS, CRAS, CREAS, Hospital, Defensoria Pública, Conselho Tutelar, Escola, etc.
+  reason              String               // Motivo e histórico clínico
+  status              String               @default("PENDING") // PENDING, SENT, COMPLETED, NO_SHOW, CANCELLED
+  result              String?              // Retorno do encaminhamento
+  
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  professional        Professional         @relation(fields: [professionalId], references: [id])
+}
+
+model CaseAlert {
+  id                  String               @id @default(uuid())
+  caseId              String
+  type                String               // NO_VISIT_PROLONGED, META_OVERDUE, PIC_REVISION_OVERDUE, PENDING_DOCUMENT, REFERRAL_NO_RETURN
+  message             String
+  status              String               @default("ACTIVE") // ACTIVE, RESOLVED
+  severity            String               @default("MEDIUM") // HIGH, MEDIUM, LOW
+  
+  createdAt           DateTime             @default(now())
+  resolvedAt          DateTime?
+
+  case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+

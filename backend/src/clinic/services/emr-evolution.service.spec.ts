@@ -14,12 +14,12 @@ class MockAuditLogService {
 }
 
 const mockDb = {
-  emrEvolutions: {
+  clinicalEvolution: {
     upsert: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
   },
-  caseVolunteers: {
+  caseProfessional: {
     findUnique: jest.fn(),
   }
 };
@@ -49,7 +49,7 @@ describe('EmrEvolutionService', () => {
   describe('saveDraft', () => {
     it('deve bloquear a tentativa de salvar se o voluntário não for alocado ao caso', async () => {
       // Setup: DB não retorna vínculo
-      db.caseVolunteers.findUnique.mockResolvedValue(null);
+      db.caseProfessional.findUnique.mockResolvedValue(null);
 
       await expect(
         service.saveDraft('case-1', 'vol-1', 'ben-1', 'Conteúdo da Sessão')
@@ -58,12 +58,12 @@ describe('EmrEvolutionService', () => {
 
     it('deve criptografar o conteúdo e salvar o rascunho com sucesso', async () => {
       // Setup: DB retorna vínculo
-      db.caseVolunteers.findUnique.mockResolvedValue({ caseId: 'case-1', volunteerId: 'vol-1' });
-      db.emrEvolutions.upsert.mockResolvedValue({ id: 'evo-1', status: 'DRAFT' });
+      db.caseProfessional.findUnique.mockResolvedValue({ caseId: 'case-1', professionalId: 'vol-1' });
+      db.clinicalEvolution.upsert.mockResolvedValue({ id: 'evo-1', status: 'DRAFT' });
 
       const result = await service.saveDraft('case-1', 'vol-1', 'ben-1', 'Conteúdo Limpo');
 
-      expect(db.emrEvolutions.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      expect(db.clinicalEvolution.upsert).toHaveBeenCalledWith(expect.objectContaining({
         create: expect.objectContaining({
           contentEncrypted: 'ENCRYPTED_Conteúdo Limpo',
           visibility: 'PRIVATE_TO_AUTHOR'
@@ -75,7 +75,7 @@ describe('EmrEvolutionService', () => {
 
   describe('signAndLockEvolution', () => {
     it('deve bloquear a assinatura se a evolução já não for rascunho', async () => {
-      db.emrEvolutions.findById.mockResolvedValue({ id: 'evo-1', status: 'SIGNED', volunteerId: 'vol-1' });
+      db.clinicalEvolution.findById.mockResolvedValue({ id: 'evo-1', status: 'SIGNED', professionalId: 'vol-1' });
 
       await expect(
         service.signAndLockEvolution('evo-1', 'vol-1', 'Conteúdo Final')
@@ -83,7 +83,7 @@ describe('EmrEvolutionService', () => {
     });
 
     it('deve bloquear a assinatura se o profissional não for o autor', async () => {
-      db.emrEvolutions.findById.mockResolvedValue({ id: 'evo-1', status: 'DRAFT', volunteerId: 'vol-2' });
+      db.clinicalEvolution.findById.mockResolvedValue({ id: 'evo-1', status: 'DRAFT', professionalId: 'vol-2' });
 
       await expect(
         service.signAndLockEvolution('evo-1', 'vol-1', 'Conteúdo Final')
