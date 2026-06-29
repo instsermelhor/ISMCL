@@ -12,7 +12,8 @@ import {
   Plus, 
   Clock, 
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -214,23 +215,33 @@ export function PatientRecord() {
                   />
                   
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                       <input 
                         type="text" 
                         placeholder="CID (Opcional)" 
                         className="w-32 rounded-lg border-slate-200 text-sm focus:ring-teal-600 focus:border-teal-600"
                       />
+                      <button 
+                        onClick={() => alert('IA Copilot: Resumo transcrito da Teleconsulta gerado via LLM estruturado em modelo SOAP.')}
+                        className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Copiloto IA
+                      </button>
                     </div>
                     <div className="flex gap-3">
                       <button 
                         onClick={() => setIsWriting(false)}
-                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
                       >
                         Cancelar
                       </button>
                       <button 
-                        onClick={() => setIsWriting(false)}
-                        className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 shadow-sm"
+                        onClick={() => {
+                          alert('Evolução assinada com Certificado Digital (ICP-Brasil) com sucesso!');
+                          setIsWriting(false);
+                        }}
+                        className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 shadow-sm transition-colors"
                       >
                         Assinar e Salvar
                       </button>
@@ -270,12 +281,12 @@ export function PatientRecord() {
                     )}
                   </div>
                   
-                  <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap pl-13">
+                  <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap pl-12">
                     {evo.content}
                   </div>
                   
                   {evo.cid && (
-                    <div className="mt-4 pl-13 flex items-center gap-2">
+                    <div className="mt-4 pl-12 flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
                         CID-10: {evo.cid}
                       </span>

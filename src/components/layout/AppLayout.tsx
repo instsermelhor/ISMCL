@@ -8,9 +8,11 @@ import {
   FileText, 
   Settings, 
   LogOut,
-  Heart
+  Heart,
+  DollarSign
 } from 'lucide-react';
 import { cn } from '../../utils';
+import { QuickExitButton } from '../QuickExitButton';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -18,6 +20,7 @@ const navigation = [
   { name: 'Agenda', href: '/calendar', icon: Calendar },
   { name: 'Prontuários', href: '/records', icon: FileText },
   { name: 'Mensagens', href: '/messages', icon: MessageCircle },
+  { name: 'Financeiro', href: '/financial', icon: DollarSign },
 ];
 
 export function AppLayout() {
@@ -91,8 +94,9 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-slate-50">
+      <main className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-slate-50 relative">
         <Outlet />
+        <QuickExitButton />
       </main>
     </div>
   );

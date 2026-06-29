@@ -21,7 +21,10 @@ export function Patients() {
             <p className="text-slate-500 mt-1">Gestão de casos e prontuários.</p>
           </div>
           
-          <button className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm">
+          <button 
+            onClick={() => navigate('/patients/new')}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm"
+          >
             <UserPlus className="w-4 h-4" />
             Novo Cadastro
           </button>

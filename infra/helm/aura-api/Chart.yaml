@@ -1,0 +1,10 @@
+# ESTRUTURA IAC - KUBERNETES HELM CHART (API GATEWAY)
+# Projeto Aura - Instituto Ser Melhor
+# Local: /infra/helm/aura-api/Chart.yaml
+
+apiVersion: v2
+name: aura-api
+description: A Helm chart for Aura API Gateway and Microservices
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,96 @@
+// =========================================================================
+// PROJETO AURA - INSTITUTO SER MELHOR
+// MÓDULO: GESTÃO DE PROJETOS E VOLUNTARIADO (ORM SCHEMA)
+// =========================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Beneficiary {
+  id                  String   @id @default(uuid())
+  fullName            String
+  documentCpf         String?  @unique
+  status              String   @default("ACTIVE")
+  cases               Case[]
+  triageQueues        TriageQueue[]
+  createdAt           DateTime @default(now())
+}
+
+model Volunteer {
+  id                  String   @id @default(uuid())
+  fullName            String
+  email               String   @unique
+  professionalCouncil String?  // Ex: CRP 00/00000
+  specialty           String?
+  status              String   @default("PENDING_APPROVAL") // PENDING, ACTIVE, INACTIVE
+  
+  projects            VolunteerProject[]
+  cases               CaseVolunteer[]
+  
+  createdAt           DateTime @default(now())
+}
+
+model Project {
+  id                  String   @id @default(uuid())
+  name                String   // Ex: Projeto Mulheres
+  description         String?
+  
+  volunteers          VolunteerProject[]
+  cases               Case[]
+  triageQueue         TriageQueue[]
+}
+
+// Relacionamento N:N - Quais voluntários atuam em quais projetos
+model VolunteerProject {
+  volunteerId         String
+  projectId           String
+  volunteer           Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  project             Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@id([volunteerId, projectId])
+}
+
+// Fila de Triagem - Beneficiários aguardando atendimento
+model TriageQueue {
+  id                  String   @id @default(uuid())
+  beneficiaryId       String
+  projectId           String
+  priority            String   @default("NORMAL") // NORMAL, HIGH, URGENT
+  enteredAt           DateTime @default(now())
+  
+  beneficiary         Beneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// O CASO CLÍNICO/SOCIAL - Entidade que destrava o sigilo e agenda
+model Case {
+  id                  String   @id @default(uuid())
+  beneficiaryId       String
+  projectId           String
+  status              String   @default("ACTIVE") // ACTIVE, CLOSED, TRANSFERRED
+  priority            String   @default("NORMAL")
+  createdAt           DateTime @default(now())
+  
+  beneficiary         Beneficiary @relation(fields: [beneficiaryId], references: [id])
+  project             Project     @relation(fields: [projectId], references: [id])
+  assignedVolunteers  CaseVolunteer[]
+}
+
+// Relacionamento N:N - Quais profissionais estão alocados num caso
+model CaseVolunteer {
+  caseId              String
+  volunteerId         String
+  role                String   @default("PRIMARY_CLINICIAN") // PRIMARY, SUPPORT, SOCIAL_WORKER
+  assignedAt          DateTime @default(now())
+  
+  case                Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  volunteer           Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  
+  @@id([caseId, volunteerId])
+}

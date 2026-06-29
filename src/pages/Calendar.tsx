@@ -37,7 +37,10 @@ export function Calendar() {
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm">
+            <button 
+              onClick={() => alert('Integração com Google Calendar/Outlook abrirá o modal de Novo Agendamento...')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm"
+            >
               <Plus className="w-4 h-4" />
               Novo Agendamento
             </button>
