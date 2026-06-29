@@ -78,10 +78,10 @@ export function AppLayout() {
           </div>
           
           <div className="space-y-1">
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+            <NavLink to="/settings" className={({ isActive }) => cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors", isActive ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}>
               <Settings className="w-5 h-5 text-slate-400" />
               Configurações
-            </button>
+            </NavLink>
             <NavLink to="/login" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-700 transition-colors">
               <LogOut className="w-5 h-5 text-slate-400" />
               Sair

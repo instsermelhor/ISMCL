@@ -6,6 +6,10 @@ import { Dashboard } from './pages/Dashboard';
 import { Patients } from './pages/Patients';
 import { PatientRecord } from './pages/PatientRecord';
 import { Telehealth } from './pages/Telehealth';
+import { Settings } from './pages/Settings';
+import { Calendar } from './pages/Calendar';
+import { Messages } from './pages/Messages';
+import { Records } from './pages/Records';
 
 export default function App() {
   return (
@@ -18,6 +22,10 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="patients" element={<Patients />} />
           <Route path="patients/:id" element={<PatientRecord />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="records" element={<Records />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
         
         <Route path="/telehealth/:id" element={<Telehealth />} />
