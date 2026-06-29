@@ -1,5 +1,17 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+// ============================================================
+// AuthContext — Camada de Compatibilidade (bridge para IAMContext)
+// Instituto Ser Melhor — Plataforma Integrada
+// ============================================================
+// Este arquivo mantém retrocompatibilidade com todos os módulos
+// existentes que importam useAuth() e AuthProvider.
+// Internamente, delega toda a lógica ao IAMContext.
+// ============================================================
 
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useIAM } from './IAMContext';
+import type { InstitutionalRole } from '../types/iam';
+
+// Tipo legado mantido para compatibilidade
 export type UserRole = 'admin' | 'ref' | 'volunteer' | null;
 
 export interface AuthUser {
@@ -8,6 +20,9 @@ export interface AuthUser {
   role: UserRole;
   initials: string;
   subtitle: string;
+  // Campos IAM expandidos (opcionais para compatibilidade)
+  iamRoles?: InstitutionalRole[];
+  iamId?: string;
 }
 
 interface AuthContextType {
@@ -20,106 +35,61 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Usuários de teste pré-configurados
-const MOCK_USERS: Record<string, { password: string; role: UserRole; name: string; subtitle: string }> = {
-  'ism@ism.org': {
-    password: 'teste',
-    role: 'admin',
-    name: 'Administrador Geral',
-    subtitle: 'Administrador do Sistema',
-  },
-  'voluntario@institutosermelhor.org': {
-    password: 'senha123',
-    role: 'ref',
-    name: 'Dra. Roberta Santos',
-    subtitle: 'Psicóloga Voluntária',
-  },
-};
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
+// Mapeia papéis IAM para papel legado
+function mapIAMRoleToLegacy(iamRoles: InstitutionalRole[]): UserRole {
+  if (iamRoles.includes('super_admin')) return 'admin';
+  if (iamRoles.includes('auditor')) return 'admin';
+  if (iamRoles.includes('director') || iamRoles.includes('president') || iamRoles.includes('manager') || iamRoles.includes('coordinator')) return 'admin';
+  if (iamRoles.includes('professional') || iamRoles.includes('volunteer_professional')) return 'ref';
+  return 'volunteer';
 }
 
-function loadUserFromStorage(): AuthUser | null {
-  try {
-    const email = localStorage.getItem('user_email');
-    const name = localStorage.getItem('user_name');
-    const role = localStorage.getItem('user_role') as UserRole;
-    const subtitle = localStorage.getItem('user_subtitle');
-
-    if (email && name && role) {
-      return {
-        email,
-        name,
-        role,
-        initials: getInitials(name),
-        subtitle: subtitle || '',
-      };
-    }
-  } catch {
-    // ignora erros de localStorage
-  }
-  return null;
+function getRoleSubtitle(iamRoles: InstitutionalRole[]): string {
+  const labels: Record<InstitutionalRole, string> = {
+    beneficiary: 'Portal do Beneficiário',
+    legal_guardian: 'Área da Família',
+    professional: 'Workspace Clínico',
+    volunteer_professional: 'Profissional Voluntário',
+    admin_volunteer: 'Voluntário Administrativo',
+    admin_collaborator: 'ERP Social',
+    coordinator: 'Coordenação',
+    manager: 'Gestão',
+    director: 'Diretoria',
+    president: 'Presidência',
+    super_admin: 'Super Administrador',
+    auditor: 'Auditoria',
+  };
+  const primary = iamRoles[0];
+  return primary ? labels[primary] : 'Acesso Geral';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(loadUserFromStorage);
+  const iam = useIAM();
 
-  const isAuthenticated = !!user;
+  // Constrói o AuthUser legado a partir do IAMUser
+  const user: AuthUser | null = iam.currentUser
+    ? {
+        email: iam.currentUser.email,
+        name: iam.currentUser.name,
+        role: mapIAMRoleToLegacy(iam.currentUser.roles),
+        initials: iam.currentUser.initials,
+        subtitle: getRoleSubtitle(iam.currentUser.roles),
+        iamRoles: iam.currentUser.roles,
+        iamId: iam.currentUser.id,
+      }
+    : null;
+
+  const isAuthenticated = iam.isAuthenticated;
   const isAdmin = user?.role === 'admin';
 
+  // Wrapper do login para interface legada (retorna boolean)
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simula chamada assíncrona (delay de 800ms para UX)
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const lowerEmail = email.toLowerCase().trim();
-    const found = MOCK_USERS[lowerEmail];
-
-    if (found && found.password === password) {
-      const authUser: AuthUser = {
-        email: lowerEmail,
-        name: found.name,
-        role: found.role,
-        initials: getInitials(found.name),
-        subtitle: found.subtitle,
-      };
-      // Persiste na localStorage
-      localStorage.setItem('user_email', authUser.email);
-      localStorage.setItem('user_name', authUser.name);
-      localStorage.setItem('user_role', authUser.role ?? '');
-      localStorage.setItem('user_subtitle', authUser.subtitle);
-      setUser(authUser);
-      return true;
-    }
-
-    // Fallback: qualquer outro email/senha loga como voluntário genérico
-    const fallbackUser: AuthUser = {
-      email: lowerEmail || 'visitante@institutosermelhor.org',
-      name: 'Usuário Visitante',
-      role: 'volunteer',
-      initials: 'UV',
-      subtitle: 'Acesso Visitante',
-    };
-    localStorage.setItem('user_email', fallbackUser.email);
-    localStorage.setItem('user_name', fallbackUser.name);
-    localStorage.setItem('user_role', fallbackUser.role ?? '');
-    localStorage.setItem('user_subtitle', fallbackUser.subtitle);
-    setUser(fallbackUser);
-    return true;
+    const result = await iam.login(email, password);
+    // Se precisar de MFA, a tela de login IAM gerencia isso
+    return result.success;
   };
 
-  const logout = () => {
-    localStorage.removeItem('user_email');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_subtitle');
-    setUser(null);
-  };
+  const logout = () => iam.logout();
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, login, logout }}>

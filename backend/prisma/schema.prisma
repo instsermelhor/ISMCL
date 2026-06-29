@@ -29,6 +29,7 @@ model Beneficiary {
   documents           ClinicalDocument[]
   attachments         ClinicalAttachment[]
   scales              ClinicalScale[]
+  protectedProfile    ProtectedProfile?
 
   createdAt           DateTime @default(now())
 }
@@ -58,7 +59,7 @@ model Professional {
   councilStatus       String?
   
   // Relacionamentos
-  documents           ProfessionalDocument[]
+  professionalDocuments ProfessionalDocument[]
   availabilities      Availability[]
   
   projects            ProfessionalProject[]
@@ -70,7 +71,7 @@ model Professional {
   evolutions          ClinicalEvolution[]
   erratas             EvolutionErrata[]
   diagnoses           Diagnosis[]
-  documents           ClinicalDocument[]
+  clinicalDocuments   ClinicalDocument[]
   attachments         ClinicalAttachment[]
   documentAccessLogs  DocumentAccessLog[]
   attachmentAccessLogs AttachmentAccessLog[]
@@ -85,6 +86,10 @@ model Professional {
   picVersions         PicVersion[]
   meetingsAttended    CaseMeetingParticipant[]
   referralsCreated    Referral[]
+  requestsCreated     AccessRequest[]        @relation("RequesterProf")
+  requestsAuthorized  AccessRequest[]        @relation("AuthorizerProf")
+  accessSessions      AccessSession[]
+  alertsResolved      BehaviorAlert[]        @relation("AlertResolver")
   
   createdAt           DateTime @default(now())
 }
@@ -120,6 +125,9 @@ model Project {
   cases               Case[]
   triageQueue         TriageQueue[]
   appointments        Appointment[]
+  
+  // Módulo 08: Gestão Financeira
+  transactions        Transaction[]
 }
 
 // Relacionamento N:N - Quais voluntários atuam em quais projetos
@@ -560,7 +568,281 @@ model CaseAlert {
   
   createdAt           DateTime             @default(now())
   resolvedAt          DateTime?
-
+  
   case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+// ─── MÓDULO 08 — GESTÃO FINANCEIRA E CAPTAÇÃO DE RECURSOS ───
+
+model CostCenter {
+  id            String         @id @default(uuid())
+  name          String
+  code          String         @unique
+  type          String         // PROJECT, PROGRAM, DEPARTMENT, CAMPAIGN, CONVENIO, UNIT
+  status        String         @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  transactions  TransactionCostCenter[]
+}
+
+model FinancialCategory {
+  id            String         @id @default(uuid())
+  name          String
+  type          String         // INCOME, EXPENSE, INVESTMENT
+  parentId      String?
+  parent        FinancialCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories FinancialCategory[] @relation("CategoryHierarchy")
+  
+  transactions  Transaction[]
+}
+
+model Transaction {
+  id            String         @id @default(uuid())
+  type          String         // INCOME, EXPENSE, INVESTMENT
+  title         String
+  description   String?
+  amount        Float
+  status        String         @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  dueDate       DateTime
+  paymentDate   DateTime?
+  
+  categoryId    String
+  category      FinancialCategory @relation(fields: [categoryId], references: [id])
+  
+  projectId     String?
+  project       Project?       @relation(fields: [projectId], references: [id])
+  
+  donorId       String?
+  donor         Donor?         @relation(fields: [donorId], references: [id])
+  
+  campaignId    String?
+  campaign      Campaign?      @relation(fields: [campaignId], references: [id])
+  
+  agreementId   String?
+  agreement     Agreement?     @relation(fields: [agreementId], references: [id])
+  
+  createdById   String
+  updatedById   String?
+  
+  documentUrl   String?
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  costCenters   TransactionCostCenter[]
+  reconciliations FinancialReconciliation[]
+}
+
+model TransactionCostCenter {
+  transactionId String
+  costCenterId  String
+  percentage    Float          @default(100.0)
+  
+  transaction   Transaction    @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  costCenter    CostCenter     @relation(fields: [costCenterId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, costCenterId])
+}
+
+model Donor {
+  id            String         @id @default(uuid())
+  name          String
+  document      String?        @unique
+  email         String
+  phone         String?
+  type          String         @default("INDIVIDUAL") // INDIVIDUAL, CORPORATE
+  status        String         @default("ACTIVE") // ACTIVE, INACTIVE
+  isRecurring   Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  
+  transactions  Transaction[]
+}
+
+model Campaign {
+  id            String         @id @default(uuid())
+  name          String
+  description   String?
+  targetAmount  Float
+  raisedAmount  Float          @default(0.0)
+  startDate     DateTime
+  endDate       DateTime
+  status        String         @default("PLANNING") // PLANNING, ACTIVE, SUSPENDED, COMPLETED
+  createdAt     DateTime       @default(now())
+  
+  transactions  Transaction[]
+}
+
+model Agreement {
+  id            String         @id @default(uuid())
+  name          String
+  code          String         @unique
+  grantor       String
+  approvedAmount Float
+  startDate     DateTime
+  endDate       DateTime
+  status        String         @default("ACTIVE") // ACTIVE, COMPLETED, AUDITING, SUSPENDED
+  createdAt     DateTime       @default(now())
+  
+  transactions  Transaction[]
+  obligations   AgreementObligation[]
+}
+
+model AgreementObligation {
+  id            String         @id @default(uuid())
+  agreementId   String
+  title         String
+  dueDate       DateTime
+  status        String         @default("PENDING") // PENDING, SUBMITTED, APPROVED, OVERDUE
+  description   String?
+  
+  agreement     Agreement      @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+}
+
+model FinancialReconciliation {
+  id            String         @id @default(uuid())
+  transactionId String
+  bankStatementId String
+  reconciledAt  DateTime       @default(now())
+  reconciledById String
+  notes         String?
+  
+  transaction   Transaction    @relation(fields: [transactionId], references: [id])
+}
+
+// =========================================================================
+// MÓDULO COMPLEMENTAR DE SEGURANÇA INSTITUCIONAL (MCSI)
+// =========================================================================
+
+model ProtectedProfile {
+  id                 String               @id @default(uuid())
+  beneficiaryId      String               @unique
+  internalCode       String               @unique // ISM-0000000000
+  sensitivityLevel   Int                  @default(0) // 0 to 4
+  specialCategory    String?              // POLICIA_MILITAR, MAGISTRADO, TESTEMUNHA_PROTEGIDA, etc.
+  riskScore          Float                @default(0.0)
+  riskHeuristics     Json?                // Metadados que justificam o score de risco
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  beneficiary        Beneficiary          @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  secureVault        SecureVault?
+  guardians          ChildGuardian[]
+  protectiveMeasures ProtectedMeasure[]
+  accessRequests     AccessRequest[]
+  accessSessions     AccessSession[]
+}
+
+model SecureVault {
+  id                      String           @id @default(uuid())
+  protectedProfileId      String           @unique
+  
+  // Dados Criptografados (Armazenados como strings em base64/hex criptografadas)
+  encryptedCpf            String?
+  encryptedAddress        String?          // JSON estruturado de endereço criptografado
+  encryptedPhone          String?
+  encryptedFamilyDetails  String?          // JSON familiar criptografado
+  encryptedWorkplace      String?
+  encryptedAlternateAddrs String?          // Endereços alternativos criptografados
+  encryptedCourtDocs      String?          // Documentação judicial sensível criptografada
+  
+  // Metadados de Criptografia
+  ivMap                   Json             // Mapeamento de Vetores de Inicialização (IV) para cada campo
+  keyId                   String           // Identificador da versão da chave KMS utilizada
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  profile                 ProtectedProfile @relation(fields: [protectedProfileId], references: [id], onDelete: Cascade)
+}
+
+model ChildGuardian {
+  id                 String               @id @default(uuid())
+  protectedProfileId String
+  fullName           String
+  relationshipType   String               // PAI, MAE, TUTOR, ACOLHEDOR, ABRIGO, CONSELHO_TUTELAR, OUTRO
+  custodyType        String               // COMPARTILHADA, UNILATERAL, NENHUMA
+  phone              String?
+  isAuthorized       Boolean              @default(false) // Autorizado a retirar/acompanhar o menor
+  isProhibited       Boolean              @default(false) // Expressamente proibido por ordem judicial
+  courtOrderDetails  String?              // Detalhes da ordem de restrição (se houver)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  profile            ProtectedProfile     @relation(fields: [protectedProfileId], references: [id], onDelete: Cascade)
+}
+
+model ProtectedMeasure {
+  id                 String               @id @default(uuid())
+  protectedProfileId String
+  processNumber      String
+  measureType        String               // LEI_MARIA_DA_PENHA, DISTANCIAMENTO_MINIMO, etc.
+  issuingAuthority   String               // Vara Judicial / Tribunal
+  startDate          DateTime
+  expirationDate     DateTime?
+  restrictionsText   String               // Descrição textual das proibições impostas
+  involvedPersons    Json                 // Lista de pessoas agressoras e suas descrições
+  documentUrl        String?              // Link seguro no S3 criptografado para o PDF da medida
+  status             String               @default("ACTIVE") // ACTIVE, EXPIRED, SUSPENDED
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  profile            ProtectedProfile     @relation(fields: [protectedProfileId], references: [id], onDelete: Cascade)
+}
+
+model AccessRequest {
+  id                 String               @id @default(uuid())
+  protectedProfileId String
+  requesterId        String
+  justification      String
+  purpose            String
+  durationMinutes    Int
+  processNumber      String?
+  status             String               @default("PENDING") // PENDING, APPROVED, DENIED, EXPIRED
+  authorizedById     String?
+  createdAt          DateTime             @default(now())
+  expiresAt          DateTime?
+
+  profile            ProtectedProfile     @relation(fields: [protectedProfileId], references: [id], onDelete: Cascade)
+  requester          Professional         @relation("RequesterProf", fields: [requesterId], references: [id])
+  authorizedBy       Professional?        @relation("AuthorizerProf", fields: [authorizedById], references: [id])
+}
+
+model AccessSession {
+  id                 String               @id @default(uuid())
+  protectedProfileId String
+  professionalId     String
+  accessRequestId    String?
+  ipAddress          String
+  userAgent          String
+  startTime          DateTime             @default(now())
+  endTime            DateTime?
+  durationSeconds    Int?
+  actionsPerformed   Json                 // Lista estruturada de ações tomadas durante o acesso
+
+  profile            ProtectedProfile     @relation(fields: [protectedProfileId], references: [id], onDelete: Cascade)
+  professional       Professional         @relation(fields: [professionalId], references: [id])
+}
+
+model AuditLogSignature {
+  id                 String               @id @default(uuid())
+  logId              String               @unique // ID do log na tabela SecurityAuditLog ou Elasticsearch
+  logHash            String               // Hash SHA-256 do conteúdo do log
+  previousLogHash    String               // Hash SHA-256 do log anterior (Encadeamento de Ledger)
+  signature          String               // Assinatura digital assimétrica usando chave privada do servidor
+  createdAt          DateTime             @default(now())
+}
+
+model BehaviorAlert {
+  id                 String               @id @default(uuid())
+  userId             String
+  alertType          String               // MASS_QUERIES, UNUSUAL_EXPORT, OUT_OF_HOURS, CONCURRENT_SESSIONS, EXCESSIVE_DOWNLOAD
+  description        String
+  severity           String               @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  status             String               @default("NEW") // NEW, INVESTIGATING, RESOLVED, FALSE_POSITIVE
+  detectedAt         DateTime             @default(now())
+  resolvedAt         DateTime?
+  resolvedById       String?
+  
+  resolvedBy         Professional?        @relation("AlertResolver", fields: [resolvedById], references: [id])
 }
 

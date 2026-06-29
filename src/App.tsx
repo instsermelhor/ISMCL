@@ -1,7 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Login } from './pages/Login';
+
+// Auth
+import { IAMLogin } from './pages/IAMLogin';
+
+// Layout
 import { AppLayout } from './components/layout/AppLayout';
+
+// Proteção de rotas
+import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
+
+// Módulos principais
 import { Dashboard } from './pages/Dashboard';
 import { Patients } from './pages/Patients';
 import { PatientRecord } from './pages/PatientRecord';
@@ -14,24 +23,29 @@ import { Calendar } from './pages/Calendar';
 import { Messages } from './pages/Messages';
 import { Records } from './pages/Records';
 import { Financial } from './pages/Financial';
-import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
 import { CGI } from './pages/CGI';
+import { MCSI } from './pages/MCSI';
+import { BeneficiaryPortal } from './pages/BeneficiaryPortal';
+import { ProfessionalPortal } from './pages/ProfessionalPortal';
+
+// IAM
+import { IAMCenter } from './pages/IAMCenter';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota pública: redireciona para /dashboard se já logado */}
+        {/* Rota pública: redireciona se já autenticado */}
         <Route
           path="/login"
           element={
             <PublicRoute>
-              <Login />
+              <IAMLogin />
             </PublicRoute>
           }
         />
 
-        {/* Rotas protegidas: exigem autenticação */}
+        {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
@@ -47,11 +61,28 @@ export default function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="financial" element={<Financial />} />
             <Route path="cgi" element={<CGI />} />
+            <Route path="seguranca" element={<MCSI />} />
+            <Route path="portal-beneficiario" element={<BeneficiaryPortal />} />
+            <Route path="portal-profissional" element={<ProfessionalPortal />} />
+
+            {/* IAM — Central de Identidade */}
+            <Route path="iam" element={<IAMCenter />} />
+
+            {/* Alias semânticos de redirecionamento por perfil */}
+            <Route path="area-familia" element={<BeneficiaryPortal />} />
+            <Route path="erp-social" element={<Dashboard />} />
+            <Route path="portal-voluntario" element={<Dashboard />} />
+            <Route path="dashboard-gerencial" element={<Dashboard />} />
+            <Route path="dashboard-executivo" element={<Dashboard />} />
+            <Route path="central-admin" element={<IAMCenter />} />
+            <Route path="painel-auditoria" element={<IAMCenter />} />
           </Route>
+
+          {/* Rota de teleconsulta (tela cheia, fora do AppLayout) */}
           <Route path="/telehealth/:id" element={<Telehealth />} />
         </Route>
 
-        {/* Fallback: redireciona qualquer rota desconhecida para /login */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
