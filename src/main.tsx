@@ -7,6 +7,7 @@ import { SecurityProvider } from './contexts/SecurityContext.tsx';
 import { BPMSProvider } from './contexts/BPMSContext.tsx';
 import { AdaptiveRegistrationProvider } from './contexts/AdaptiveRegistrationContext.tsx';
 import { SATAIProvider } from './contexts/SATAIContext.tsx';
+import { PiaraveProvider } from './contexts/PiaraveContext.tsx';
 import './index.css';
 
 // Hierarquia de providers:
@@ -26,7 +27,9 @@ createRoot(document.getElementById('root')!).render(
           <BPMSProvider>
             <AdaptiveRegistrationProvider>
               <SATAIProvider>
-                <App />
+                <PiaraveProvider>
+                  <App />
+                </PiaraveProvider>
               </SATAIProvider>
             </AdaptiveRegistrationProvider>
           </BPMSProvider>

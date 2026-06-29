@@ -42,6 +42,11 @@ import AdaptiveRegistrationAdmin from './pages/AdaptiveRegistrationAdmin';
 import SataiWizard from './pages/SataiWizard';
 import SataiAdmin from './pages/SataiAdmin';
 
+// PIARAVE — Programa de Acolhimento Violência Relacional
+import PiaraveAcolhimento from './pages/PiaraveAcolhimento';
+import PiaraveBiblioteca from './pages/PiaraveBiblioteca';
+import PiaraveAdmin from './pages/PiaraveAdmin';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -61,6 +66,10 @@ export default function App() {
 
         {/* Rota pública: Triagem/Acolhimento Inteligente (SATAI) */}
         <Route path="/acolhimento" element={<SataiWizard />} />
+
+        {/* Rota pública: PIARAVE Acolhimento e Biblioteca */}
+        <Route path="/piarave/acolhimento" element={<PiaraveAcolhimento />} />
+        <Route path="/piarave/biblioteca" element={<PiaraveBiblioteca />} />
 
         {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>
@@ -93,6 +102,9 @@ export default function App() {
 
             {/* SATAI — Central de Triagem e Acolhimento */}
             <Route path="satai" element={<SataiAdmin />} />
+
+            {/* PIARAVE — Painel Administrativo de Casos */}
+            <Route path="piarave" element={<PiaraveAdmin />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />
