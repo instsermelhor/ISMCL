@@ -47,6 +47,7 @@ const adminNavigation = [
   { name: 'IAM — Identidades', href: '/iam', icon: Shield },
   { name: 'BPM — Processos', href: '/processos', icon: GitBranch },
   { name: 'ARE — Cadastro', href: '/cadastro-adaptativo', icon: Activity },
+  { name: 'SATAI — Triagem', href: '/satai', icon: Heart },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {

@@ -575,9 +575,7 @@ const AdaptiveRegistrationInner: React.FC = () => {
 };
 
 const AdaptiveRegistration: React.FC = () => (
-  <AdaptiveRegistrationProvider>
-    <AdaptiveRegistrationInner />
-  </AdaptiveRegistrationProvider>
+  <AdaptiveRegistrationInner />
 );
 
 export default AdaptiveRegistration;

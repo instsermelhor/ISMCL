@@ -38,6 +38,10 @@ import { BPMSCenter } from './pages/BPMSCenter';
 import AdaptiveRegistration from './pages/AdaptiveRegistration';
 import AdaptiveRegistrationAdmin from './pages/AdaptiveRegistrationAdmin';
 
+// SATAI — Sistema Inteligente de Acolhimento e Triagem
+import SataiWizard from './pages/SataiWizard';
+import SataiAdmin from './pages/SataiAdmin';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -54,6 +58,9 @@ export default function App() {
 
         {/* Rota pública: Cadastro Inteligente Adaptativo */}
         <Route path="/registro" element={<AdaptiveRegistration />} />
+
+        {/* Rota pública: Triagem/Acolhimento Inteligente (SATAI) */}
+        <Route path="/acolhimento" element={<SataiWizard />} />
 
         {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>
@@ -83,6 +90,9 @@ export default function App() {
 
             {/* ARE — Central do Cadastro Inteligente Adaptativo */}
             <Route path="cadastro-adaptativo" element={<AdaptiveRegistrationAdmin />} />
+
+            {/* SATAI — Central de Triagem e Acolhimento */}
+            <Route path="satai" element={<SataiAdmin />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />

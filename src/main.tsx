@@ -5,6 +5,8 @@ import { IAMProvider } from './contexts/IAMContext.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import { SecurityProvider } from './contexts/SecurityContext.tsx';
 import { BPMSProvider } from './contexts/BPMSContext.tsx';
+import { AdaptiveRegistrationProvider } from './contexts/AdaptiveRegistrationContext.tsx';
+import { SATAIProvider } from './contexts/SATAIContext.tsx';
 import './index.css';
 
 // Hierarquia de providers:
@@ -12,7 +14,9 @@ import './index.css';
 //   AuthProvider (ponte de compatibilidade retroativa) →
 //     SecurityProvider (MCSI) →
 //       BPMSProvider (workflows e automação) →
-//         App
+//         AdaptiveRegistrationProvider (ARE) →
+//           SATAIProvider (acolhimento/triagem) →
+//             App
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,7 +24,11 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <SecurityProvider>
           <BPMSProvider>
-            <App />
+            <AdaptiveRegistrationProvider>
+              <SATAIProvider>
+                <App />
+              </SATAIProvider>
+            </AdaptiveRegistrationProvider>
           </BPMSProvider>
         </SecurityProvider>
       </AuthProvider>
