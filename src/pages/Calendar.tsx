@@ -240,6 +240,64 @@ export function Calendar() {
         </AnimatePresence>
 
       </div>
+
+      {/* AI Match Modal */}
+      {isAiModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-slate-100 shadow-2xl space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-teal-600 animate-pulse" /> AI Scheduler Matches
+              </h3>
+              <p className="text-sm text-slate-500 mt-2">
+                Otimização da fila de espera baseada em IA para preencher horários livres de cancelamentos.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3 bg-teal-50/50 border border-teal-100/50 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">Beatriz Almeida</div>
+                  <div className="text-xs text-teal-700">Psicologia • Sugerido: Hoje, 11:00 (Vago)</div>
+                </div>
+                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-md">Score 98</span>
+              </div>
+              <div className="p-3 bg-teal-50/50 border border-teal-100/50 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">João Ferreira</div>
+                  <div className="text-xs text-teal-700">Serviço Social • Sugerido: Hoje, 13:00 (Vago)</div>
+                </div>
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-md">Score 85</span>
+              </div>
+              <div className="p-3 bg-teal-50/50 border border-teal-100/50 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">Lúcia Mendes</div>
+                  <div className="text-xs text-teal-700">Psiquiatria • Sugerido: Hoje, 16:30 (Vago)</div>
+                </div>
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-md">Score 70</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => setAiModalOpen(false)}
+                className="flex-1 py-3 border border-slate-200 text-slate-700 font-medium text-sm rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Voltar
+              </button>
+              <button 
+                onClick={() => {
+                  alert('Agendamentos automatizados realizados! Notificações enviadas via WhatsApp para confirmação.');
+                  setAiModalOpen(false);
+                }}
+                className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 text-white font-medium text-sm rounded-xl transition-colors shadow-sm"
+              >
+                Confirmar Match
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

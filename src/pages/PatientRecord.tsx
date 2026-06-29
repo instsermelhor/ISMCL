@@ -251,50 +251,83 @@ export function PatientRecord() {
               </motion.div>
             )}
 
-            {/* Timeline */}
-            <div className="space-y-6">
-              {evolutions.map((evo) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  key={evo.id} 
-                  className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 relative"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-slate-400" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900">{evo.professional}</div>
-                        <div className="text-sm text-slate-500 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
-                          {format(evo.date, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+            {activeTab === 'evolutions' ? (
+              /* Timeline */
+              <div className="space-y-6">
+                {evolutions.map((evo) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key={evo.id} 
+                    className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 relative"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-900">{evo.professional}</div>
+                          <div className="text-sm text-slate-500 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            {format(evo.date, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                          </div>
                         </div>
                       </div>
+                      {evo.signed && (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100/50">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Assinado digitalmente
+                        </div>
+                      )}
                     </div>
-                    {evo.signed && (
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100/50">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Assinado digitalmente
+                    
+                    <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap pl-12">
+                      {evo.content}
+                    </div>
+                    
+                    {evo.cid && (
+                      <div className="mt-4 pl-12 flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                          CID-10: {evo.cid}
+                        </span>
                       </div>
                     )}
-                  </div>
-                  
-                  <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap pl-12">
-                    {evo.content}
-                  </div>
-                  
-                  {evo.cid && (
-                    <div className="mt-4 pl-12 flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                        CID-10: {evo.cid}
-                      </span>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              /* Documents List */
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
+                {[
+                  { name: 'Laudo Psicológico - Encaminhamento CREAS.pdf', date: '10/05/2023', size: '1.2 MB' },
+                  { name: 'Comprovante de Residência.jpg', date: '12/05/2023', size: '840 KB' },
+                  { name: 'Termo de Consentimento Livre e Esclarecido.pdf', date: '14/05/2023', size: '450 KB' }
+                ].map((doc, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-slate-300 transition-all shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm">{doc.name}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{doc.date} • {doc.size}</div>
+                      </div>
                     </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
+                    <button 
+                      onClick={() => alert(`Baixando o arquivo ${doc.name}...`)}
+                      className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-xl transition-colors"
+                    >
+                      Download
+                    </button>
+                  </div>
+                ))}
+              </motion.div>
+            )}
             
             <div className="mt-8 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
               <Lock className="w-4 h-4" />

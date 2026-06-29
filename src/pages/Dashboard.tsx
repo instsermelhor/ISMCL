@@ -75,7 +75,12 @@ export function Dashboard() {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium text-slate-900">Próximos Atendimentos</h2>
-              <button className="text-sm font-medium text-teal-600 hover:text-teal-700">Ver agenda completa</button>
+              <button 
+                onClick={() => navigate('/calendar')}
+                className="text-sm font-medium text-teal-600 hover:text-teal-700"
+              >
+                Ver agenda completa
+              </button>
             </div>
             
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">

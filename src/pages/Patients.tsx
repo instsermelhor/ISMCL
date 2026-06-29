@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, UserPlus, AlertTriangle } from 'lucide-react';
 
@@ -10,6 +10,12 @@ const patients = [
 
 export function Patients() {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredPatients = patients.filter(patient => 
+    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.professional.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
@@ -37,6 +43,8 @@ export function Patients() {
             <input 
               type="text" 
               placeholder="Buscar por nome, CPF ou ID do caso..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-600 focus:border-teal-600 shadow-sm"
             />
           </div>
@@ -60,7 +68,7 @@ export function Patients() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {patients.map((patient) => (
+                {filteredPatients.map((patient) => (
                   <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-900">{patient.name}</div>
