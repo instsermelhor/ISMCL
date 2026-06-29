@@ -1,0 +1,6 @@
+{
+  "name": "Projeto Aura - Instituto Ser Melhor",
+  "description": "Plataforma integrada de acolhimento, saúde mental e gestão do cuidado social.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
