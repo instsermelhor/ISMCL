@@ -10,6 +10,7 @@ import { SATAIProvider } from './contexts/SATAIContext.tsx';
 import { PiaraveProvider } from './contexts/PiaraveContext.tsx';
 import { PlatformHealthProvider } from './contexts/PlatformHealthContext.tsx';
 import { SodoProvider } from './contexts/SodoContext.tsx';
+import { AuraContentProvider } from './contexts/AuraContentContext.tsx';
 import './index.css';
 
 // Hierarquia de providers:
@@ -22,7 +23,8 @@ import './index.css';
 //             PiaraveProvider (programa PIARAVE) →
 //               PlatformHealthProvider (observabilidade e auditoria) →
 //                 SodoProvider (documentação e academia) →
-//                   App
+//                   AuraContentProvider (conteúdo editável da tela inicial) →
+//                     App
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -35,7 +37,9 @@ createRoot(document.getElementById('root')!).render(
                 <PiaraveProvider>
                   <PlatformHealthProvider>
                     <SodoProvider>
-                      <App />
+                      <AuraContentProvider>
+                        <App />
+                      </AuraContentProvider>
                     </SodoProvider>
                   </PlatformHealthProvider>
                 </PiaraveProvider>

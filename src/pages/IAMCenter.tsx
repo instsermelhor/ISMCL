@@ -33,10 +33,20 @@ import {
   Trash2,
   UserPlus,
   Award,
+  FileText,
+  PenLine,
+  Save,
+  RotateCcw,
+  GripVertical,
+  Trash2 as TrashIcon,
 } from 'lucide-react';
 import { useIAM } from '../contexts/IAMContext';
 import type { IAMUser, InstitutionalRole, AuditEventType } from '../types/iam';
 import { ROLE_LABELS, ROLE_COLORS } from '../types/iam';
+import {
+  useAuraContent,
+} from '../contexts/AuraContentContext';
+import type { AuraContentSection } from '../contexts/AuraContentContext';
 
 // ----------------------------------------------------------------
 // Helpers
@@ -387,15 +397,16 @@ function UserDetailModal({
 // Tabs
 // ----------------------------------------------------------------
 
-type Tab = 'users' | 'audit' | 'ai' | 'sessions' | 'devices' | 'permissions';
+type Tab = 'users' | 'audit' | 'ai' | 'sessions' | 'devices' | 'permissions' | 'landing';
 
-const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [
-  { id: 'users',       label: 'Usuários',        icon: Users },
-  { id: 'audit',       label: 'Auditoria',        icon: Activity },
-  { id: 'ai',          label: 'Inteligência IA',  icon: Bot },
-  { id: 'sessions',    label: 'Sessões Ativas',   icon: LogOut },
-  { id: 'devices',     label: 'Dispositivos',     icon: Smartphone },
+const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number; superAdminOnly?: boolean }[] = [
+  { id: 'users',       label: 'Usuários',            icon: Users },
+  { id: 'audit',       label: 'Auditoria',            icon: Activity },
+  { id: 'ai',          label: 'Inteligência IA',      icon: Bot },
+  { id: 'sessions',    label: 'Sessões Ativas',       icon: LogOut },
+  { id: 'devices',     label: 'Dispositivos',         icon: Smartphone },
   { id: 'permissions', label: 'Matriz de Permissões', icon: Layers },
+  { id: 'landing',     label: 'Tela Inicial Aura',    icon: FileText, superAdminOnly: true },
 ];
 
 // ----------------------------------------------------------------
@@ -422,6 +433,8 @@ export function IAMCenter() {
     rejectAISuggestion,
   } = useIAM();
 
+  const auraContent = useAuraContent();
+
   const [activeTab, setActiveTab] = useState<Tab>('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<IAMUser | null>(null);
@@ -433,6 +446,9 @@ export function IAMCenter() {
   const isSuperAdmin = currentUser?.roles.includes('super_admin');
   const isAuditor = currentUser?.roles.includes('auditor');
   const canManage = isSuperAdmin;
+
+  // Filtrar tabs por permissão
+  const visibleTabs = TABS.filter(t => !t.superAdminOnly || isSuperAdmin);
 
   // Métricas
   const metrics = useMemo(() => ({
@@ -523,7 +539,7 @@ export function IAMCenter() {
       {/* Tabs */}
       <div className="bg-white border-b border-slate-200 px-8 shrink-0">
         <nav className="flex gap-1 overflow-x-auto">
-          {TABS.map(tab => (
+          {visibleTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -1094,6 +1110,358 @@ export function IAMCenter() {
                     Atributos ABAC (horário, IP, escopo de dados) são configurados individualmente.
                     Apenas o Super Administrador pode modificar esta matriz.
                   </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== TAB TELA INICIAL AURA ===== */}
+          {activeTab === 'landing' && isSuperAdmin && (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              {/* Cabeçalho da aba */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Gestão da Tela Inicial — Projeto Aura
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    Edite o conteúdo institucional exibido antes da autenticação. As alterações são salvas e refletidas imediatamente.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {auraContent.content.lastEditedAt && (
+                    <span className="text-xs text-slate-400">
+                      v{auraContent.content.version} · editado por {auraContent.content.lastEditedBy ?? '—'} em{' '}
+                      {new Date(auraContent.content.lastEditedAt).toLocaleString('pt-BR')}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => auraContent.resetToDefault()}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-colors"
+                    title="Restaurar conteúdo padrão"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Restaurar padrão
+                  </button>
+                  {auraContent.isDirty && (
+                    <button
+                      onClick={() => auraContent.discardChanges()}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-semibold transition-colors"
+                    >
+                      Descartar
+                    </button>
+                  )}
+                  <button
+                    onClick={() => auraContent.saveContent(currentUser?.name ?? 'Super Admin')}
+                    disabled={auraContent.isSaving || !auraContent.isDirty}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {auraContent.isSaving ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    {auraContent.isSaving ? 'Salvando...' : 'Salvar alterações'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Badge de alterações não salvas */}
+              {auraContent.isDirty && (
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                  <PenLine className="w-4 h-4 text-amber-600 shrink-0" />
+                  <p className="text-xs text-amber-700 font-medium">
+                    Você tem alterações não salvas. Clique em "Salvar alterações" para publicar o conteúdo na tela inicial.
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {/* Coluna esquerda: editor de campos */}
+                <div className="space-y-5">
+
+                  {/* Badge / Destaque */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-teal-100 flex items-center justify-center">
+                        <PenLine className="w-3.5 h-3.5 text-teal-600" />
+                      </span>
+                      Identificação e Títulos
+                    </h3>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                        Badge de Destaque (topo)
+                      </label>
+                      <input
+                        type="text"
+                        value={auraContent.content.badgeText}
+                        onChange={e => auraContent.updateContent({ badgeText: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                        placeholder="Ex: ✨ Ecossistema de Cuidado"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                        Título Principal (H2)
+                      </label>
+                      <textarea
+                        value={auraContent.content.headline}
+                        onChange={e => auraContent.updateContent({ headline: e.target.value })}
+                        rows={2}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none"
+                        placeholder="Título principal do Projeto Aura"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                        Subtítulo
+                      </label>
+                      <input
+                        type="text"
+                        value={auraContent.content.subheadline}
+                        onChange={e => auraContent.updateContent({ subheadline: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                        placeholder="Subtítulo abaixo do título"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Texto de Introdução */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      Texto de Introdução
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Use quebras de linha (\n) para separar parágrafos. O texto após a última linha com "apoia:" será ignorado — use os itens de público abaixo.
+                    </p>
+                    <textarea
+                      value={auraContent.content.introText}
+                      onChange={e => auraContent.updateContent({ introText: e.target.value })}
+                      rows={6}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Público Atendido */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-700">
+                        Público Atendido (lista)
+                      </h3>
+                      <button
+                        onClick={() => auraContent.updateContent({
+                          audienceItems: [...auraContent.content.audienceItems, 'Novo item de público'],
+                        })}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold transition-colors"
+                      >
+                        <Plus className="w-3 h-3" /> Adicionar
+                      </button>
+                    </div>
+                    {auraContent.content.audienceItems.map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <GripVertical className="w-4 h-4 text-slate-300 mt-2.5 shrink-0" />
+                        <input
+                          type="text"
+                          value={item}
+                          onChange={e => {
+                            const updated = [...auraContent.content.audienceItems];
+                            updated[idx] = e.target.value;
+                            auraContent.updateContent({ audienceItems: updated });
+                          }}
+                          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                        />
+                        <button
+                          onClick={() => {
+                            const updated = auraContent.content.audienceItems.filter((_, i) => i !== idx);
+                            auraContent.updateContent({ audienceItems: updated });
+                          }}
+                          className="mt-1.5 p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Seções de Informação */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-700">
+                        Seções de Informação (com borda colorida)
+                      </h3>
+                      <button
+                        onClick={() => auraContent.addSection({
+                          title: 'Nova seção',
+                          body: 'Insira o conteúdo desta seção aqui.',
+                          accentColor: 'teal',
+                        })}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold transition-colors"
+                      >
+                        <Plus className="w-3 h-3" /> Nova seção
+                      </button>
+                    </div>
+
+                    {auraContent.content.sections.map(section => (
+                      <div key={section.id} className="border border-slate-100 rounded-xl p-4 space-y-3 bg-slate-50/50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={section.accentColor}
+                              onChange={e => auraContent.updateSection(section.id, {
+                                accentColor: e.target.value as AuraContentSection['accentColor'],
+                              })}
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-400 transition-all"
+                            >
+                              <option value="teal">🟢 Verde-água</option>
+                              <option value="sky">🔵 Azul</option>
+                              <option value="rose">🔴 Rosa</option>
+                              <option value="amber">🟡 Âmbar</option>
+                            </select>
+                          </div>
+                          <button
+                            onClick={() => auraContent.removeSection(section.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <input
+                          type="text"
+                          value={section.title}
+                          onChange={e => auraContent.updateSection(section.id, { title: e.target.value })}
+                          placeholder="Título da seção"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                        />
+
+                        <textarea
+                          value={section.body}
+                          onChange={e => auraContent.updateSection(section.id, { body: e.target.value })}
+                          rows={4}
+                          placeholder="Conteúdo da seção..."
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none font-mono leading-relaxed"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Nota de Disponibilidade */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      Nota de Disponibilidade (rodapé do bloco)
+                    </h3>
+                    <textarea
+                      value={auraContent.content.availabilityNote}
+                      onChange={e => auraContent.updateContent({ availabilityNote: e.target.value })}
+                      rows={3}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Coluna direita: pré-visualização */}
+                <div className="space-y-5">
+                  <div className="sticky top-0">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-teal-500" />
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Pré-visualização em tempo real
+                      </p>
+                    </div>
+
+                    <div
+                      className="rounded-3xl p-6 space-y-5 overflow-y-auto max-h-[780px] custom-scrollbar"
+                      style={{
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f2027 100%)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    >
+                      {/* Badge */}
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold uppercase tracking-wider">
+                        {auraContent.content.badgeText || '—'}
+                      </div>
+
+                      {/* Headline */}
+                      <h2 className="text-xl font-extrabold text-white leading-tight">
+                        {auraContent.content.headline || '—'}
+                      </h2>
+
+                      {/* Subheadline */}
+                      <p className="text-slate-400 text-sm">
+                        {auraContent.content.subheadline || '—'}
+                      </p>
+
+                      {/* Intro */}
+                      <div className="space-y-2">
+                        {auraContent.content.introText.split('\n').map((para, i) => (
+                          <p key={i} className="text-slate-300 text-xs leading-relaxed">{para}</p>
+                        ))}
+                      </div>
+
+                      {/* Audience */}
+                      {auraContent.content.audienceItems.length > 0 && (
+                        <ul className="list-disc list-inside space-y-1.5 text-slate-400 text-xs pl-1">
+                          {auraContent.content.audienceItems.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {/* Sections */}
+                      {auraContent.content.sections.map(s => {
+                        const borderMap: Record<string, string> = {
+                          teal: 'border-teal-500/40',
+                          sky:  'border-sky-500/40',
+                          rose: 'border-rose-500/40',
+                          amber: 'border-amber-500/40',
+                        };
+                        return (
+                          <div
+                            key={s.id}
+                            className={`border-l-2 ${borderMap[s.accentColor] ?? 'border-slate-500/40'} pl-3 py-1 space-y-1.5`}
+                          >
+                            <p className="text-white text-xs font-semibold uppercase tracking-wide">{s.title}</p>
+                            {s.body.split('\n').map((line, i) => (
+                              <p key={i} className="text-slate-400 text-xs leading-relaxed">{line}</p>
+                            ))}
+                          </div>
+                        );
+                      })}
+
+                      {/* Availability note */}
+                      {auraContent.content.availabilityNote && (
+                        <p className="text-slate-500 text-xs">{auraContent.content.availabilityNote}</p>
+                      )}
+
+                      {/* Quick actions */}
+                      <div className="grid grid-cols-3 gap-2 pt-2">
+                        {auraContent.content.quickActions.map(action => (
+                          <div
+                            key={action.id}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold text-center ${action.colorClass} cursor-default`}
+                          >
+                            {action.emoji} {action.label}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-2 pt-3 border-t border-white/5 text-center">
+                        <p className="text-[10px] text-slate-600">
+                          © 2026 Instituto Ser Melhor — Pré-visualização do painel administrativo
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

@@ -14,6 +14,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useIAM } from '../contexts/IAMContext';
+import { useAuraContent } from '../contexts/AuraContentContext';
 
 // ----------------------------------------------------------------
 // Campo de input reutilizável
@@ -78,6 +79,97 @@ function InputField({
         )}
       </div>
     </div>
+  );
+}
+
+// ----------------------------------------------------------------
+// AuraLandingColumn — coluna esquerda com conteúdo institucional dinâmico
+// ----------------------------------------------------------------
+
+const ACCENT_MAP: Record<string, string> = {
+  teal: 'border-teal-500/40',
+  sky:  'border-sky-500/40',
+  rose: 'border-rose-500/40',
+  amber: 'border-amber-500/40',
+};
+
+function AuraLandingColumn() {
+  const navigate = useNavigate();
+  const { content } = useAuraContent();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className="lg:col-span-7 bg-slate-900/40 border border-white/5 rounded-3xl p-6 lg:p-10 backdrop-blur-md space-y-6 text-left"
+    >
+      {/* Badge */}
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold uppercase tracking-wider">
+        {content.badgeText}
+      </div>
+
+      {/* Título */}
+      <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+        {content.headline}
+      </h2>
+
+      {/* Subtítulo */}
+      <p className="text-slate-400 text-sm font-medium">
+        {content.subheadline}
+      </p>
+
+      {/* Corpo principal */}
+      <div className="space-y-4 text-sm text-slate-300 leading-relaxed max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+        {content.introText.split('\n').map((para, i) => (
+          <p key={i}>{para}</p>
+        ))}
+
+        {/* Público atendido */}
+        {content.audienceItems.length > 0 && (
+          <ul className="list-disc list-inside space-y-2 text-slate-400 text-xs pl-2">
+            {content.audienceItems.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        )}
+
+        {/* Seções com borda colorida */}
+        {content.sections.map(section => (
+          <div
+            key={section.id}
+            className={`border-l-2 ${ACCENT_MAP[section.accentColor] ?? 'border-slate-500/40'} pl-4 py-1 space-y-2`}
+          >
+            <h4 className="text-white font-semibold text-xs uppercase tracking-wide">
+              {section.title}
+            </h4>
+            {section.body.split('\n').map((line, i) => (
+              <p key={i} className="text-xs text-slate-400 leading-relaxed">
+                {line}
+              </p>
+            ))}
+          </div>
+        ))}
+
+        {/* Nota de disponibilidade */}
+        {content.availabilityNote && (
+          <p className="text-xs text-slate-400">{content.availabilityNote}</p>
+        )}
+      </div>
+
+      {/* Ações rápidas */}
+      <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {content.quickActions.map(action => (
+          <button
+            key={action.id}
+            onClick={() => navigate(action.route)}
+            className={`px-4 py-3 rounded-xl font-semibold text-xs transition-all text-center active:scale-[0.98] ${action.colorClass}`}
+          >
+            {action.emoji} {action.label}
+          </button>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 
@@ -156,253 +248,253 @@ export function IAMLogin() {
         </svg>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-8"
-        >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-2xl shadow-teal-500/30 mb-5">
-            <Heart className="w-10 h-10 text-white fill-current" />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Projeto Aura</h1>
-          <p className="text-slate-400 text-sm mt-1 font-medium">Instituto Ser Melhor</p>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <Shield className="w-3.5 h-3.5 text-teal-400" />
-            <span className="text-xs text-teal-400 font-medium tracking-wide uppercase">
-              Acesso Seguro e Centralizado
-            </span>
-          </div>
-        </motion.div>
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10 py-6 px-4">
 
-        {/* Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-3xl overflow-hidden"
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(20px)',
-          }}
-        >
-          <AnimatePresence mode="wait">
+        {/* Left Column: Institutional Presentation — conteúdo dinâmico via AuraContentContext */}
+        <AuraLandingColumn />
 
-            {/* ---- STEP: LOGIN ---- */}
-            {step === 'credentials' && (
-              <motion.div
-                key="credentials"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.25 }}
-                className="p-8"
-              >
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-white">Bem-vindo</h2>
-                  <p className="text-slate-400 text-sm mt-1">
-                    Acesse com suas credenciais institucionais
-                  </p>
-                </div>
+        {/* Right Column: Login Card & Credentials */}
+        <div className="lg:col-span-5 w-full max-w-md mx-auto">
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center mb-6 lg:mb-8"
+          >
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-2xl shadow-teal-500/30 mb-4">
+              <Heart className="w-8 h-8 text-white fill-current" />
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Portal do Colaborador</h1>
+            <p className="text-slate-400 text-xs mt-1 font-medium">Acesso Restrito e Identificado</p>
+          </motion.div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <InputField
-                    id="email"
-                    label="E-mail institucional"
-                    type="email"
-                    value={email}
-                    onChange={setEmail}
-                    placeholder="seu@institutosermelhor.org"
-                    autoComplete="email"
-                    icon={Mail}
-                    error={!!error}
-                  />
+          {/* Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-3xl overflow-hidden"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            <AnimatePresence mode="wait">
 
-                  <InputField
-                    id="password"
-                    label="Senha"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="Digite sua senha"
-                    autoComplete="current-password"
-                    icon={Lock}
-                    error={!!error}
-                    rightElement={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="text-slate-500 hover:text-slate-300 transition-colors"
-                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    }
-                  />
-
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3"
-                      >
-                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-300">{error}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        id="remember"
-                        className="w-4 h-4 rounded border-slate-600 bg-white/5 text-teal-500 focus:ring-teal-500/30"
-                      />
-                      <span className="text-sm text-slate-400">Lembrar dispositivo</span>
-                    </label>
-                    <button
-                      type="button"
-                      className="text-sm text-teal-400 hover:text-teal-300 transition-colors font-medium"
-                    >
-                      Esqueceu a senha?
-                    </button>
+              {/* ---- STEP: LOGIN ---- */}
+              {step === 'credentials' && (
+                <motion.div
+                  key="credentials"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.25 }}
+                  className="p-6 lg:p-8"
+                >
+                  <div className="mb-6 text-left">
+                    <h2 className="text-lg font-bold text-white">Identificação</h2>
+                    <p className="text-slate-400 text-xs mt-0.5">
+                      Insira suas credenciais institucionais
+                    </p>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    id="btn-login-submit"
-                    className="
-                      w-full flex items-center justify-center gap-2 rounded-xl py-3.5
-                      bg-gradient-to-r from-teal-500 to-teal-600
-                      text-white font-semibold text-sm
-                      shadow-lg shadow-teal-500/25
-                      hover:from-teal-400 hover:to-teal-500
-                      disabled:opacity-50 disabled:cursor-not-allowed
-                      transition-all duration-200 active:scale-[0.98]
-                    "
-                  >
-                    {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        Acessar Plataforma
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                {/* Credenciais de teste */}
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowHints(!showHints)}
-                    className="w-full flex items-center justify-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors py-2"
-                  >
-                    <Info className="w-3.5 h-3.5" />
-                    {showHints ? 'Ocultar credenciais de acesso' : 'Ver credenciais de acesso (demo)'}
-                  </button>
-
-                  <AnimatePresence>
-                    {showHints && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-3 rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2 overflow-hidden"
-                      >
-                        <p className="text-xs font-semibold text-slate-300 mb-3">Perfis de Acesso — Demo:</p>
-                        {[
-                          { label: 'Super Admin',       email: 'ism@ism.org',                                 password: 'teste',            color: 'bg-slate-700 text-white' },
-                          { label: 'Prof. Voluntária',  email: 'voluntario@institutosermelhor.org',            password: 'senha123',         color: 'bg-emerald-900/60 text-emerald-300' },
-                          { label: 'Auditora',          email: 'auditora@institutosermelhor.org',              password: 'auditoria123',     color: 'bg-zinc-800 text-zinc-300' },
-                          { label: 'Coordenadora',      email: 'coordenadora@institutosermelhor.org',          password: 'coord123',         color: 'bg-orange-900/60 text-orange-300' },
-                          { label: 'Gestor',            email: 'gestor@institutosermelhor.org',                password: 'gestor123',        color: 'bg-rose-900/60 text-rose-300' },
-                          { label: 'Diretora',          email: 'diretora@institutosermelhor.org',              password: 'diretora123',      color: 'bg-purple-900/60 text-purple-300' },
-                          { label: 'Vol. Administrativa', email: 'admin.voluntario@institutosermelhor.org',   password: 'voluntario123',    color: 'bg-lime-900/60 text-lime-300' },
-                          { label: 'Beneficiário',      email: 'beneficiario@exemplo.com',                    password: 'beneficiario123',  color: 'bg-sky-900/60 text-sky-300' },
-                        ].map(u => (
-                          <button
-                            key={u.email}
-                            type="button"
-                            onClick={() => { setEmail(u.email); setPassword(u.password); }}
-                            className="w-full flex items-center gap-3 text-left hover:bg-white/5 rounded-xl p-2 transition-colors"
-                          >
-                            <span className={`shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold ${u.color}`}>
-                              {u.label}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="text-xs text-slate-400 truncate">{u.email}</p>
-                              <p className="text-xs text-slate-600 font-mono">{u.password}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ---- STEP: SUCESSO ---- */}
-            {step === 'success' && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="p-8 text-center"
-              >
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-teal-500/20 border border-teal-500/30 mb-6">
-                  <CheckCircle2 className="w-10 h-10 text-teal-400" />
-                </div>
-                <h2 className="text-xl font-bold text-white mb-2">Acesso confirmado!</h2>
-                <p className="text-slate-400 text-sm">
-                  Identificando seu perfil e redirecionando...
-                </p>
-                <div className="flex justify-center gap-1 mt-6">
-                  {[0, 1, 2].map(i => (
-                    <motion.div
-                      key={i}
-                      className="w-2 h-2 rounded-full bg-teal-500"
-                      animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <InputField
+                      id="email"
+                      label="E-mail institucional"
+                      type="email"
+                      value={email}
+                      onChange={setEmail}
+                      placeholder="seu@institutosermelhor.org"
+                      autoComplete="email"
+                      icon={Mail}
+                      error={!!error}
                     />
-                  ))}
-                </div>
-              </motion.div>
-            )}
 
-          </AnimatePresence>
-        </motion.div>
+                    <InputField
+                      id="password"
+                      label="Senha"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={setPassword}
+                      placeholder="Digite sua senha"
+                      autoComplete="current-password"
+                      icon={Lock}
+                      error={!!error}
+                      rightElement={
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="text-slate-500 hover:text-slate-300 transition-colors"
+                          aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      }
+                    />
 
-        {/* Rodapé */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-center mt-6"
-        >
-          <div className="flex items-center justify-center gap-4 text-xs text-slate-600">
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-teal-700" />
-              <span>Zero Trust Architecture</span>
+                    <AnimatePresence>
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-left"
+                        >
+                          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          <p className="text-xs text-red-300">{error}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id="remember"
+                          className="w-3.5 h-3.5 rounded border-slate-600 bg-white/5 text-teal-500 focus:ring-teal-500/30"
+                        />
+                        <span className="text-xs text-slate-400">Lembrar acesso</span>
+                      </label>
+                      <button
+                        type="button"
+                        className="text-xs text-teal-400 hover:text-teal-300 transition-colors font-medium bg-none border-none cursor-pointer"
+                      >
+                        Esqueceu a senha?
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      id="btn-login-submit"
+                      className="
+                        w-full flex items-center justify-center gap-2 rounded-xl py-3
+                        bg-gradient-to-r from-teal-500 to-teal-600
+                        text-white font-semibold text-sm
+                        shadow-lg shadow-teal-500/25
+                        hover:from-teal-400 hover:to-teal-500
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        transition-all duration-200 active:scale-[0.98]
+                      "
+                    >
+                      {isLoading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Entrar no Painel
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+
+                  {/* Credenciais de teste */}
+                  <div className="mt-4 border-t border-white/5 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowHints(!showHints)}
+                      className="w-full flex items-center justify-center gap-2 text-[11px] text-slate-500 hover:text-slate-350 transition-colors py-1 cursor-pointer bg-none border-none"
+                    >
+                      <Info className="w-3 h-3" />
+                      {showHints ? 'Ocultar credenciais de demonstração' : 'Ver credenciais de demonstração'}
+                    </button>
+
+                    <AnimatePresence>
+                      {showHints && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-2 rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5 overflow-hidden max-h-[180px] overflow-y-auto pr-1 custom-scrollbar text-left"
+                        >
+                          {[
+                            { label: 'Super Admin',       email: 'ism@ism.org',                                 password: 'teste',            color: 'bg-slate-700 text-white' },
+                            { label: 'Prof. Voluntária',  email: 'voluntario@institutosermelhor.org',            password: 'senha123',         color: 'bg-emerald-900/60 text-emerald-300' },
+                            { label: 'Auditora',          email: 'auditora@institutosermelhor.org',              password: 'auditoria123',     color: 'bg-zinc-800 text-zinc-300' },
+                            { label: 'Coordenadora',      email: 'coordenadora@institutosermelhor.org',          password: 'coord123',         color: 'bg-orange-900/60 text-orange-300' },
+                            { label: 'Gestor',            email: 'gestor@institutosermelhor.org',                password: 'gestor123',        color: 'bg-rose-900/60 text-rose-300' },
+                            { label: 'Diretora',          email: 'diretora@institutosermelhor.org',              password: 'diretora123',      color: 'bg-purple-900/60 text-purple-300' },
+                            { label: 'Vol. Administrativa', email: 'admin.voluntario@institutosermelhor.org',   password: 'voluntario123',    color: 'bg-lime-900/60 text-lime-300' },
+                            { label: 'Beneficiário',      email: 'beneficiario@exemplo.com',                    password: 'beneficiario123',  color: 'bg-sky-900/60 text-sky-300' },
+                          ].map(u => (
+                            <button
+                              key={u.email}
+                              type="button"
+                              onClick={() => { setEmail(u.email); setPassword(u.password); }}
+                              className="w-full flex items-center gap-2 text-left hover:bg-white/5 rounded-lg p-1.5 transition-colors cursor-pointer border-none"
+                            >
+                              <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${u.color}`}>
+                                {u.label}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] text-slate-400 truncate">{u.email}</p>
+                                <p className="text-[10px] text-slate-600 font-mono">{u.password}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ---- STEP: SUCESSO ---- */}
+              {step === 'success' && (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="p-8 text-center"
+                >
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-500/20 border border-teal-500/30 mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-teal-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white mb-1">Acesso Autorizado</h2>
+                  <p className="text-slate-400 text-xs">
+                    Identificando suas atribuições institucionais...
+                  </p>
+                  <div className="flex justify-center gap-1 mt-4">
+                    {[0, 1, 2].map(i => (
+                      <motion.div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-teal-500"
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Rodapé */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-center mt-6"
+          >
+            <div className="flex items-center justify-center gap-3 text-[10px] text-slate-600">
+              <div className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-teal-700" />
+                <span>Zero Trust Core</span>
+              </div>
+              <span>•</span>
+              <span>Tráfego Auditado</span>
             </div>
-            <span>•</span>
-            <span>Ambiente monitorado e criptografado</span>
-          </div>
-          <p className="text-xs text-slate-700 mt-2">
-            © 2026 Instituto Ser Melhor — Todos os direitos reservados
-          </p>
-        </motion.div>
+            <p className="text-[10px] text-slate-700 mt-1">
+              © 2026 Instituto Ser Melhor — Todos os direitos reservados
+            </p>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
