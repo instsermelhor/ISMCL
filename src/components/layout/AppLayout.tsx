@@ -22,6 +22,9 @@ import {
   Activity,
   GitBranch,
   Monitor,
+  BookOpen,
+  GraduationCap,
+  FileCheck,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { QuickExitButton } from '../QuickExitButton';
@@ -51,6 +54,10 @@ const adminNavigation = [
   { name: 'SATAI — Triagem', href: '/satai', icon: Heart },
   { name: 'PIARAVE — Casos', href: '/piarave', icon: Heart },
   { name: 'Platform Health Center', href: '/auditoria-plataforma', icon: Monitor },
+  { name: 'SODO — Documentos', href: '/sodo', icon: BookOpen },
+  { name: 'SODO — Academia', href: '/academia', icon: GraduationCap },
+  { name: 'SODO — POPs', href: '/pops', icon: FileCheck },
+  { name: 'SODO — Governança', href: '/governanca-conhecimento', icon: ShieldCheck },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {

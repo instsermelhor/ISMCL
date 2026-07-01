@@ -50,6 +50,12 @@ import PiaraveAdmin from './pages/PiaraveAdmin';
 // Platform Health & Audit Center
 import PlatformHealthCenter from './pages/PlatformHealthCenter';
 
+// SODO — Sistema Oficial de Documentação Operacional e Academia
+import SodoPortal from './pages/SodoPortal';
+import SodoAcademy from './pages/SodoAcademy';
+import SodoPops from './pages/SodoPops';
+import SodoAdmin from './pages/SodoAdmin';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -111,6 +117,12 @@ export default function App() {
 
             {/* Platform Health & Audit Center */}
             <Route path="auditoria-plataforma" element={<PlatformHealthCenter />} />
+
+            {/* SODO — Sistema Oficial de Documentação Operacional */}
+            <Route path="sodo" element={<SodoPortal />} />
+            <Route path="academia" element={<SodoAcademy />} />
+            <Route path="pops" element={<SodoPops />} />
+            <Route path="governanca-conhecimento" element={<SodoAdmin />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />

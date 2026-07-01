@@ -9,6 +9,7 @@ import { AdaptiveRegistrationProvider } from './contexts/AdaptiveRegistrationCon
 import { SATAIProvider } from './contexts/SATAIContext.tsx';
 import { PiaraveProvider } from './contexts/PiaraveContext.tsx';
 import { PlatformHealthProvider } from './contexts/PlatformHealthContext.tsx';
+import { SodoProvider } from './contexts/SodoContext.tsx';
 import './index.css';
 
 // Hierarquia de providers:
@@ -20,7 +21,8 @@ import './index.css';
 //           SATAIProvider (acolhimento/triagem) →
 //             PiaraveProvider (programa PIARAVE) →
 //               PlatformHealthProvider (observabilidade e auditoria) →
-//                 App
+//                 SodoProvider (documentação e academia) →
+//                   App
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -32,7 +34,9 @@ createRoot(document.getElementById('root')!).render(
               <SATAIProvider>
                 <PiaraveProvider>
                   <PlatformHealthProvider>
-                    <App />
+                    <SodoProvider>
+                      <App />
+                    </SodoProvider>
                   </PlatformHealthProvider>
                 </PiaraveProvider>
               </SATAIProvider>
