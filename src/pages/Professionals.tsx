@@ -12,7 +12,8 @@ import {
   Brain,
   Scale,
   MoreVertical,
-  Activity
+  Activity,
+  XCircle
 } from 'lucide-react';
 import { cn } from '../utils';
 
@@ -71,10 +72,155 @@ const MOCK_PROFESSIONALS = [
   }
 ];
 
+interface CreateProfessionalModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (prof: any) => void;
+}
+
+function CreateProfessionalModal({ isOpen, onClose, onCreate }: CreateProfessionalModalProps) {
+  const [name, setName] = useState('');
+  const [profession, setProfession] = useState('Psicólogo');
+  const [specialty, setSpecialty] = useState('');
+  const [council, setCouncil] = useState('');
+  const [bondType, setBondType] = useState<'VOLUNTEER' | 'EMPLOYEE' | 'PARTNER'>('VOLUNTEER');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const newProf = {
+      id: String(Date.now()),
+      name,
+      profession,
+      specialty: specialty || 'Geral',
+      council: council || 'N/A',
+      status: 'ACTIVE',
+      hoursDonated: 0,
+      activePatients: 0,
+      bondType,
+      avatar: `https://i.pravatar.cc/150?u=${Math.floor(Math.random() * 1000)}`
+    };
+
+    onCreate(newProf);
+    onClose();
+    setName('');
+    setSpecialty('');
+    setCouncil('');
+    setBondType('VOLUNTEER');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">Novo Profissional</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Nome Completo</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Nome do profissional"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Profissão</label>
+            <select
+              value={profession}
+              onChange={e => setProfession(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all bg-white"
+            >
+              <option value="Psicólogo">Psicólogo(a)</option>
+              <option value="Psiquiatra">Psiquiatra</option>
+              <option value="Assistente Social">Assistente Social</option>
+              <option value="Advogado">Advogado(a)</option>
+              <option value="Médico">Médico(a)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Especialidade</label>
+            <input
+              type="text"
+              value={specialty}
+              onChange={e => setSpecialty(e.target.value)}
+              placeholder="Ex: TCC, Infantil, Família"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Registro de Conselho (CRP/CRM/OAB)</label>
+            <input
+              type="text"
+              value={council}
+              onChange={e => setCouncil(e.target.value)}
+              placeholder="Ex: CRP 06/12345"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Vínculo</label>
+            <select
+              value={bondType}
+              onChange={e => setBondType(e.target.value as any)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all bg-white"
+            >
+              <option value="VOLUNTEER">Voluntário</option>
+              <option value="EMPLOYEE">Colaborador (CLT/PJ)</option>
+              <option value="PARTNER">Parceiro Institucional</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-teal-600 hover:bg-teal-700 text-white transition-colors"
+            >
+              Adicionar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function Professionals() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [professionalsList, setProfessionalsList] = useState(() => {
+    const saved = localStorage.getItem('professionals_list');
+    return saved ? JSON.parse(saved) : MOCK_PROFESSIONALS;
+  });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (!localStorage.getItem('professionals_list')) {
+      localStorage.setItem('professionals_list', JSON.stringify(MOCK_PROFESSIONALS));
+    }
+  }, []);
 
   const getProfessionIcon = (profession: string) => {
     switch (profession) {
@@ -102,7 +248,7 @@ export function Professionals() {
     }
   };
 
-  const filteredProfessionals = MOCK_PROFESSIONALS.filter(p => {
+  const filteredProfessionals = professionalsList.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.profession.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
@@ -121,7 +267,7 @@ export function Professionals() {
           </div>
           
           <button 
-            onClick={() => navigate('/professionals/new')}
+            onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm"
           >
             <UserPlus className="w-4 h-4" />
@@ -212,6 +358,15 @@ export function Professionals() {
         </div>
 
       </div>
+      <CreateProfessionalModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={(newProf) => {
+          const updated = [...professionalsList, newProf];
+          setProfessionalsList(updated);
+          localStorage.setItem('professionals_list', JSON.stringify(updated));
+        }}
+      />
     </div>
   );
 }

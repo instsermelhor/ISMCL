@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   Search, Plus, ShieldCheck, ShieldX, KeyRound, Smartphone,
   Clock, CheckCircle2, AlertTriangle, UserCog, ChevronRight,
-  Users, Edit3, X, Save, Eye, EyeOff, Info
+  Users, Edit3, X, Save, Eye, EyeOff, Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../utils';
 import {
-  systemUsers, ROLE_LABELS, teams,
+  systemUsers as systemUsersMock, ROLE_LABELS, teams,
   userSessions, type SystemUser, type AdminRole,
 } from '../../data/cgi-mock';
 
@@ -22,7 +22,13 @@ function formatTimestamp(ts: string) {
 }
 
 // ─── User Modal (Create/Edit) ─────────────────────────────────
-function UserModal({ user, onClose }: { user: SystemUser | null; onClose: () => void }) {
+interface UserModalProps {
+  user: SystemUser | null;
+  onClose: () => void;
+  onSave: (u: SystemUser) => void;
+}
+
+function UserModal({ user, onClose, onSave }: UserModalProps) {
   const isNew = !user;
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -30,11 +36,30 @@ function UserModal({ user, onClose }: { user: SystemUser | null; onClose: () => 
   const [team, setTeam] = useState(user?.team ?? '');
   const [mfa, setMfa] = useState(user?.mfa ?? false);
   const [showPass, setShowPass] = useState(false);
+  const [password, setPassword] = useState('');
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
+    if (!name.trim() || !email.trim()) return;
+
+    const savedUser: SystemUser = {
+      id: user?.id ?? `u${Date.now()}`,
+      name,
+      email,
+      role,
+      status: user?.status ?? 'ativo',
+      mfa,
+      lastLogin: user?.lastLogin ?? new Date().toISOString(),
+      createdAt: user?.createdAt ?? new Date().toISOString().split('T')[0],
+      permissions: user?.permissions ?? ['patients.read'],
+      team: team || undefined,
+      sessionsThisMonth: user?.sessionsThisMonth ?? 0,
+      riskScore: user?.riskScore ?? 10,
+    };
+
+    onSave(savedUser);
     setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 1200);
+    setTimeout(() => { setSaved(false); onClose(); }, 1000);
   }
 
   return (
@@ -96,7 +121,7 @@ function UserModal({ user, onClose }: { user: SystemUser | null; onClose: () => 
               <div className="col-span-2">
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">Senha Inicial</label>
                 <div className="relative">
-                  <input type={showPass ? 'text' : 'password'} placeholder="Mín. 10 caracteres"
+                  <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Mín. 10 caracteres"
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none pr-10" />
                   <button type="button" onClick={() => setShowPass(s => !s)}
                     className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
@@ -224,10 +249,62 @@ export function CGIUsuarios() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selected, setSelected] = useState<SystemUser | null>(null);
-  const [modalUser, setModalUser] = useState<SystemUser | null | 'new'>(undefined as any);
+  const [modalUser, setModalUser] = useState<SystemUser | null | 'new' | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'usuarios' | 'equipes' | 'sessoes'>('usuarios');
 
-  const filtered = systemUsers.filter(u => {
+  const [usersList, setUsersList] = useState<SystemUser[]>(() => {
+    const saved = localStorage.getItem('cgi_usuarios');
+    return saved ? JSON.parse(saved) : systemUsersMock;
+  });
+
+  React.useEffect(() => {
+    if (!localStorage.getItem('cgi_usuarios')) {
+      localStorage.setItem('cgi_usuarios', JSON.stringify(systemUsersMock));
+    }
+  }, []);
+
+  function persist(list: SystemUser[]) {
+    setUsersList(list);
+    localStorage.setItem('cgi_usuarios', JSON.stringify(list));
+  }
+
+  function handleSaveUser(savedUser: SystemUser) {
+    const exists = usersList.some(u => u.id === savedUser.id);
+    let updated: SystemUser[];
+    if (exists) {
+      updated = usersList.map(u => u.id === savedUser.id ? savedUser : u);
+    } else {
+      updated = [...usersList, savedUser];
+    }
+    persist(updated);
+    if (selected?.id === savedUser.id) {
+      setSelected(savedUser);
+    }
+  }
+
+  function handleResetPassword(user: SystemUser) {
+    alert(`Uma solicitação de redefinição de senha foi enviada para ${user.email}`);
+  }
+
+  function handleRequestMfa(user: SystemUser) {
+    const updated = usersList.map(u => u.id === user.id ? { ...u, mfa: true } : u);
+    persist(updated);
+    if (selected?.id === user.id) {
+      setSelected({ ...selected, mfa: true });
+    }
+    alert(`Multifator (MFA) solicitado com sucesso para o usuário ${user.name}.`);
+  }
+
+  function handleToggleStatus(user: SystemUser) {
+    const newStatus = user.status === 'ativo' ? 'suspenso' : 'ativo';
+    const updated = usersList.map(u => u.id === user.id ? { ...u, status: newStatus as any } : u);
+    persist(updated);
+    if (selected?.id === user.id) {
+      setSelected({ ...selected, status: newStatus as any });
+    }
+  }
+
+  const filtered = usersList.filter(u => {
     const q = search.toLowerCase();
     const matchSearch = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || u.status === statusFilter;
@@ -235,20 +312,21 @@ export function CGIUsuarios() {
   });
 
   const kpis = [
-    { label: 'Total', value: systemUsers.length, color: 'text-slate-900' },
-    { label: 'Ativos', value: systemUsers.filter(u => u.status === 'ativo').length, color: 'text-emerald-600' },
-    { label: 'Suspensos', value: systemUsers.filter(u => u.status === 'suspenso').length, color: 'text-red-600' },
-    { label: 'Com MFA', value: systemUsers.filter(u => u.mfa).length, color: 'text-teal-600' },
+    { label: 'Total', value: usersList.length, color: 'text-slate-900' },
+    { label: 'Ativos', value: usersList.filter(u => u.status === 'ativo').length, color: 'text-emerald-600' },
+    { label: 'Suspensos', value: usersList.filter(u => u.status === 'suspenso').length, color: 'text-red-600' },
+    { label: 'Com MFA', value: usersList.filter(u => u.mfa).length, color: 'text-teal-600' },
   ];
 
   return (
     <>
       {/* Modal */}
       <AnimatePresence>
-        {modalUser !== undefined && (
+        {modalUser !== undefined && modalUser !== null && (
           <UserModal
             user={modalUser === 'new' ? null : modalUser}
-            onClose={() => setModalUser(undefined as any)}
+            onClose={() => setModalUser(undefined)}
+            onSave={handleSaveUser}
           />
         )}
       </AnimatePresence>
@@ -265,7 +343,7 @@ export function CGIUsuarios() {
         </div>
 
         {/* MFA info banner */}
-        {systemUsers.filter(u => !u.mfa && u.status === 'ativo').length > 0 && (
+        {usersList.filter(u => !u.mfa && u.status === 'ativo').length > 0 && (
           <div className="flex items-center gap-3 p-4 rounded-xl border border-teal-100 bg-teal-50/50">
             <Info className="w-4 h-4 text-teal-600 shrink-0" />
             <p className="text-sm text-teal-800">
@@ -396,20 +474,28 @@ export function CGIUsuarios() {
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-500 transition-colors">
                               <UserCog className="w-3.5 h-3.5" /> Editar Perfil
                             </button>
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors">
+                            <button
+                              onClick={() => handleResetPassword(u)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors">
                               <KeyRound className="w-3.5 h-3.5" /> Resetar Senha
                             </button>
                             {!u.mfa && (
-                              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-teal-200 text-teal-700 text-xs font-medium rounded-lg hover:bg-teal-50 transition-colors">
+                              <button
+                                onClick={() => handleRequestMfa(u)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-teal-200 text-teal-700 text-xs font-medium rounded-lg hover:bg-teal-50 transition-colors">
                                 <Smartphone className="w-3.5 h-3.5" /> Solicitar MFA
                               </button>
                             )}
                             {u.status === 'ativo' ? (
-                              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors">
+                              <button
+                                onClick={() => handleToggleStatus(u)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors">
                                 <ShieldX className="w-3.5 h-3.5" /> Suspender
                               </button>
                             ) : u.status === 'suspenso' ? (
-                              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-500 transition-colors">
+                              <button
+                                onClick={() => handleToggleStatus(u)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-500 transition-colors">
                                 <ShieldCheck className="w-3.5 h-3.5" /> Reativar
                               </button>
                             ) : null}

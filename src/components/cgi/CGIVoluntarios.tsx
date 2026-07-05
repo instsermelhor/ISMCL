@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Plus, Download, Star, Clock, Award, CheckCircle2, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, Download, Star, Clock, Award, CheckCircle2, Pause, ChevronDown, ChevronUp, XCircle, Edit3, Eye, User, Save, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../utils';
-import { voluntarios, type Voluntario } from '../../data/cgi-mock';
+import { voluntarios as defaultVoluntarios, type Voluntario } from '../../data/cgi-mock';
 
 const statusConfig = {
   ativo: { label: 'Ativo', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
@@ -21,12 +21,443 @@ function StarRating({ value }: { value: number }) {
   );
 }
 
+// ─── Modal: Ver Perfil de Voluntário ──────────────────────────
+function ViewVolunteerModal({ volunteer, onClose }: { volunteer: Voluntario; onClose: () => void }) {
+  const cfg = statusConfig[volunteer.status];
+  const Icon = cfg.icon;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div className="bg-gradient-to-r from-violet-650 to-violet-500 px-6 py-5 bg-violet-600 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center font-bold text-lg">
+                {volunteer.name.split(' ').slice(0, 2).map(w => w[0]).join('')}
+              </div>
+              <div>
+                <h3 className="font-bold text-base leading-tight">{volunteer.name}</h3>
+                <p className="text-xs text-violet-100">{volunteer.area} · Desde {volunteer.admissao}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/20">
+              <XCircle className="w-6 h-6 text-white" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-6 space-y-5">
+          <div className="flex gap-2">
+            <span className={cn('flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full', cfg.color)}>
+              <Icon className="w-3.5 h-3.5" /> {cfg.label}
+            </span>
+            <span className="bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> Avaliação: {volunteer.avaliacao}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 p-3 rounded-xl text-center">
+              <p className="text-xs text-slate-400">Horas no Mês</p>
+              <p className="text-xl font-bold text-slate-800">{volunteer.horasMes}h</p>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl text-center">
+              <p className="text-xs text-slate-400">Horas Totais</p>
+              <p className="text-xl font-bold text-slate-800">{volunteer.horasTotais}h</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-slate-500 mb-2">Projetos Ativos</p>
+            <div className="flex flex-wrap gap-1.5">
+              {volunteer.projetos.map(p => (
+                <span key={p} className="text-xs font-medium px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-100">{p}</span>
+              ))}
+              {volunteer.projetos.length === 0 && <span className="text-xs text-slate-400">Nenhum projeto associado.</span>}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-slate-500 mb-2">Capacitações Concluídas</p>
+            <div className="flex flex-wrap gap-1.5">
+              {volunteer.capacitacoes.map(c => (
+                <span key={c} className="text-xs font-medium px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100">{c}</span>
+              ))}
+              {volunteer.capacitacoes.length === 0 && <span className="text-xs text-slate-400">Nenhuma capacitação registrada.</span>}
+            </div>
+          </div>
+
+          {volunteer.reconhecimento && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-xs font-bold text-amber-800 mb-1 flex items-center gap-1">
+                <Award className="w-4 h-4 fill-amber-400 text-amber-500" /> Destaque & Reconhecimento
+              </p>
+              <p className="text-xs text-amber-700">{volunteer.reconhecimento}</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Modal: Editar Voluntário ─────────────────────────────────
+function EditVolunteerModal({
+  volunteer, onClose, onSave
+}: {
+  volunteer: Voluntario;
+  onClose: () => void;
+  onSave: (v: Voluntario) => void;
+}) {
+  const [name, setName] = useState(volunteer.name);
+  const [area, setArea] = useState(volunteer.area);
+  const [status, setStatus] = useState(volunteer.status);
+  const [projetos, setProjetos] = useState(volunteer.projetos.join(', '));
+  const [capacitacoes, setCapacitacoes] = useState(volunteer.capacitacoes.join(', '));
+  const [saved, setSaved] = useState(false);
+
+  const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all';
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave({
+      ...volunteer,
+      name,
+      area,
+      status,
+      projetos: projetos.split(',').map(p => p.trim()).filter(Boolean),
+      capacitacoes: capacitacoes.split(',').map(c => c.trim()).filter(Boolean),
+    });
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onClose(); }, 1000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Edit3 className="w-5 h-5 text-teal-600" />
+            <h3 className="text-lg font-bold text-slate-900">Editar Voluntário</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-650">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Nome Completo</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Área de Atuação</label>
+              <select value={area} onChange={e => setArea(e.target.value)} className={`${inputCls} bg-white`}>
+                <option value="Jurídico">Jurídico</option>
+                <option value="TI / Sistemas">TI / Sistemas</option>
+                <option value="Comunicação">Comunicação</option>
+                <option value="Contabilidade">Contabilidade</option>
+                <option value="Psicologia">Psicologia</option>
+                <option value="Assistência Social">Assistência Social</option>
+                <option value="Administração">Administração</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Educação">Educação</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+              <select value={status} onChange={e => setStatus(e.target.value as any)} className={`${inputCls} bg-white`}>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="ferias">Férias</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Projetos (separados por vírgula)</label>
+            <input type="text" value={projetos} onChange={e => setProjetos(e.target.value)} className={inputCls} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Capacitações (separadas por vírgula)</label>
+            <input type="text" value={capacitacoes} onChange={e => setCapacitacoes(e.target.value)} className={inputCls} />
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-100 flex gap-3">
+          <button onClick={handleSave}
+            className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all',
+              saved ? 'bg-emerald-500 text-white' : 'bg-teal-600 text-white hover:bg-teal-500')}>
+            {saved ? <><CheckCircle2 className="w-4 h-4" /> Salvo!</> : <><Save className="w-4 h-4" /> Salvar Alterações</>}
+          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Modal: Reconhecer Voluntário ────────────────────────────
+function RecognizeVolunteerModal({
+  volunteer, onClose, onSave
+}: {
+  volunteer: Voluntario;
+  onClose: () => void;
+  onSave: (v: Voluntario) => void;
+}) {
+  const [reconhecimento, setReconhecimento] = useState(volunteer.reconhecimento ?? '');
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    onSave({
+      ...volunteer,
+      reconhecimento: reconhecimento.trim() || undefined,
+    });
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onClose(); }, 1000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col"
+      >
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-500 fill-amber-500" />
+            <h3 className="text-lg font-bold text-slate-900">Reconhecer Voluntário</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-650">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <p className="text-xs text-slate-500">Escreva um destaque ou agradecimento para exibir no perfil deste voluntário.</p>
+          <div>
+            <textarea
+              rows={3}
+              value={reconhecimento}
+              onChange={e => setReconhecimento(e.target.value)}
+              placeholder="Ex: Voluntário Destaque do Mês de Junho/2026 pelo seu compromisso com a triagem e suporte técnico."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-100 flex gap-3">
+          <button onClick={handleSave}
+            className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all',
+              saved ? 'bg-emerald-500 text-white' : 'bg-teal-600 text-white hover:bg-teal-500')}>
+            {saved ? <><CheckCircle2 className="w-4 h-4" /> Reconhecido!</> : <><Save className="w-4 h-4" /> Salvar</>}
+          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Modal de Criação de Voluntário ───────────────────────────
+interface CreateCgiVolunteerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (v: Voluntario) => void;
+}
+
+function CreateCgiVolunteerModal({ isOpen, onClose, onCreate }: CreateCgiVolunteerModalProps) {
+  const [name, setName] = useState('');
+  const [area, setArea] = useState('Jurídico');
+  const [status, setStatus] = useState<'ativo' | 'inativo' | 'ferias'>('ativo');
+  const [projetos, setProjetos] = useState('Lar Protegido');
+  const [capacitacoes, setCapacitacoes] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const newVolunteer: Voluntario = {
+      id: `v${Date.now()}`,
+      name,
+      area,
+      status,
+      horasTotais: 0,
+      horasMes: 0,
+      projetos: projetos.split(',').map(p => p.trim()).filter(Boolean),
+      capacitacoes: capacitacoes.split(',').map(c => c.trim()).filter(Boolean),
+      admissao: new Date().toISOString().split('T')[0],
+      avaliacao: 5.0,
+    };
+
+    onCreate(newVolunteer);
+    onClose();
+    setName('');
+    setArea('Jurídico');
+    setStatus('ativo');
+    setProjetos('Lar Protegido');
+    setCapacitacoes('');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">Novo Voluntário</h3>
+          <button onClick={onClose} type="button" className="text-slate-400 hover:text-slate-600 transition-colors">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Nome Completo</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Nome do voluntário"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Área de Atuação</label>
+              <select
+                value={area}
+                onChange={e => setArea(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+              >
+                <option value="Jurídico">Jurídico</option>
+                <option value="TI / Sistemas">TI / Sistemas</option>
+                <option value="Comunicação">Comunicação</option>
+                <option value="Contabilidade">Contabilidade</option>
+                <option value="Psicologia">Psicologia</option>
+                <option value="Assistência Social">Assistência Social</option>
+                <option value="Administração">Administração</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Educação">Educação</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as any)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+              >
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="ferias">Férias</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Projetos (separados por vírgula)</label>
+            <input
+              type="text"
+              value={projetos}
+              onChange={e => setProjetos(e.target.value)}
+              placeholder="Ex: Lar Protegido, Escuta Ativa"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Capacitações (separadas por vírgula)</label>
+            <input
+              type="text"
+              value={capacitacoes}
+              onChange={e => setCapacitacoes(e.target.value)}
+              placeholder="Ex: Direitos Humanos, LGPD"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-teal-600 hover:bg-teal-700 text-white transition-colors"
+            >
+              Adicionar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Componente Principal ─────────────────────────────────────
+
+type ActiveModal =
+  | { type: 'perfil'; volunteer: Voluntario }
+  | { type: 'editar'; volunteer: Voluntario }
+  | { type: 'reconhecer'; volunteer: Voluntario }
+  | null;
+
 export function CGIVoluntarios() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
 
-  const filtered = voluntarios.filter(v => {
+  const [voluntariosList, setVoluntariosList] = useState<Voluntario[]>(() => {
+    const saved = localStorage.getItem('cgi_voluntarios');
+    return saved ? JSON.parse(saved) : defaultVoluntarios;
+  });
+
+  React.useEffect(() => {
+    if (!localStorage.getItem('cgi_voluntarios')) {
+      localStorage.setItem('cgi_voluntarios', JSON.stringify(defaultVoluntarios));
+    }
+  }, []);
+
+  function persist(list: Voluntario[]) {
+    setVoluntariosList(list);
+    localStorage.setItem('cgi_voluntarios', JSON.stringify(list));
+  }
+
+  function handleSaveVolunteer(updated: Voluntario) {
+    const list = voluntariosList.map(v => v.id === updated.id ? updated : v);
+    persist(list);
+  }
+
+  const filtered = voluntariosList.filter(v => {
     const q = search.toLowerCase();
     const matchSearch = v.name.toLowerCase().includes(q) || v.area.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || v.status === statusFilter;
@@ -34,14 +465,35 @@ export function CGIVoluntarios() {
   });
 
   const kpis = [
-    { label: 'Total', value: voluntarios.length, color: 'text-slate-900' },
-    { label: 'Ativos', value: voluntarios.filter(v => v.status === 'ativo').length, color: 'text-emerald-600' },
-    { label: 'Horas no Mês', value: `${voluntarios.reduce((s, v) => s + v.horasMes, 0)}h`, color: 'text-teal-600' },
-    { label: 'Horas Totais', value: `${voluntarios.reduce((s, v) => s + v.horasTotais, 0)}h`, color: 'text-violet-600' },
+    { label: 'Total', value: voluntariosList.length, color: 'text-slate-900' },
+    { label: 'Ativos', value: voluntariosList.filter(v => v.status === 'ativo').length, color: 'text-emerald-600' },
+    { label: 'Horas no Mês', value: `${voluntariosList.reduce((s, v) => s + v.horasMes, 0)}h`, color: 'text-teal-600' },
+    { label: 'Horas Totais', value: `${voluntariosList.reduce((s, v) => s + v.horasTotais, 0)}h`, color: 'text-violet-600' },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Modais */}
+      <AnimatePresence>
+        {activeModal?.type === 'perfil' && (
+          <ViewVolunteerModal volunteer={activeModal.volunteer} onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal?.type === 'editar' && (
+          <EditVolunteerModal
+            volunteer={activeModal.volunteer}
+            onClose={() => setActiveModal(null)}
+            onSave={updated => { handleSaveVolunteer(updated); setActiveModal(null); }}
+          />
+        )}
+        {activeModal?.type === 'reconhecer' && (
+          <RecognizeVolunteerModal
+            volunteer={activeModal.volunteer}
+            onClose={() => setActiveModal(null)}
+            onSave={updated => { handleSaveVolunteer(updated); setActiveModal(null); }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(k => (
@@ -58,10 +510,10 @@ export function CGIVoluntarios() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome ou área..."
-            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 shadow-sm" />
+            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-teal-500 shadow-sm outline-none" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-teal-500">
+          className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 shadow-sm focus:ring-2 focus:ring-teal-500 outline-none">
           <option value="all">Todos os status</option>
           <option value="ativo">Ativo</option>
           <option value="inativo">Inativo</option>
@@ -70,7 +522,10 @@ export function CGIVoluntarios() {
         <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
           <Download className="w-4 h-4" /> Exportar
         </button>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm">
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm"
+        >
           <Plus className="w-4 h-4" /> Novo Voluntário
         </button>
       </div>
@@ -112,7 +567,8 @@ export function CGIVoluntarios() {
                 {isExpanded && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                    className="border-t border-slate-100 px-5 pb-5 pt-4 space-y-4">
+                    className="border-t border-slate-100 px-5 pb-5 pt-4 space-y-4"
+                    onClick={e => e.stopPropagation()}>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {[
                         { label: 'Admissão', value: v.admissao },
@@ -144,13 +600,13 @@ export function CGIVoluntarios() {
                     {v.reconhecimento && (
                       <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
                         <Award className="w-4 h-4 text-amber-600 shrink-0" />
-                        <p className="text-sm font-medium text-amber-800">{v.reconhecimento}</p>
+                        <p className="text-xs text-amber-700 font-medium">{v.reconhecimento}</p>
                       </div>
                     )}
                     <div className="flex gap-3 pt-1">
-                      <button className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors">Ver Perfil</button>
-                      <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Editar</button>
-                      <button className="px-4 py-2 bg-white border border-violet-200 text-violet-700 text-sm font-medium rounded-xl hover:bg-violet-50 transition-colors flex items-center gap-1.5">
+                      <button onClick={() => setActiveModal({ type: 'perfil', volunteer: v })} className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors">Ver Perfil</button>
+                      <button onClick={() => setActiveModal({ type: 'editar', volunteer: v })} className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Editar</button>
+                      <button onClick={() => setActiveModal({ type: 'reconhecer', volunteer: v })} className="px-4 py-2 bg-white border border-violet-200 text-violet-700 text-sm font-medium rounded-xl hover:bg-violet-50 transition-colors flex items-center gap-1.5">
                         <Award className="w-4 h-4" /> Reconhecer
                       </button>
                     </div>
@@ -166,6 +622,16 @@ export function CGIVoluntarios() {
           </div>
         )}
       </div>
+
+      {/* Modal de Criação */}
+      <CreateCgiVolunteerModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={(newVolunteer) => {
+          const updated = [...voluntariosList, newVolunteer];
+          persist(updated);
+        }}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, UserPlus, AlertTriangle } from 'lucide-react';
 
-const patients = [
+const DEFAULT_PATIENTS = [
   { id: '1', name: 'Ana Silva Santos', age: 32, status: 'Ativo', risk: 'high', lastSeen: '14/06/2023', professional: 'Dra. Roberta' },
   { id: '2', name: 'Marcos Santos Oliveira', age: 14, status: 'Em avaliação', risk: 'medium', lastSeen: '10/06/2023', professional: 'Dr. Carlos' },
   { id: '3', name: 'Júlia Costa', age: 45, status: 'Ativo', risk: 'low', lastSeen: '05/06/2023', professional: 'Dra. Roberta' },
@@ -11,8 +11,18 @@ const patients = [
 export function Patients() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [patientsList, setPatientsList] = useState(() => {
+    const saved = localStorage.getItem('patients_list');
+    return saved ? JSON.parse(saved) : DEFAULT_PATIENTS;
+  });
 
-  const filteredPatients = patients.filter(patient => 
+  React.useEffect(() => {
+    if (!localStorage.getItem('patients_list')) {
+      localStorage.setItem('patients_list', JSON.stringify(DEFAULT_PATIENTS));
+    }
+  }, []);
+
+  const filteredPatients = patientsList.filter(patient => 
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.professional.toLowerCase().includes(searchTerm.toLowerCase())
   );

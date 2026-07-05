@@ -335,6 +335,23 @@ export function TriageForm() {
             ) : (
               <button 
                 onClick={() => {
+                  const saved = localStorage.getItem('patients_list');
+                  const list = saved ? JSON.parse(saved) : [
+                    { id: '1', name: 'Ana Silva Santos', age: 32, status: 'Ativo', risk: 'high', lastSeen: '14/06/2023', professional: 'Dra. Roberta' },
+                    { id: '2', name: 'Marcos Santos Oliveira', age: 14, status: 'Em avaliação', risk: 'medium', lastSeen: '10/06/2023', professional: 'Dr. Carlos' },
+                    { id: '3', name: 'Júlia Costa', age: 45, status: 'Ativo', risk: 'low', lastSeen: '05/06/2023', professional: 'Dra. Roberta' },
+                  ];
+                  const hasHighRisk = formData.violenceHistory || formData.suicidalIdeation;
+                  const newPatient = {
+                    id: String(list.length + 1),
+                    name: formData.fullName || 'Beneficiário Sem Nome',
+                    age: 28,
+                    status: 'Em avaliação',
+                    risk: hasHighRisk ? 'high' : 'low',
+                    lastSeen: new Date().toLocaleDateString('pt-BR'),
+                    professional: 'Dra. Roberta'
+                  };
+                  localStorage.setItem('patients_list', JSON.stringify([...list, newPatient]));
                   alert('Cadastro realizado com sucesso! O paciente foi encaminhado para a fila de triagem.');
                   navigate('/patients');
                 }}

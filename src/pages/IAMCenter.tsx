@@ -394,6 +394,140 @@ function UserDetailModal({
 }
 
 // ----------------------------------------------------------------
+// CreateUserModal
+// ----------------------------------------------------------------
+
+function CreateUserModal({
+  isOpen,
+  onClose,
+  onCreate,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (data: Partial<IAMUser>) => Promise<IAMUser>;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<InstitutionalRole>('admin_collaborator');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!name.trim()) return setError('Nome completo é obrigatório');
+    if (!email.trim() || !email.includes('@')) return setError('E-mail válido é obrigatório');
+
+    setIsSubmitting(true);
+    try {
+      await onCreate({
+        name,
+        email,
+        primaryRole: role,
+        roles: [role],
+      });
+      setName('');
+      setEmail('');
+      setRole('admin_collaborator');
+      onClose();
+    } catch (err: any) {
+      setError(err?.message ?? 'Erro ao criar usuário');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+      >
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">Novo Usuário Institucional</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-650">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Nome Completo</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Digite o nome completo"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">E-mail Institucional</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="exemplo@institutosermelhor.org"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Papel / Função Principal</label>
+            <select
+              value={role}
+              onChange={e => setRole(e.target.value as InstitutionalRole)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all bg-white"
+            >
+              {Object.entries(ROLE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-teal-600 hover:bg-teal-700 text-white transition-colors flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : 'Criar Usuário'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ----------------------------------------------------------------
 // Tabs
 // ----------------------------------------------------------------
 
@@ -431,6 +565,7 @@ export function IAMCenter() {
     revokeDevice,
     approveAISuggestion,
     rejectAISuggestion,
+    createUser,
   } = useIAM();
 
   const auraContent = useAuraContent();
@@ -438,6 +573,7 @@ export function IAMCenter() {
   const [activeTab, setActiveTab] = useState<Tab>('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<IAMUser | null>(null);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [aiReviewId, setAiReviewId] = useState<string | null>(null);
@@ -505,7 +641,10 @@ export function IAMCenter() {
               </div>
             )}
             {canManage && (
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors">
+              <button 
+                onClick={() => setIsCreateUserModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors"
+              >
                 <UserPlus className="w-4 h-4" />
                 Novo Usuário
               </button>
@@ -1484,6 +1623,13 @@ export function IAMCenter() {
           />
         )}
       </AnimatePresence>
+
+      {/* Modal de criação de novo usuário */}
+      <CreateUserModal
+        isOpen={isCreateUserModalOpen}
+        onClose={() => setIsCreateUserModalOpen(false)}
+        onCreate={createUser}
+      />
     </div>
   );
 }
