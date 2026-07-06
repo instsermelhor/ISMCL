@@ -517,8 +517,74 @@ function getAssistantResponse(input: string): string {
   return ASSISTANT_RESPONSES.default;
 }
 
+function mapCentralToPortal(appt: any): PortalAppointment {
+  const typeMap: Record<string, AppointmentType> = {
+    online: 'TELECONSULTA',
+    presential: 'PRESENCIAL',
+    domiciliar: 'DOMICILIAR',
+    grupo: 'GRUPO',
+  };
+  const statusMap: Record<string, AppointmentStatus> = {
+    completed: 'COMPLETED',
+    upcoming: 'CONFIRMED',
+    pending: 'PENDING',
+    cancelled: 'CANCELLED',
+    rescheduling: 'RESCHEDULING',
+  };
+
+  const status = statusMap[appt.status] || 'PENDING';
+  const type = typeMap[appt.type] || 'TELECONSULTA';
+
+  return {
+    id: appt.id,
+    date: appt.date,
+    time: appt.time,
+    professional: appt.professionalName,
+    specialty: appt.specialty || 'Atendimento',
+    type,
+    status,
+    location: appt.room || (type === 'PRESENCIAL' ? 'Sala 3 — Unidade Central' : undefined),
+    teleconsultUrl: type === 'TELECONSULTA' ? `/telehealth/${appt.id}` : undefined,
+    canConfirm: status === 'PENDING',
+    canCancel: status === 'PENDING' || status === 'CONFIRMED',
+    canReschedule: status === 'PENDING' || status === 'CONFIRMED',
+    notes: appt.notes || (type === 'TELECONSULTA' ? 'Lembre-se de acessar em local tranquilo com câmera e microfone disponíveis.' : undefined),
+  };
+}
+
 export function BeneficiaryPortalProvider({ children }: { children: ReactNode }) {
-  const [appointments, setAppointments] = useState<PortalAppointment[]>(MOCK_APPOINTMENTS);
+  const [appointments, setAppointments] = useState<PortalAppointment[]>(() => {
+    const saved = localStorage.getItem('appointments_list');
+    const beneficiaryId = MOCK_BENEFICIARY.id;
+    const beneficiaryName = MOCK_BENEFICIARY.name;
+
+    if (saved) {
+      const all = JSON.parse(saved);
+      const beneficiaryAppts = all.filter((a: any) =>
+        String(a.patientId) === String(beneficiaryId) ||
+        (a.patientName && a.patientName.toLowerCase() === beneficiaryName.toLowerCase())
+      );
+      if (beneficiaryAppts.length > 0) {
+        return beneficiaryAppts.map(mapCentralToPortal);
+      }
+    }
+
+    const seedCentral = [
+      { id: 'apt-001', time: '14:00', date: '2026-07-02', patientId: beneficiaryId, patientName: beneficiaryName, professionalId: '1', professionalName: 'Dra. Roberta Santos', type: 'online', status: 'upcoming', specialty: 'Psicologia' },
+      { id: 'apt-002', time: '09:30', date: '2026-07-10', patientId: beneficiaryId, patientName: beneficiaryName, professionalId: '2', professionalName: 'Dr. Carlos Mendes', type: 'presencial', status: 'pending', specialty: 'Serviço Social', room: 'Sala 3 — Unidade Central' },
+      { id: 'apt-003', time: '10:00', date: '2026-06-20', patientId: beneficiaryId, patientName: beneficiaryName, professionalId: '1', professionalName: 'Dra. Roberta Santos', type: 'online', status: 'completed', specialty: 'Psicologia' },
+      { id: 'apt-004', time: '16:00', date: '2026-07-18', patientId: beneficiaryId, patientName: beneficiaryName, professionalId: 'group-1', professionalName: 'Equipe Multidisciplinar', type: 'grupo', status: 'upcoming', specialty: 'Grupo Terapêutico', room: 'Auditório — Sede' },
+    ];
+
+    const currentSaved = saved ? JSON.parse(saved) : [];
+    const newItems = seedCentral.filter(item => !currentSaved.some((c: any) => c.id === item.id));
+    if (newItems.length > 0) {
+      localStorage.setItem('appointments_list', JSON.stringify([...currentSaved, ...newItems]));
+    }
+
+    return seedCentral.map(mapCentralToPortal);
+  });
+
   const [notifications, setNotifications] = useState<PortalNotification[]>(MOCK_NOTIFICATIONS);
   const [messages, setMessages] = useState<PortalMessage[]>(MOCK_MESSAGES);
   const [requests, setRequests] = useState<ServiceRequest[]>(MOCK_REQUESTS);
@@ -539,18 +605,42 @@ export function BeneficiaryPortalProvider({ children }: { children: ReactNode })
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: 'CONFIRMED' as AppointmentStatus, canConfirm: false } : a))
     );
+    const saved = localStorage.getItem('appointments_list');
+    if (saved) {
+      const all = JSON.parse(saved);
+      const updated = all.map((a: any) =>
+        a.id === id ? { ...a, status: 'upcoming' } : a
+      );
+      localStorage.setItem('appointments_list', JSON.stringify(updated));
+    }
   }, []);
 
   const cancelAppointment = useCallback((id: string) => {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: 'CANCELLED' as AppointmentStatus, canConfirm: false, canCancel: false, canReschedule: false } : a))
     );
+    const saved = localStorage.getItem('appointments_list');
+    if (saved) {
+      const all = JSON.parse(saved);
+      const updated = all.map((a: any) =>
+        a.id === id ? { ...a, status: 'cancelled' } : a
+      );
+      localStorage.setItem('appointments_list', JSON.stringify(updated));
+    }
   }, []);
 
   const requestReschedule = useCallback((id: string) => {
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: 'RESCHEDULING' as AppointmentStatus } : a))
     );
+    const saved = localStorage.getItem('appointments_list');
+    if (saved) {
+      const all = JSON.parse(saved);
+      const updated = all.map((a: any) =>
+        a.id === id ? { ...a, status: 'rescheduling' } : a
+      );
+      localStorage.setItem('appointments_list', JSON.stringify(updated));
+    }
   }, []);
 
   const markNotificationRead = useCallback((id: string) => {
@@ -566,8 +656,31 @@ export function BeneficiaryPortalProvider({ children }: { children: ReactNode })
   }, []);
 
   const sendMessage = useCallback((to: string, subject: string, body: string) => {
-    // Simulate sending — would integrate with backend
-    console.log('Mensagem enviada:', { to, subject, body });
+    if (!body.trim()) return;
+    // Grava no ledger compartilhado messages_list (lido também pelo Messages.tsx da equipe)
+    const newMsg = {
+      sender: 'them' as const,
+      text: subject ? `[${subject}] ${body}` : body,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      threadId: `staff-1`, // Conversa com Coordenação Clínica por padrão
+    };
+    const saved = localStorage.getItem('messages_list');
+    const existing = saved ? JSON.parse(saved) : [];
+    const updated = [...existing, newMsg];
+    localStorage.setItem('messages_list', JSON.stringify(updated));
+    // Também adiciona às mensagens do portal (contexto local)
+    const portalMsg: PortalMessage = {
+      id: `msg-${Date.now()}`,
+      from: 'Você',
+      fromRole: 'Beneficiário',
+      subject: subject || 'Mensagem',
+      preview: body.substring(0, 80),
+      body,
+      sentAt: new Date().toISOString(),
+      status: 'READ' as MessageStatus,
+      canReply: false,
+    };
+    setMessages((prev) => [portalMsg, ...prev]);
   }, []);
 
   const submitRequest = useCallback((category: string, title: string, description: string) => {

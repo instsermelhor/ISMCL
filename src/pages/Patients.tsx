@@ -77,6 +77,31 @@ const DEFAULT_PATIENTS = [
     education: 'Superior Completo',
     occupation: 'Analista de Sistemas',
     familyRenda: 'Acima de 5 SM'
+  },
+  {
+    id: 'ben-001',
+    name: 'Maria Clara Oliveira',
+    socialName: 'Maria Clara',
+    age: 36,
+    gender: 'Feminino',
+    birthDate: '1990-03-15',
+    cpf: '111.222.333-44',
+    rg: '11.222.333-4',
+    status: 'Ativo',
+    risk: 'low',
+    lastSeen: '28/06/2026',
+    professional: 'Dra. Roberta',
+    phone: '(11) 99999-8888',
+    email: 'maria.clara@email.com',
+    address: 'Av. Paulista, 1000, Bela Vista, São Paulo - SP, CEP 01310-100',
+    emergencyContact: 'José (Marido) - (11) 98888-7777',
+    socialProject: 'Saúde Mental Comunitária',
+    photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    income: '1_to_3',
+    housing: 'rented',
+    education: 'Superior Incompleto',
+    occupation: 'Auxiliar Administrativa',
+    familyRenda: '1 a 2 SM'
   }
 ];
 

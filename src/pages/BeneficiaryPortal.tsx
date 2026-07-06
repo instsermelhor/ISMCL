@@ -763,16 +763,31 @@ function DocumentsPanel() {
 // ─── Mensagens ────────────────────────────────────────────────────────────────
 
 function MessagesPanel() {
-  const { messages, markMessageRead, unreadMessages } = useBeneficiaryPortal();
+  const { messages, markMessageRead, unreadMessages, sendMessage } = useBeneficiaryPortal();
   const [selected, setSelected] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [showCompose, setShowCompose] = useState(false);
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [composeSent, setComposeSent] = useState(false);
 
   const selectedMessage = messages.find((m) => m.id === selected);
 
   const handleSelect = (id: string) => {
     setSelected(id);
     markMessageRead(id);
+  };
+
+  const handleComposeSend = () => {
+    if (!composeBody.trim()) return;
+    sendMessage('Equipe Administrativa', composeSubject, composeBody);
+    setComposeSent(true);
+    setTimeout(() => {
+      setShowCompose(false);
+      setComposeSubject('');
+      setComposeBody('');
+      setComposeSent(false);
+    }, 1500);
   };
 
   return (
@@ -918,37 +933,65 @@ function MessagesPanel() {
               className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl"
             >
               <h3 className="font-bold text-slate-900 text-lg mb-4">Nova Mensagem</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Destinatário</label>
-                  <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    <option>Equipe Administrativa</option>
-                    <option>Dra. Roberta Santos — Psicóloga</option>
-                    <option>Dr. Carlos Mendes — Serviço Social</option>
-                  </select>
+              {composeSent ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                    <Send className="w-7 h-7 text-emerald-600" />
+                  </div>
+                  <p className="font-semibold text-slate-800">Mensagem enviada!</p>
+                  <p className="text-xs text-slate-500 mt-1">A equipe responderá em até 2 dias úteis.</p>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Assunto</label>
-                  <input type="text" placeholder="Assunto da mensagem" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Mensagem</label>
-                  <textarea rows={4} placeholder="Escreva sua mensagem..." className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-300" />
-                </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-600 flex items-start gap-2">
-                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  Mensagens são encaminhadas à equipe responsável e respondidas em até 2 dias úteis. Não use este canal para emergências.
-                </div>
-              </div>
-              <div className="flex gap-3 mt-5">
-                <button onClick={() => setShowCompose(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
-                  Cancelar
-                </button>
-                <button className="flex-1 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
-                  <Send className="w-4 h-4" />
-                  Enviar
-                </button>
-              </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Destinatário</label>
+                      <select className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                        <option>Equipe Administrativa</option>
+                        <option>Dra. Roberta Santos — Psicóloga</option>
+                        <option>Dr. Carlos Mendes — Serviço Social</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Assunto</label>
+                      <input
+                        type="text"
+                        value={composeSubject}
+                        onChange={(e) => setComposeSubject(e.target.value)}
+                        placeholder="Assunto da mensagem"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Mensagem</label>
+                      <textarea
+                        rows={4}
+                        value={composeBody}
+                        onChange={(e) => setComposeBody(e.target.value)}
+                        placeholder="Escreva sua mensagem..."
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-300"
+                      />
+                    </div>
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-600 flex items-start gap-2">
+                      <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      Mensagens são encaminhadas à equipe responsável e respondidas em até 2 dias úteis. Não use este canal para emergências.
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-5">
+                    <button onClick={() => setShowCompose(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleComposeSend}
+                      disabled={!composeBody.trim()}
+                      className="flex-1 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-4 h-4" />
+                      Enviar
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
