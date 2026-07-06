@@ -394,6 +394,57 @@ export function ProfessionalProfile() {
                 </div>
               </div>
 
+              {/* Timeline de Consultas do Dia */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Agenda de Hoje — 28 Jun 2026</h3>
+                  <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                    {(() => {
+                      const saved = localStorage.getItem('appointments_list');
+                      const all = saved ? JSON.parse(saved) : [];
+                      return all.filter((a: any) => String(a.professionalId) === String(prof.id) && a.date === '2026-06-28').length;
+                    })()} consulta(s) hoje
+                  </span>
+                </div>
+                {(() => {
+                  const saved = localStorage.getItem('appointments_list');
+                  const all = saved ? JSON.parse(saved) : [];
+                  const profAppts = all.filter((a: any) => String(a.professionalId) === String(prof.id) && a.date === '2026-06-28');
+                  if (profAppts.length === 0) {
+                    return (
+                      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 text-center">
+                        <p className="text-slate-500 font-medium">Nenhuma consulta agendada para hoje.</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                      <div className="divide-y divide-slate-100">
+                        {profAppts.map((appt: any) => (
+                          <div key={appt.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/70 transition-colors">
+                            <div className="w-14 text-center shrink-0">
+                              <span className="text-sm font-bold text-slate-700">{appt.time}</span>
+                            </div>
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${appt.status === 'completed' ? 'bg-slate-400' : 'bg-teal-500'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-semibold truncate ${appt.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                                {appt.patientName}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-0.5 capitalize">{appt.type} · {appt.duration}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              appt.status === 'completed' ? 'bg-slate-100 text-slate-500' : 'bg-teal-50 text-teal-700 border border-teal-100'
+                            }`}>
+                              {appt.status === 'completed' ? 'REALIZADA' : 'CONFIRMADO'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Pacientes Atualmente Vinculados</h3>
                 <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 text-center">

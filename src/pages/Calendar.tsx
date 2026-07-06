@@ -7,15 +7,7 @@ import { cn } from '../utils';
 // MÓDULO 03: AGENDA INTELIGENTE E CENTRAL DE AGENDAMENTOS
 // =========================================================================
 
-const MOCK_SCHEDULE = [
-  { id: 1, time: '09:00', patient: 'Ana Silva', type: 'online', duration: '50 min', status: 'completed', prof: 'Dra. Elena Silva' },
-  { id: 2, time: '10:00', patient: 'Carlos Santos', type: 'presencial', duration: '50 min', status: 'completed', prof: 'Dra. Elena Silva', room: 'Consultório 1' },
-  { id: 3, time: '11:00', patient: '-', type: 'empty', duration: '', status: '' },
-  { id: 4, time: '13:00', patient: '-', type: 'empty', duration: '', status: '' },
-  { id: 5, time: '14:00', patient: 'Júlia Costa', type: 'online', duration: '50 min', status: 'upcoming', prof: 'Dra. Elena Silva' },
-  { id: 6, time: '15:30', patient: 'Marcos Oliveira', type: 'online', duration: '50 min', status: 'upcoming', prof: 'Dra. Elena Silva' },
-  { id: 7, time: '16:30', patient: '-', type: 'empty', duration: '', status: '' },
-];
+
 
 const MOCK_WAITLIST = [
   { id: 1, name: 'Beatriz Almeida', specialty: 'Psicologia', score: 98, waitTime: '15 dias', urgency: 'URGENT' },
@@ -26,6 +18,73 @@ const MOCK_WAITLIST = [
 export function Calendar() {
   const [activeTab, setActiveTab] = useState('minha-agenda');
   const [isAiModalOpen, setAiModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // --- CONTROLE DE AGENDAMENTOS INTEGRADOS ---
+  const [appointments, setAppointments] = useState<any[]>(() => {
+    const saved = localStorage.getItem('appointments_list');
+    if (saved) return JSON.parse(saved);
+
+    const initial = [
+      { id: '1', time: '09:00', date: '2026-06-28', patientId: '1', patientName: 'Ana Silva Santos', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'completed' },
+      { id: '2', time: '10:00', date: '2026-06-28', patientId: '2', patientName: 'Marcos Santos Oliveira', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'presencial', duration: '50 min', status: 'completed', room: 'Consultório 1' },
+      { id: '3', time: '14:00', date: '2026-06-28', patientId: '3', patientName: 'Júlia Costa', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'upcoming' },
+    ];
+    localStorage.setItem('appointments_list', JSON.stringify(initial));
+    return initial;
+  });
+
+  // Lista de beneficiários e profissionais para o formulário
+  const [patients] = useState<any[]>(() => {
+    const saved = localStorage.getItem('patients_list');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [professionals] = useState<any[]>(() => {
+    const saved = localStorage.getItem('professionals_list');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Formulário de Novo Agendamento
+  const [formPatientId, setFormPatientId] = useState('');
+  const [formProfId, setFormProfId] = useState('');
+  const [formTime, setFormTime] = useState('11:00');
+  const [formType, setFormType] = useState<'online' | 'presencial'>('online');
+  const [formDate, setFormDate] = useState('2026-06-28');
+
+  const currentDate = '2026-06-28';
+  const timeSlots = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:30', '16:30'];
+
+  const handleCreateAppointment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formPatientId || !formProfId) {
+      alert('Por favor, selecione o beneficiário e o profissional.');
+      return;
+    }
+
+    const patientObj = patients.find((p: any) => String(p.id) === String(formPatientId));
+    const profObj = professionals.find((p: any) => String(p.id) === String(formProfId));
+
+    const newAppt = {
+      id: String(Date.now()),
+      time: formTime,
+      date: formDate,
+      patientId: formPatientId,
+      patientName: patientObj ? patientObj.name : 'Beneficiário',
+      professionalId: formProfId,
+      professionalName: profObj ? profObj.name : 'Profissional',
+      type: formType,
+      duration: '50 min',
+      status: 'upcoming',
+      room: formType === 'presencial' ? 'Consultório 1' : undefined
+    };
+
+    const updated = [...appointments, newAppt];
+    setAppointments(updated);
+    localStorage.setItem('appointments_list', JSON.stringify(updated));
+    setIsCreateModalOpen(false);
+    alert('Consulta agendada com sucesso!');
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 font-sans p-4 sm:p-8">
@@ -43,7 +102,10 @@ export function Calendar() {
               <Filter className="w-4 h-4" />
               Filtros
             </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm">
+            <button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors shadow-sm"
+            >
               <Plus className="w-4 h-4" />
               Novo Agendamento
             </button>
@@ -105,55 +167,66 @@ export function Calendar() {
 
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="divide-y divide-slate-100">
-                  {MOCK_SCHEDULE.map((slot) => (
-                    <div key={slot.id} className="flex items-stretch hover:bg-slate-50/50 transition-colors group">
-                      <div className="w-24 shrink-0 py-4 px-6 flex items-center justify-center border-r border-slate-100">
-                        <span className="text-sm font-medium text-slate-500">{slot.time}</span>
-                      </div>
-                      
-                      <div className="flex-1 p-4">
-                        {slot.type === 'empty' ? (
-                          <div className="h-full flex items-center">
-                            <button className="text-sm font-medium text-slate-400 group-hover:text-teal-600 transition-colors flex items-center gap-2">
-                              <Plus className="w-4 h-4" />
-                              Horário Disponível
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-slate-100 rounded-xl p-4 shadow-sm gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className={cn("w-2 h-10 rounded-full", slot.status === 'completed' ? 'bg-slate-300' : 'bg-teal-500')} />
-                              <div>
-                                <h4 className={cn("text-base font-medium", slot.status === 'completed' ? 'text-slate-500 line-through' : 'text-slate-900')}>
-                                  {slot.patient}
-                                </h4>
-                                <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-slate-500">
-                                  <span className="flex items-center gap-1.5">
-                                    {slot.type === 'online' ? <Video className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-                                    <span className="capitalize">{slot.type}</span>
-                                  </span>
-                                  {slot.room && (
-                                    <>
-                                      <span>•</span>
-                                      <span>{slot.room}</span>
-                                    </>
-                                  )}
-                                  <span>•</span>
-                                  <span>{slot.duration}</span>
+                  {timeSlots.map((slotTime) => {
+                    const slot = appointments.find((a: any) => a.time === slotTime && a.date === currentDate);
+                    return (
+                      <div key={slotTime} className="flex items-stretch hover:bg-slate-50/50 transition-colors group">
+                        <div className="w-24 shrink-0 py-4 px-6 flex items-center justify-center border-r border-slate-100">
+                          <span className="text-sm font-medium text-slate-500">{slotTime}</span>
+                        </div>
+                        
+                        <div className="flex-1 p-4">
+                          {!slot ? (
+                            <div className="h-full flex items-center">
+                              <button 
+                                onClick={() => {
+                                  setFormTime(slotTime);
+                                  setIsCreateModalOpen(true);
+                                }}
+                                className="text-sm font-medium text-slate-400 group-hover:text-teal-600 transition-colors flex items-center gap-2"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Horário Disponível
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-slate-100 rounded-xl p-4 shadow-sm gap-4">
+                              <div className="flex items-center gap-4">
+                                <div className={cn("w-2 h-10 rounded-full", slot.status === 'completed' ? 'bg-slate-300' : 'bg-teal-500')} />
+                                <div>
+                                  <h4 className={cn("text-base font-semibold", slot.status === 'completed' ? 'text-slate-450 line-through' : 'text-slate-900')}>
+                                    {slot.patientName}
+                                  </h4>
+                                  <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                      {slot.type === 'online' ? <Video className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
+                                      <span className="capitalize">{slot.type}</span>
+                                    </span>
+                                    <span>•</span>
+                                    <span>{slot.professionalName}</span>
+                                    {slot.room && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{slot.room}</span>
+                                      </>
+                                    )}
+                                    <span>•</span>
+                                    <span>{slot.duration}</span>
+                                  </div>
                                 </div>
                               </div>
+                              
+                              {slot.status === 'upcoming' && (
+                                <button className="px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-500 transition-colors w-full sm:w-auto text-center shadow-sm">
+                                  Acessar Sala
+                                </button>
+                              )}
                             </div>
-                            
-                            {slot.status === 'upcoming' && (
-                              <button className="px-5 py-2.5 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-500 transition-colors w-full sm:w-auto text-center shadow-sm">
-                                Acessar Sala
-                              </button>
-                            )}
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
@@ -287,6 +360,14 @@ export function Calendar() {
               </button>
               <button 
                 onClick={() => {
+                  const matchAppts = [
+                    { id: 'match-1', time: '11:00', date: '2026-06-28', patientId: 'match-p1', patientName: 'Beatriz Almeida', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'upcoming' },
+                    { id: 'match-2', time: '13:00', date: '2026-06-28', patientId: 'match-p2', patientName: 'João Ferreira', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'upcoming' },
+                    { id: 'match-3', time: '16:30', date: '2026-06-28', patientId: 'match-p3', patientName: 'Lúcia Mendes', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'upcoming' }
+                  ];
+                  const updated = [...appointments, ...matchAppts];
+                  setAppointments(updated);
+                  localStorage.setItem('appointments_list', JSON.stringify(updated));
                   alert('Agendamentos automatizados realizados! Notificações enviadas via WhatsApp para confirmação.');
                   setAiModalOpen(false);
                 }}
@@ -295,6 +376,103 @@ export function Calendar() {
                 Confirmar Match
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MANUAL DE NOVO AGENDAMENTO */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-100 shadow-2xl space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Novo Agendamento Clínico</h3>
+              <p className="text-sm text-slate-500 mt-2">Selecione o paciente e o profissional para alocação de horário.</p>
+            </div>
+
+            <form onSubmit={handleCreateAppointment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Beneficiário (Paciente)</label>
+                <select 
+                  value={formPatientId} 
+                  onChange={(e) => setFormPatientId(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                  required
+                >
+                  <option value="">Selecione um paciente...</option>
+                  {patients.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Profissional Voluntário</label>
+                <select 
+                  value={formProfId} 
+                  onChange={(e) => setFormProfId(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                  required
+                >
+                  <option value="">Selecione um profissional...</option>
+                  {professionals.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name} - {p.profession}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Horário</label>
+                  <select 
+                    value={formTime} 
+                    onChange={(e) => setFormTime(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    {timeSlots.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Modalidade</label>
+                  <select 
+                    value={formType} 
+                    onChange={(e) => setFormType(e.target.value as any)}
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    <option value="online">Vídeo (Online)</option>
+                    <option value="presencial">Presencial (Sede)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">Data da Consulta</label>
+                <input 
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:ring-teal-500 focus:border-teal-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition-colors shadow-md shadow-teal-900/10"
+                >
+                  Confirmar Agendamento
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

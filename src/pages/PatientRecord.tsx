@@ -2636,29 +2636,32 @@ export function PatientRecord() {
                       </button>
                     </div>
                     <div className="space-y-2">
-                      {[
-                        { date: '08/07/2026', time: '14:00', prof: 'Dra. Roberta de Souza', type: 'Psicoterapia', status: 'CONFIRMADO' },
-                        { date: '15/07/2026', time: '10:30', prof: 'Dr. Marcos Mendes', type: 'Psiquiatria', status: 'PENDENTE' },
-                        { date: '22/07/2026', time: '09:00', prof: 'Assistente Social Fernando', type: 'Ass. Social', status: 'PENDENTE' },
-                      ].map((appt, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="text-center">
-                              <div className="text-sm font-bold text-slate-900">{appt.date.split('/')[0]}</div>
-                              <div className="text-[10px] text-slate-500">{appt.date.split('/')[1]}/{appt.date.split('/')[2]}</div>
+                      {(() => {
+                        const saved = localStorage.getItem('appointments_list');
+                        const allAppts = saved ? JSON.parse(saved) : [];
+                        const patientAppts = allAppts.filter((a: any) => String(a.patientId) === String(patient.id) && a.status === 'upcoming');
+                        if (patientAppts.length === 0) {
+                          return (
+                            <p className="text-xs text-slate-400 text-center py-4">Nenhuma consulta futura agendada.</p>
+                          );
+                        }
+                        return patientAppts.map((appt: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="text-center">
+                                <div className="text-sm font-bold text-slate-900">{appt.time}</div>
+                                <div className="text-[10px] text-slate-500">{appt.date}</div>
+                              </div>
+                              <div className="w-px h-8 bg-slate-200" />
+                              <div>
+                                <div className="text-xs font-bold text-slate-800 capitalize">{appt.type}</div>
+                                <div className="text-[10px] text-slate-500">{appt.professionalName}</div>
+                              </div>
                             </div>
-                            <div className="w-px h-8 bg-slate-200" />
-                            <div>
-                              <div className="text-xs font-bold text-slate-800">{appt.time} — {appt.type}</div>
-                              <div className="text-[10px] text-slate-500">{appt.prof}</div>
-                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">PENDENTE</span>
                           </div>
-                          <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                            appt.status === 'CONFIRMADO' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                          )}>{appt.status}</span>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </div>
 
