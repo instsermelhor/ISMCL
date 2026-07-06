@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Video, MapPin, Plus, Filter, Users, Calendar as CalendarIcon, Clock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../contexts/SecurityContext';
 
 // =========================================================================
 // MÓDULO 03: AGENDA INTELIGENTE E CENTRAL DE AGENDAMENTOS
@@ -16,6 +18,8 @@ const MOCK_WAITLIST = [
 ];
 
 export function Calendar() {
+  const { user } = useAuth();
+  const { logAction } = useSecurity();
   const [activeTab, setActiveTab] = useState('minha-agenda');
   const [isAiModalOpen, setAiModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -82,6 +86,18 @@ export function Calendar() {
     const updated = [...appointments, newAppt];
     setAppointments(updated);
     localStorage.setItem('appointments_list', JSON.stringify(updated));
+
+    // Log de Auditoria MCSI
+    logAction({
+      userId: user?.email ?? 'sistema',
+      userName: user?.name ?? 'Coordenador',
+      action: 'EDIT',
+      targetCode: `APPT-${newAppt.id}`,
+      description: `[Agenda] Criou novo agendamento para beneficiário: ${newAppt.patientName} com ${newAppt.professionalName}`,
+      ipAddress: '—',
+      device: navigator.userAgent.slice(0, 80),
+    });
+
     setIsCreateModalOpen(false);
     alert('Consulta agendada com sucesso!');
   };
@@ -368,6 +384,20 @@ export function Calendar() {
                   const updated = [...appointments, ...matchAppts];
                   setAppointments(updated);
                   localStorage.setItem('appointments_list', JSON.stringify(updated));
+
+                  // Log de Auditoria MCSI
+                  matchAppts.forEach(appt => {
+                    logAction({
+                      userId: user?.email ?? 'sistema',
+                      userName: user?.name ?? 'Coordenador',
+                      action: 'EDIT',
+                      targetCode: `APPT-${appt.id}`,
+                      description: `[Agenda-IA] Criou agendamento automatizado via IA para beneficiário: ${appt.patientName}`,
+                      ipAddress: '—',
+                      device: navigator.userAgent.slice(0, 80),
+                    });
+                  });
+
                   alert('Agendamentos automatizados realizados! Notificações enviadas via WhatsApp para confirmação.');
                   setAiModalOpen(false);
                 }}

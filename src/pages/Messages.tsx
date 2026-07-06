@@ -5,6 +5,8 @@ import {
   Smartphone, CheckCircle2, Clock, Phone
 } from 'lucide-react';
 import { cn } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../contexts/SecurityContext';
 
 // =========================================================================
 // MÓDULO: MENSAGERIA UNIFICADA & LEMBRETES OMNICHANNEL
@@ -57,6 +59,8 @@ const INITIAL_THREAD_MESSAGES: ChatMessage[] = [
 ];
 
 export function Messages() {
+  const { user } = useAuth();
+  const { logAction } = useSecurity();
   const [sidebarTab, setSidebarTab] = useState<'mensagens' | 'lembretes'>('mensagens');
   const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
@@ -141,6 +145,18 @@ export function Messages() {
         c.id === activeContact.id ? { ...c, lastMsg: inputText, time: newMsg.time } : c
       )
     );
+    // Auditoria MCSI: mensagens para beneficiários são eventos sensíveis
+    if (activeContact.type === 'beneficiary') {
+      logAction({
+        userId: user?.email ?? 'sistema',
+        userName: user?.name ?? 'Equipe Técnica',
+        action: 'EDIT',
+        targetCode: activeContact.id,
+        description: `[Mensageria] Mensagem enviada para beneficiário: ${activeContact.name}`,
+        ipAddress: '—',
+        device: navigator.userAgent.slice(0, 80),
+      });
+    }
     setInputText('');
   };
 

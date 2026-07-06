@@ -544,7 +544,20 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [profiles, setProfiles] = useState<ProtectedProfile[]>(INITIAL_PROFILES);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(INITIAL_REQUESTS);
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(INITIAL_AUDIT);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(() => {
+    // Persiste trilha de auditoria entre reloads
+    const saved = localStorage.getItem('audit_log');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as AuditLogEntry[];
+        // Merge: saved + initial (sem duplicatas)
+        const ids = new Set(parsed.map((e) => e.id));
+        const merged = [...parsed, ...INITIAL_AUDIT.filter((e) => !ids.has(e.id))];
+        return merged;
+      } catch { /* ignorar parse errors */ }
+    }
+    return INITIAL_AUDIT;
+  });
   const [behaviorAlerts, setBehaviorAlerts] = useState<BehaviorAlert[]>(INITIAL_ALERTS);
 
   const canAccess = useCallback(
@@ -576,7 +589,12 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         timestamp,
         logHash: generateLogHash({ ...entry, timestamp }),
       };
-      setAuditLog((prev) => [newEntry, ...prev]);
+      setAuditLog((prev) => {
+        const updated = [newEntry, ...prev];
+        // Persiste os 200 registros mais recentes no localStorage
+        localStorage.setItem('audit_log', JSON.stringify(updated.slice(0, 200)));
+        return updated;
+      });
     },
     []
   );

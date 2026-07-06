@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../contexts/SecurityContext';
 import { 
   ArrowLeft, 
   User, 
@@ -97,8 +99,17 @@ export function PatientRecord() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // --- CONTEXTOS DE AUTENTICAÇÃO E SEGURANÇA (MCSI) ---
+  const { user } = useAuth();
+  const { logAction } = useSecurity();
+
   // --- CONTROLE DE SIGILO E PRIVACIDADE (PEI-RN01, PEI-RN02) ---
-  const [userRole, setUserRole] = useState<'ref' | 'external' | 'admin' | 'coord'>('ref');
+  // userRole é derivado do AuthContext — reflete o usuário real logado
+  const authRole = user?.role ?? 'volunteer';
+  // Mapeamento: 'admin' -> 'admin', 'ref' -> 'ref', 'volunteer' -> 'external'
+  const derivedRole: 'ref' | 'external' | 'admin' | 'coord' =
+    authRole === 'admin' ? 'admin' : authRole === 'ref' ? 'ref' : 'external';
+  const [userRole, setUserRole] = useState<'ref' | 'external' | 'admin' | 'coord'>(derivedRole);
   const [isPrivacyLocked, setIsPrivacyLocked] = useState(false);
   const [hasOverrideAccess, setHasOverrideAccess] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
@@ -556,21 +567,37 @@ export function PatientRecord() {
     { timestamp: '14:15:30', action: 'ACESSO_ANAMNESE', professional: 'Dra. Roberta de Souza', role: 'Psicóloga Clínica', details: 'Visualizou a Anamnese Geral do paciente (Versão v2).', type: 'info' }
   ]);
 
-  const addAuditEntry = (action: string, details: string, type: 'info' | 'warning' | 'security' | 'success' = 'info') => {
+  const addAuditEntry = useCallback((action: string, details: string, type: 'info' | 'warning' | 'security' | 'success' = 'info') => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const professionalName = user?.name ?? (userRole === 'ref' ? 'Profissional de Referência' : userRole === 'coord' ? 'Coordenadora Técnica' : userRole === 'admin' ? 'Administrador Geral' : 'Técnico Externo');
+    const roleName = user?.subtitle ?? (userRole === 'ref' ? 'Psicóloga Clínica' : userRole === 'coord' ? 'Coordenadora Técnica' : userRole === 'admin' ? 'TI Adm' : 'Acesso Externo');
     setAuditEntries(prev => [
       {
         timestamp: timeStr,
         action,
-        professional: userRole === 'ref' ? 'Dra. Roberta de Souza' : userRole === 'coord' ? 'Dra. Carla Dias (Coordenadora)' : userRole === 'admin' ? 'Administrador Geral' : 'Dr. Marcos Mendes (Técnico Externo)',
-        role: userRole === 'ref' ? 'Psicóloga Clínica' : userRole === 'coord' ? 'Coordenadora Técnica' : userRole === 'admin' ? 'TI Adm' : 'Médico Psiquiatra',
+        professional: professionalName,
+        role: roleName,
         details,
         type
       },
       ...prev
     ]);
-  };
+    // Envia eventos sensíveis para a trilha imutável do MCSI (SecurityContext)
+    if (type === 'security' || action.includes('EXPORT') || action.includes('OVERRIDE') || action.includes('CPF') || action.includes('RG') || action.includes('VAULT')) {
+      logAction({
+        userId: user?.email ?? 'sistema',
+        userName: professionalName,
+        action: action.includes('EXPORT') ? 'EXPORT' :
+                action.includes('OVERRIDE') ? 'BREAK_GLASS' :
+                action.includes('CPF') || action.includes('RG') ? 'VIEW' : 'VIEW',
+        targetCode: id ? `PEI-${id}` : 'PEI',
+        description: `[PEI] ${details}`,
+        ipAddress: '—',
+        device: navigator.userAgent.slice(0, 80),
+      });
+    }
+  }, [user, userRole, id, logAction]);
 
   // --- EXPORTAR RELATÓRIO DO PRONTUÁRIO (PRINT/PDF AUDITED) ---
   const handleExportPEI = () => {
