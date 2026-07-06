@@ -116,7 +116,11 @@ export function PatientRecord() {
   }, [userRole]);
 
   // --- NAVEGAÇÃO DE ABAS ---
-  const [activeTab, setActiveTab] = useState<'timeline' | 'anamnese' | 'evolutions' | 'documents' | 'scales' | 'attachments' | 'audit' | 'pic' | 'team' | 'meetings' | 'referrals' | 'alerts'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'anamnese' | 'evolutions' | 'documents' | 'scales' | 'attachments' | 'audit' | 'pic' | 'team' | 'meetings' | 'referrals' | 'alerts' | 'personal' | 'bonds' | 'schedule_list'>('timeline');
+
+  // Helper: abas clínicas que requerem sigilo
+  const clinicalTabs = ['timeline', 'anamnese', 'evolutions', 'documents', 'scales', 'attachments', 'audit', 'pic', 'team', 'meetings', 'referrals', 'alerts'] as const;
+  const isCurrentTabClinical = (clinicalTabs as readonly string[]).includes(activeTab);
 
   // --- MÓDULO 06: GESTÃO DE CASOS & PIC STATE ---
   const [picPlan, setPicPlan] = useState({
@@ -576,60 +580,7 @@ export function PatientRecord() {
       {/* LAYOUT PRINCIPAL DO PRONTUÁRIO */}
       {/* ========================================================================= */}
       <div className="flex-1 flex overflow-hidden">
-        
-        {/* BLOQUEIO DE PRIVACIDADE CASO NEGADO (PEI-RN01, PEI-RN02) */}
-        {isPrivacyLocked && !hasOverrideAccess ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-900/5 text-center">
-            <motion.div 
-              initial={{ scale: 0.98, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="max-w-md w-full bg-white border border-slate-200 shadow-2xl rounded-3xl p-8 space-y-6 relative overflow-hidden"
-            >
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-rose-500" />
-              <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-500 border border-rose-100 shadow-sm">
-                <Lock className="w-8 h-8" />
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">Acesso Restrito - Prontuário Sigiloso</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Para garantir o acolhimento seguro, a integridade do beneficiário e as normas profissionais (LGPD), este prontuário é sigiloso e restrito a profissionais designados.
-                </p>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500 leading-normal">
-                Você está autenticado como **{userRole === 'admin' ? 'Administrador Geral' : 'Dr. Marcos Mendes (Psiquiatra sem vínculo)'}**. Administradores e profissionais sem vínculo direto com o tratamento não possuem permissão de leitura clínica.
-              </div>
-
-              <div className="flex flex-col gap-2 pt-2">
-                {userRole === 'coord' || userRole === 'external' ? (
-                  <button 
-                    onClick={() => {
-                      setOverrideReason('');
-                      setShowOverrideModal(true);
-                    }}
-                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-rose-900/10 flex items-center justify-center gap-1.5"
-                  >
-                    <Key className="w-4 h-4" />
-                    Forçar Acesso de Emergência (Override)
-                  </button>
-                ) : (
-                  <div className="text-[10px] text-rose-600 font-semibold bg-rose-50 p-2.5 rounded-lg">
-                    Seu perfil administrativo não permite override clínico. Apenas Coordenadores Técnicos ou Médicos Peritos podem justificar e forçar acesso.
-                  </div>
-                )}
-                
-                <button 
-                  onClick={() => navigate('/dashboard')}
-                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-all"
-                >
-                  Voltar ao Painel
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        ) : (
-          <>
+        <>
             {/* LADO ESQUERDO: MENU DE ABAS E IDENTIFICAÇÃO BÁSICA */}
             <aside className="w-[300px] border-r border-slate-200 bg-white flex flex-col shrink-0 overflow-y-auto">
               {/* Contatos / Info da Identificação */}
@@ -801,11 +752,92 @@ export function PatientRecord() {
                     Alertas do Caso
                   </button>
                 </div>
+
+                {/* ===================== ABAS CADASTRAIS ===================== */}
+                <div className="pt-2 border-t border-slate-100 my-2">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">Cadastro do Beneficiário</div>
+
+                  <button
+                    onClick={() => { setActiveTab('personal'); addAuditEntry('ABRIR_ABA', 'Aba Dados Pessoais visualizada.', 'info'); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeTab === 'personal' ? "bg-sky-50 text-sky-700" : "text-slate-650 hover:bg-slate-50 hover:text-slate-950"
+                    )}
+                  >
+                    <User className="w-4 h-4" />
+                    Dados Pessoais
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('bonds'); addAuditEntry('ABRIR_ABA', 'Aba Acolhimento & Vínculos visualizada.', 'info'); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeTab === 'bonds' ? "bg-sky-50 text-sky-700" : "text-slate-650 hover:bg-slate-50 hover:text-slate-950"
+                    )}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Acolhimento & Vínculos
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('schedule_list'); addAuditEntry('ABRIR_ABA', 'Aba Agenda & Consultas visualizada.', 'info'); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all",
+                      activeTab === 'schedule_list' ? "bg-sky-50 text-sky-700" : "text-slate-650 hover:bg-slate-50 hover:text-slate-950"
+                    )}
+                  >
+                    <Clock className="w-4 h-4" />
+                    Agenda & Consultas
+                  </button>
+                </div>
               </nav>
             </aside>
 
             {/* LADO DIREITO: ÁREA DE EXIBIÇÃO CLÍNICA DE CADA ABA */}
             <main className="flex-1 bg-slate-50 overflow-y-auto p-8 relative flex flex-col gap-6">
+
+              {/* BLOQUEIO INTERNO: só bloqueia abas clínicas se sigilo ativo */}
+              {isPrivacyLocked && !hasOverrideAccess && isCurrentTabClinical && (
+                <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
+                  <motion.div
+                    initial={{ scale: 0.98, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="max-w-md w-full bg-white border border-slate-200 shadow-2xl rounded-3xl p-8 space-y-6 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 inset-x-0 h-1.5 bg-rose-500" />
+                    <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-500 border border-rose-100 shadow-sm">
+                      <Lock className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-2 text-center">
+                      <h3 className="text-lg font-bold text-slate-900">Acesso Clínico Restrito</h3>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Esta aba contém dados clínicos sigilosos. Apenas profissionais com vínculo terapêutico ativo podem visualizá-la.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 pt-2">
+                      {userRole === 'coord' || userRole === 'external' ? (
+                        <button
+                          onClick={() => { setOverrideReason(''); setShowOverrideModal(true); }}
+                          className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-rose-900/10 flex items-center justify-center gap-1.5"
+                        >
+                          <Key className="w-4 h-4" />
+                          Justificar & Forçar Acesso de Emergência
+                        </button>
+                      ) : (
+                        <div className="text-[10px] text-rose-600 font-semibold bg-rose-50 p-2.5 rounded-lg text-center">
+                          Seu perfil não permite override clínico. Contate o Coordenador Técnico.
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setActiveTab('personal')}
+                        className="w-full py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold rounded-xl transition-all"
+                      >
+                        Ir para Dados Pessoais (acesso liberado)
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
               
               <AnimatePresence mode="wait">
                 
@@ -2208,9 +2240,283 @@ export function PatientRecord() {
                 )}
               </section>
 
+              {/* ===================== ABA: DADOS PESSOAIS ===================== */}
+              {activeTab === 'personal' && (
+                <motion.div key="personal" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-6">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                    <h2 className="text-base font-bold text-slate-950 uppercase tracking-wide">Dados Pessoais do Beneficiário</h2>
+                    <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold border border-sky-100">Recepção / Administração</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Identificação */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 col-span-2">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Identificação Civil</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nome Completo</label>
+                          <input defaultValue={patient.name} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-800" readOnly />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nome Social</label>
+                          <input defaultValue="" placeholder="Se houver" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data de Nascimento</label>
+                          <input type="date" defaultValue="1994-03-12" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Gênero / Identidade</label>
+                          <select defaultValue="Feminino" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
+                            <option>Feminino</option><option>Masculino</option><option>Não-binário</option><option>Outro</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">CPF</label>
+                          <div className="relative">
+                            <input defaultValue="***.456.789-**" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-mono" readOnly />
+                            <button onClick={() => addAuditEntry('VISUALIZAÇÃO_CPF', 'CPF do beneficiário exibido.', 'security')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600"><Eye className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">RG</label>
+                          <div className="relative">
+                            <input defaultValue="**.***.***-*" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-mono" readOnly />
+                            <button onClick={() => addAuditEntry('VISUALIZAÇÃO_RG', 'RG do beneficiário exibido.', 'security')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600"><Eye className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contato */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Contato</h3>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Telefone Principal</label>
+                          <input defaultValue={patient.phone} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">E-mail</label>
+                          <input defaultValue="ana.silva@email.com" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contato de Emergência</label>
+                          <input defaultValue={patient.emergencyContact} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Endereço */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Endereço Residencial</h3>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Logradouro</label>
+                          <input defaultValue="Rua das Acácias, 342" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bairro</label>
+                            <input defaultValue="Penha" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">CEP</label>
+                            <input defaultValue="03700-000" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cidade</label>
+                            <input defaultValue="São Paulo" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">UF</label>
+                            <input defaultValue="SP" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dados Socioeconômicos */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 col-span-2">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Dados Socioeconômicos</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Escolaridade</label>
+                          <select className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
+                            <option>Superior Completo</option><option>Ensino Médio</option><option>Fundamental</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ocupação</label>
+                          <input defaultValue="Gerente Administrativa" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Renda Familiar</label>
+                          <select className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
+                            <option>2 a 5 SM</option><option>Até 1 SM</option><option>1 a 2 SM</option><option>Acima de 5 SM</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button onClick={() => addAuditEntry('SALVAR_DADOS_PESSOAIS', 'Dados pessoais do beneficiário atualizados.', 'success')} className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-teal-900/10 transition-all">
+                      Salvar Alterações
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ===================== ABA: ACOLHIMENTO & VÍNCULOS ===================== */}
+              {activeTab === 'bonds' && (
+                <motion.div key="bonds" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-6">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                    <h2 className="text-base font-bold text-slate-950 uppercase tracking-wide">Acolhimento & Vínculos Sociais</h2>
+                    <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold border border-sky-100">Assistência Social / Recepção</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Situação de Vulnerabilidade</h3>
+                      <div className="space-y-2">
+                        {['Violência Doméstica', 'Situação de Rua', 'Vulnerabilidade Econômica', 'Dependência Química'].map(item => (
+                          <label key={item} className="flex items-center gap-2 text-xs text-slate-700">
+                            <input type="checkbox" defaultChecked={item === 'Violência Doméstica' || item === 'Vulnerabilidade Econômica'} className="rounded" />
+                            {item}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rede de Apoio</h3>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Responsável Legal</label>
+                          <input defaultValue="Maria Santos (Mãe)" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Vínculo Familiar</label>
+                          <select className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
+                            <option>Reside com a mãe</option><option>Reside sozinho(a)</option><option>Reside com companheiro(a)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Projetos & Serviços ISM</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-2.5 bg-teal-50 border border-teal-100 rounded-xl">
+                          <div>
+                            <div className="text-xs font-bold text-teal-800">{patient.socialProject}</div>
+                            <div className="text-[10px] text-teal-600">Desde 14/06/2026 • Ativo</div>
+                          </div>
+                          <span className="text-[10px] bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-bold">Ativo</span>
+                        </div>
+                        <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div>
+                            <div className="text-xs font-bold text-slate-700">Suporte Jurídico ISM</div>
+                            <div className="text-[10px] text-slate-500">Desde 25/06/2026 • Em Andamento</div>
+                          </div>
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Ativo</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Encaminhamentos Externos</h3>
+                      <div className="space-y-2">
+                        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div className="text-xs font-bold text-slate-700">CREAS — Assistência Social</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Encaminhado em 15/06/2026 • Aguardando retorno</div>
+                        </div>
+                        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div className="text-xs font-bold text-slate-700">Psiquiatria ISM</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Encaminhado em 22/06/2026 • Consulta agendada</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button onClick={() => addAuditEntry('SALVAR_VINCULOS', 'Dados de acolhimento e vínculos atualizados.', 'success')} className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-teal-900/10 transition-all">
+                      Salvar Alterações
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ===================== ABA: AGENDA & CONSULTAS ===================== */}
+              {activeTab === 'schedule_list' && (
+                <motion.div key="schedule_list" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="space-y-6">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                    <h2 className="text-base font-bold text-slate-950 uppercase tracking-wide">Agenda & Histórico de Consultas</h2>
+                    <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold border border-sky-100">Recepção / Administração</span>
+                  </div>
+
+                  {/* Próximas Consultas */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Próximas Consultas</h3>
+                      <button className="text-[10px] bg-teal-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-teal-500 transition-colors flex items-center gap-1">
+                        <PlusCircle className="w-3 h-3" /> Novo Agendamento
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {[
+                        { date: '08/07/2026', time: '14:00', prof: 'Dra. Roberta de Souza', type: 'Psicoterapia', status: 'CONFIRMADO' },
+                        { date: '15/07/2026', time: '10:30', prof: 'Dr. Marcos Mendes', type: 'Psiquiatria', status: 'PENDENTE' },
+                        { date: '22/07/2026', time: '09:00', prof: 'Assistente Social Fernando', type: 'Ass. Social', status: 'PENDENTE' },
+                      ].map((appt, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="text-center">
+                              <div className="text-sm font-bold text-slate-900">{appt.date.split('/')[0]}</div>
+                              <div className="text-[10px] text-slate-500">{appt.date.split('/')[1]}/{appt.date.split('/')[2]}</div>
+                            </div>
+                            <div className="w-px h-8 bg-slate-200" />
+                            <div>
+                              <div className="text-xs font-bold text-slate-800">{appt.time} — {appt.type}</div>
+                              <div className="text-[10px] text-slate-500">{appt.prof}</div>
+                            </div>
+                          </div>
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                            appt.status === 'CONFIRMADO' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                          )}>{appt.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Histórico */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Histórico de Atendimentos (últimos 30 dias)</h3>
+                    <div className="space-y-2">
+                      {[
+                        { date: '28/06/2026', prof: 'Dra. Roberta de Souza', type: 'Psicoterapia', duration: '50min', presence: 'PRESENTE' },
+                        { date: '21/06/2026', prof: 'Dra. Roberta de Souza', type: 'Psicoterapia', duration: '50min', presence: 'PRESENTE' },
+                        { date: '14/06/2026', prof: 'Dra. Roberta de Souza', type: 'Triagem', duration: '60min', presence: 'PRESENTE' },
+                      ].map((hist, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                          <div>
+                            <div className="text-xs font-bold text-slate-800">{hist.date} — {hist.type} ({hist.duration})</div>
+                            <div className="text-[10px] text-slate-500">{hist.prof}</div>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">{hist.presence}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
             </main>
           </>
-        )}
 
       </div>
 
