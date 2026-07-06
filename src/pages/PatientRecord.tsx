@@ -192,18 +192,124 @@ export function PatientRecord() {
   // --- BUSCA INTELIGENTE ---
   const [searchQuery, setSearchQuery] = useState('');
   
-  // --- MOCK PATIENT DATA ---
-  const patient = {
-    name: 'Ana Silva Santos',
-    age: 32,
-    gender: 'Feminino',
-    status: 'Em acompanhamento',
-    riskLevel: 'vermelho', // verde | amarelo | vermelho (Trauma/Vulnerabilidade)
-    phone: '(11) 98765-4321',
-    address: 'Zona Leste, São Paulo - SP',
-    emergencyContact: 'Maria (Mãe) - (11) 91234-5678',
-    socialProject: 'Acolher Saúde Mental',
-    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80' // premium mock photo
+  // --- CARREGAMENTO REATIVO DO BENEFICIÁRIO (PASSO 1) ---
+  const [patient, setPatient] = useState(() => {
+    const listSaved = localStorage.getItem('patients_list');
+    const list = listSaved ? JSON.parse(listSaved) : [];
+    // Comparar string ou número
+    const found = list.find((p: any) => String(p.id) === String(id));
+    return found || {
+      id: id || '1',
+      name: 'Ana Silva Santos',
+      socialName: 'Ana Silva',
+      age: 32,
+      gender: 'Feminino',
+      birthDate: '1994-03-12',
+      cpf: '123.456.789-00',
+      rg: '12.345.678-9',
+      status: 'Ativo',
+      risk: 'high',
+      lastSeen: '14/06/2023',
+      professional: 'Dra. Roberta',
+      phone: '(11) 98765-4321',
+      email: 'ana.silva@email.com',
+      address: 'Rua das Acácias, 342, Penha, São Paulo - SP, CEP 03700-000',
+      emergencyContact: 'Maria (Mãe) - (11) 91234-5678',
+      socialProject: 'Acolher Saúde Mental',
+      photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      income: 'up_to_1',
+      housing: 'rented',
+      education: 'Superior Completo',
+      occupation: 'Gerente Administrativa',
+      familyRenda: '2 a 5 SM'
+    };
+  });
+
+  // Atualização reativa se o id mudar
+  useEffect(() => {
+    const listSaved = localStorage.getItem('patients_list');
+    const list = listSaved ? JSON.parse(listSaved) : [];
+    const found = list.find((p: any) => String(p.id) === String(id));
+    if (found) {
+      setPatient(found);
+    }
+  }, [id]);
+
+  // Controles de Visualização de CPF e RG (LGPD)
+  const [showCpf, setShowCpf] = useState(false);
+  const [showRg, setShowRg] = useState(false);
+
+  // Estados de Formulário das Abas
+  const [personalForm, setPersonalForm] = useState({
+    socialName: patient.socialName || '',
+    birthDate: patient.birthDate || '',
+    gender: patient.gender || 'Feminino',
+    cpf: patient.cpf || '',
+    rg: patient.rg || '',
+    phone: patient.phone || '',
+    email: patient.email || '',
+    emergencyContact: patient.emergencyContact || '',
+    address: patient.address || '',
+    income: patient.income || 'none',
+    housing: patient.housing || 'owned',
+    education: patient.education || 'Fundamental',
+    occupation: patient.occupation || '',
+    familyRenda: patient.familyRenda || 'Até 1 SM'
+  });
+
+  // Sincroniza formulário com o paciente carregado
+  useEffect(() => {
+    setPersonalForm({
+      socialName: patient.socialName || '',
+      birthDate: patient.birthDate || '',
+      gender: patient.gender || 'Feminino',
+      cpf: patient.cpf || '',
+      rg: patient.rg || '',
+      phone: patient.phone || '',
+      email: patient.email || '',
+      emergencyContact: patient.emergencyContact || '',
+      address: patient.address || '',
+      income: patient.income || 'none',
+      housing: patient.housing || 'owned',
+      education: patient.education || 'Fundamental',
+      occupation: patient.occupation || '',
+      familyRenda: patient.familyRenda || 'Até 1 SM'
+    });
+  }, [patient]);
+
+  // Função para gravar alterações no localStorage
+  const handleSavePersonalDetails = () => {
+    const listSaved = localStorage.getItem('patients_list');
+    const list = listSaved ? JSON.parse(listSaved) : [];
+    const updatedList = list.map((p: any) => {
+      if (String(p.id) === String(patient.id)) {
+        return {
+          ...p,
+          socialName: personalForm.socialName,
+          birthDate: personalForm.birthDate,
+          gender: personalForm.gender,
+          cpf: personalForm.cpf,
+          rg: personalForm.rg,
+          phone: personalForm.phone,
+          email: personalForm.email,
+          emergencyContact: personalForm.emergencyContact,
+          address: personalForm.address,
+          income: personalForm.income,
+          housing: personalForm.housing,
+          education: personalForm.education,
+          occupation: personalForm.occupation,
+          familyRenda: personalForm.familyRenda
+        };
+      }
+      return p;
+    });
+    localStorage.setItem('patients_list', JSON.stringify(updatedList));
+    const found = updatedList.find((p: any) => String(p.id) === String(patient.id));
+    if (found) {
+      setPatient(found);
+    }
+    addAuditEntry('SALVAR_DADOS_PESSOAIS', 'Dados pessoais do beneficiário atualizados no sistema.', 'success');
+    alert('Dados cadastrais salvos com sucesso!');
   };
 
   // --- MOCK ANAMNESE VERSIONAMENTO (PEI-RN04) ---
@@ -2255,34 +2361,81 @@ export function PatientRecord() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nome Completo</label>
-                          <input defaultValue={patient.name} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-800" readOnly />
+                          <input value={patient.name} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-semibold text-slate-800" readOnly />
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nome Social</label>
-                          <input defaultValue="" placeholder="Se houver" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          <input 
+                            value={personalForm.socialName} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, socialName: e.target.value }))}
+                            placeholder="Como prefere ser chamado(a)" 
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data de Nascimento</label>
-                          <input type="date" defaultValue="1994-03-12" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          <input 
+                            type="date" 
+                            value={personalForm.birthDate} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, birthDate: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Gênero / Identidade</label>
-                          <select defaultValue="Feminino" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
-                            <option>Feminino</option><option>Masculino</option><option>Não-binário</option><option>Outro</option>
+                          <select 
+                            value={personalForm.gender} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, gender: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white"
+                          >
+                            <option value="Feminino">Feminino</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Não-binário">Não-binário</option>
+                            <option value="Outro">Outro</option>
                           </select>
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">CPF</label>
                           <div className="relative">
-                            <input defaultValue="***.456.789-**" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-mono" readOnly />
-                            <button onClick={() => addAuditEntry('VISUALIZAÇÃO_CPF', 'CPF do beneficiário exibido.', 'security')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600"><Eye className="w-3.5 h-3.5" /></button>
+                            <input 
+                              value={showCpf ? personalForm.cpf : '***.***.***-**'} 
+                              className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-mono" 
+                              readOnly 
+                            />
+                            <button 
+                              onClick={() => {
+                                const nextShow = !showCpf;
+                                setShowCpf(nextShow);
+                                if (nextShow) {
+                                  addAuditEntry('VISUALIZAÇÃO_CPF', 'Desmascarou e visualizou o CPF do beneficiário.', 'security');
+                                }
+                              }} 
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600"
+                            >
+                              {showCpf ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
                           </div>
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">RG</label>
                           <div className="relative">
-                            <input defaultValue="**.***.***-*" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-mono" readOnly />
-                            <button onClick={() => addAuditEntry('VISUALIZAÇÃO_RG', 'RG do beneficiário exibido.', 'security')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600"><Eye className="w-3.5 h-3.5" /></button>
+                            <input 
+                              value={showRg ? personalForm.rg : '**.***.***-*'} 
+                              className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-mono" 
+                              readOnly 
+                            />
+                            <button 
+                              onClick={() => {
+                                const nextShow = !showRg;
+                                setShowRg(nextShow);
+                                if (nextShow) {
+                                  addAuditEntry('VISUALIZAÇÃO_RG', 'Desmascarou e visualizou o RG do beneficiário.', 'security');
+                                }
+                              }} 
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600"
+                            >
+                              {showRg ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -2294,15 +2447,27 @@ export function PatientRecord() {
                       <div className="space-y-2">
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Telefone Principal</label>
-                          <input defaultValue={patient.phone} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          <input 
+                            value={personalForm.phone} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, phone: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">E-mail</label>
-                          <input defaultValue="ana.silva@email.com" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          <input 
+                            value={personalForm.email} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, email: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contato de Emergência</label>
-                          <input defaultValue={patient.emergencyContact} className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          <input 
+                            value={personalForm.emergencyContact} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                       </div>
                     </div>
@@ -2312,28 +2477,12 @@ export function PatientRecord() {
                       <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Endereço Residencial</h3>
                       <div className="space-y-2">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Logradouro</label>
-                          <input defaultValue="Rua das Acácias, 342" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bairro</label>
-                            <input defaultValue="Penha" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">CEP</label>
-                            <input defaultValue="03700-000" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cidade</label>
-                            <input defaultValue="São Paulo" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">UF</label>
-                            <input defaultValue="SP" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
-                          </div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Logradouro / Bairro / Cidade / CEP</label>
+                          <input 
+                            value={personalForm.address} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, address: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                       </div>
                     </div>
@@ -2344,18 +2493,35 @@ export function PatientRecord() {
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Escolaridade</label>
-                          <select className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
-                            <option>Superior Completo</option><option>Ensino Médio</option><option>Fundamental</option>
+                          <select 
+                            value={personalForm.education} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, education: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white"
+                          >
+                            <option value="Superior Completo">Superior Completo</option>
+                            <option value="Ensino Médio">Ensino Médio</option>
+                            <option value="Fundamental">Fundamental</option>
                           </select>
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ocupação</label>
-                          <input defaultValue="Gerente Administrativa" className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" />
+                          <input 
+                            value={personalForm.occupation} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, occupation: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl" 
+                          />
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Renda Familiar</label>
-                          <select className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl">
-                            <option>2 a 5 SM</option><option>Até 1 SM</option><option>1 a 2 SM</option><option>Acima de 5 SM</option>
+                          <select 
+                            value={personalForm.familyRenda} 
+                            onChange={(e) => setPersonalForm(prev => ({ ...prev, familyRenda: e.target.value }))}
+                            className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white"
+                          >
+                            <option value="Até 1 SM">Até 1 SM</option>
+                            <option value="1 a 2 SM">1 a 2 SM</option>
+                            <option value="2 a 5 SM">2 a 5 SM</option>
+                            <option value="Acima de 5 SM">Acima de 5 SM</option>
                           </select>
                         </div>
                       </div>
@@ -2363,7 +2529,10 @@ export function PatientRecord() {
                   </div>
 
                   <div className="flex justify-end">
-                    <button onClick={() => addAuditEntry('SALVAR_DADOS_PESSOAIS', 'Dados pessoais do beneficiário atualizados.', 'success')} className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-teal-900/10 transition-all">
+                    <button 
+                      onClick={handleSavePersonalDetails} 
+                      className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-teal-900/10 transition-all"
+                    >
                       Salvar Alterações
                     </button>
                   </div>

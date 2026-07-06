@@ -336,21 +336,36 @@ export function TriageForm() {
               <button 
                 onClick={() => {
                   const saved = localStorage.getItem('patients_list');
-                  const list = saved ? JSON.parse(saved) : [
-                    { id: '1', name: 'Ana Silva Santos', age: 32, status: 'Ativo', risk: 'high', lastSeen: '14/06/2023', professional: 'Dra. Roberta' },
-                    { id: '2', name: 'Marcos Santos Oliveira', age: 14, status: 'Em avaliação', risk: 'medium', lastSeen: '10/06/2023', professional: 'Dr. Carlos' },
-                    { id: '3', name: 'Júlia Costa', age: 45, status: 'Ativo', risk: 'low', lastSeen: '05/06/2023', professional: 'Dra. Roberta' },
-                  ];
+                  const list = saved ? JSON.parse(saved) : [];
                   const hasHighRisk = formData.violenceHistory || formData.suicidalIdeation;
+                  
+                  // Criando objeto completo de beneficiário enriquecido
                   const newPatient = {
                     id: String(list.length + 1),
                     name: formData.fullName || 'Beneficiário Sem Nome',
+                    socialName: formData.socialName || '',
                     age: 28,
+                    gender: 'Feminino',
+                    birthDate: '1998-05-10',
+                    cpf: formData.cpf || '***.000.000-**',
+                    rg: '**.***.***-*',
                     status: 'Em avaliação',
                     risk: hasHighRisk ? 'high' : 'low',
                     lastSeen: new Date().toLocaleDateString('pt-BR'),
-                    professional: 'Dra. Roberta'
+                    professional: 'Dra. Roberta',
+                    phone: formData.phone || '(11) 90000-0000',
+                    email: 'beneficiario@email.com',
+                    address: 'Endereço não informado',
+                    emergencyContact: 'Contato de Emergência - (11) 90000-0000',
+                    socialProject: 'Acolher Saúde Mental',
+                    photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                    income: formData.income || 'none',
+                    housing: formData.housing || 'owned',
+                    education: 'Ensino Médio',
+                    occupation: 'Não informada',
+                    familyRenda: formData.income === 'none' ? 'Até 1 SM' : '1 a 2 SM'
                   };
+
                   localStorage.setItem('patients_list', JSON.stringify([...list, newPatient]));
                   alert('Cadastro realizado com sucesso! O paciente foi encaminhado para a fila de triagem.');
                   navigate('/patients');
