@@ -237,10 +237,86 @@ export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode
   const submitRegistration = useCallback(async () => {
     setIsSubmitting(true);
     // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1800));
+    await new Promise((resolve) => resolve(null));
+    
+    try {
+      const savedPatients = localStorage.getItem('patients_list');
+      const list = savedPatients ? JSON.parse(savedPatients) : [];
+      const fullName = String(session.answers['full_name'] || 'Beneficiário ARE');
+      const socialName = String(session.answers['social_name'] || '');
+      const cpf = String(session.answers['cpf'] || '***.***.***-**');
+      const dob = String(session.answers['birth_date'] || '');
+      const phone = String(session.answers['phone'] || '');
+      const email = String(session.answers['email'] || '');
+      
+      const newPatient = {
+        id: `are-${Date.now()}`,
+        name: fullName,
+        socialName: socialName,
+        age: dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 30,
+        gender: String(session.answers['gender'] || 'Feminino'),
+        birthDate: dob,
+        cpf: cpf,
+        rg: '**.***.***-*',
+        status: 'Em avaliação',
+        risk: session.priorityLevel === 'critical' || session.priorityLevel === 'high' ? 'high' : 'low',
+        lastSeen: new Date().toLocaleDateString('pt-BR'),
+        professional: 'Aguardando Atribuição',
+        phone: phone,
+        email: email,
+        address: String(session.answers['address'] || 'Endereço não informado'),
+        emergencyContact: 'Não informado',
+        socialProject: 'Acolher Saúde Mental',
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        income: String(session.answers['income'] || 'none'),
+        housing: String(session.answers['housing'] || 'owned'),
+        education: 'Não informada',
+        occupation: 'Não informada',
+        familyRenda: 'Até 1 SM'
+      };
+      
+      localStorage.setItem('patients_list', JSON.stringify([...list, newPatient]));
+    } catch (err) {
+      console.error(err);
+    }
+
+    try {
+      const savedDossiers = localStorage.getItem('satai_dossiers');
+      const dossiersList = savedDossiers ? JSON.parse(savedDossiers) : [];
+      
+      const newDossier = {
+        id: `DOS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+        registrationId: session.id,
+        sessionId: `ses-${Date.now()}`,
+        protocolId: 'prot-geral',
+        protocolName: 'Protocolo Geral de Acolhimento',
+        programIds: ['prog-acolher'],
+        beneficiaryName: String(session.answers['full_name'] || 'Beneficiário ARE'),
+        beneficiaryProfile: session.profile || 'adult_civilian',
+        beneficiaryDob: String(session.answers['birth_date'] || ''),
+        iipScore: session.iipScore,
+        priorityLevel: session.priorityLevel,
+        securityLevel: session.securityLevel,
+        attendanceMotives: (session.answers['attendance_motives'] as string[]) || [],
+        factorsOfAttention: (session.answers['vulnerability_indicators'] as string[]) || [],
+        alertsTriggered: session.iipScore > 50 ? ['sofrimento_agudo'] : [],
+        protocolAnswers: { ...session.answers },
+        aiSummary: `Beneficiário cadastrado via Portal ARE com prioridade ${session.priorityLevel.toUpperCase()}.`,
+        aiInconsistencies: [],
+        aiRecommendedProtocols: ['Acolhimento Psicológico'],
+        aiRiskFlags: session.priorityLevel === 'critical' ? ['🚨 RISCO CRÍTICO'] : [],
+        status: 'pending_review',
+        createdAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('satai_dossiers', JSON.stringify([newDossier, ...dossiersList]));
+    } catch (err) {
+      console.error(err);
+    }
+
     setSession((prev) => ({ ...prev, status: 'pending_review' }));
     setIsSubmitting(false);
-  }, []);
+  }, [session]);
 
   const value: AdaptiveRegistrationContextType = {
     session,

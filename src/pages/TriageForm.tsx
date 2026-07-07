@@ -338,10 +338,11 @@ export function TriageForm() {
                   const saved = localStorage.getItem('patients_list');
                   const list = saved ? JSON.parse(saved) : [];
                   const hasHighRisk = formData.violenceHistory || formData.suicidalIdeation;
+                  const newPatientId = `triage-${Date.now()}`;
                   
                   // Criando objeto completo de beneficiário enriquecido
                   const newPatient = {
-                    id: String(list.length + 1),
+                    id: newPatientId,
                     name: formData.fullName || 'Beneficiário Sem Nome',
                     socialName: formData.socialName || '',
                     age: 28,
@@ -355,7 +356,7 @@ export function TriageForm() {
                     professional: 'Dra. Roberta',
                     phone: formData.phone || '(11) 90000-0000',
                     email: 'beneficiario@email.com',
-                    address: 'Endereço não informado',
+                    address: formData.housing || 'Endereço não informado',
                     emergencyContact: 'Contato de Emergência - (11) 90000-0000',
                     socialProject: 'Acolher Saúde Mental',
                     photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -367,6 +368,42 @@ export function TriageForm() {
                   };
 
                   localStorage.setItem('patients_list', JSON.stringify([...list, newPatient]));
+
+                  // Criando dossiê SATAI correspondente
+                  try {
+                    const savedDossiers = localStorage.getItem('satai_dossiers');
+                    const dossiersList = savedDossiers ? JSON.parse(savedDossiers) : [];
+                    
+                    const newDossier = {
+                      id: `DOS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+                      registrationId: newPatientId,
+                      sessionId: `ses-triage-${Date.now()}`,
+                      protocolId: 'prot-geral',
+                      protocolName: 'Protocolo Geral de Acolhimento',
+                      programIds: ['prog-acolher'],
+                      beneficiaryName: formData.fullName || 'Beneficiário Sem Nome',
+                      beneficiaryProfile: 'adult_civilian',
+                      beneficiaryDob: '1998-05-10',
+                      iipScore: hasHighRisk ? 75 : 25,
+                      priorityLevel: hasHighRisk ? 'high' : 'regular',
+                      securityLevel: 'standard',
+                      attendanceMotives: formData.chiefComplaint ? [formData.chiefComplaint] : [],
+                      factorsOfAttention: formData.violenceHistory ? ['Violência Doméstica'] : [],
+                      alertsTriggered: hasHighRisk ? ['sofrimento_agudo'] : [],
+                      protocolAnswers: { ...formData },
+                      aiSummary: `Triagem manual registrada na plataforma. Queixa principal: ${formData.chiefComplaint || 'Não informada'}.`,
+                      aiInconsistencies: [],
+                      aiRecommendedProtocols: ['Acolhimento Psicológico'],
+                      aiRiskFlags: hasHighRisk ? ['🚨 PRIORIDADE'] : [],
+                      status: 'pending_review',
+                      createdAt: new Date().toISOString()
+                    };
+
+                    localStorage.setItem('satai_dossiers', JSON.stringify([newDossier, ...dossiersList]));
+                  } catch (err) {
+                    console.error(err);
+                  }
+
                   alert('Cadastro realizado com sucesso! O paciente foi encaminhado para a fila de triagem.');
                   navigate('/patients');
                 }}
