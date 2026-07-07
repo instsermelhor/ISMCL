@@ -27,6 +27,13 @@ export default function SodoPops() {
   const [activeTab, setActiveTab] = useState<'pops' | 'sandbox'>('pops');
   const [selectedScenario, setSelectedScenario] = useState<SandboxScenario | null>(null);
 
+  // Sincroniza a aba quando um POP for selecionado via busca/contexto
+  React.useEffect(() => {
+    if (selectedPop) {
+      setActiveTab('pops');
+    }
+  }, [selectedPop]);
+
   // ─── Sandbox Viewer ────────────────────────────────────────
   if (activeTab === 'sandbox' && selectedScenario) {
     const scenario = sandboxScenarios.find(s => s.id === selectedScenario.id) || selectedScenario;

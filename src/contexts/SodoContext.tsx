@@ -66,16 +66,55 @@ function searchKnowledge(query: string): { answer: string; articleIds: string[];
 
 // ─── Provider ────────────────────────────────────────────────
 export function SodoProvider({ children }: { children: React.ReactNode }) {
+  // Helpers de localStorage
+  const loadStorage = <T,>(key: string, fallback: T): T => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const [libraries] = useState<DocLibrary[]>(MOCK_LIBRARIES);
-  const [articles, setArticles] = useState<DocArticle[]>(MOCK_ARTICLES);
-  const [pops, setPops] = useState<DocPOP[]>(MOCK_POPS);
-  const [courses, setCourses] = useState<Course[]>(MOCK_COURSES);
+  const [articles, setArticles] = useState<DocArticle[]>(() => loadStorage('sodo_articles', MOCK_ARTICLES));
+  const [pops, setPops] = useState<DocPOP[]>(() => loadStorage('sodo_pops', MOCK_POPS));
+  const [courses, setCourses] = useState<Course[]>(() => loadStorage('sodo_courses', MOCK_COURSES));
   const [trails] = useState<LearningTrail[]>(MOCK_TRAILS);
-  const [certificates, setCertificates] = useState<UserCertificate[]>(MOCK_CERTIFICATES);
-  const [sandboxScenarios, setSandboxScenarios] = useState<SandboxScenario[]>(MOCK_SANDBOX_SCENARIOS);
-  const [governanceLog, setGovernanceLog] = useState<GovernanceAction[]>(MOCK_GOVERNANCE_LOG);
-  const [readingHistory, setReadingHistory] = useState<UserReadingEntry[]>([]);
+  const [certificates, setCertificates] = useState<UserCertificate[]>(() => loadStorage('sodo_certificates', MOCK_CERTIFICATES));
+  const [sandboxScenarios, setSandboxScenarios] = useState<SandboxScenario[]>(() => loadStorage('sodo_sandbox_scenarios', MOCK_SANDBOX_SCENARIOS));
+  const [governanceLog, setGovernanceLog] = useState<GovernanceAction[]>(() => loadStorage('sodo_governance_log', MOCK_GOVERNANCE_LOG));
+  const [readingHistory, setReadingHistory] = useState<UserReadingEntry[]>(() => loadStorage('sodo_reading_history', []));
   const [biMetrics] = useState<AcademyBiMetrics>(MOCK_BI_METRICS);
+
+  // Persistência automática via useEffects
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_articles', JSON.stringify(articles)); } catch {}
+  }, [articles]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_pops', JSON.stringify(pops)); } catch {}
+  }, [pops]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_courses', JSON.stringify(courses)); } catch {}
+  }, [courses]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_certificates', JSON.stringify(certificates)); } catch {}
+  }, [certificates]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_sandbox_scenarios', JSON.stringify(sandboxScenarios)); } catch {}
+  }, [sandboxScenarios]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_governance_log', JSON.stringify(governanceLog)); } catch {}
+  }, [governanceLog]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('sodo_reading_history', JSON.stringify(readingHistory)); } catch {}
+  }, [readingHistory]);
 
   const [currentTab, setCurrentTab] = useState<SodoTab>('portal');
   const [searchQuery, setSearchQueryState] = useState('');

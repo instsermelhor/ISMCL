@@ -4,6 +4,7 @@
 // ============================================================
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSodo } from '../contexts/SodoContext';
 import type { LibraryCategory, DocArticle } from '../types/sodo';
 
@@ -36,13 +37,27 @@ const STATUS_BADGE: Record<string, { label: string; color: string }> = {
 
 export default function SodoPortal() {
   const {
-    libraries, articles, searchQuery, setSearchQuery, searchResults,
+    libraries, articles, pops, courses, certificates, searchQuery, setSearchQuery, searchResults,
     selectedLibrary, selectedArticle, selectLibrary, selectArticle,
     toggleFavorite, isFavorite, aiMessages, sendAiMessage, readingHistory,
+    selectPop, selectCourse
   } = useSodo();
 
   const [view, setView] = useState<'home' | 'library' | 'article' | 'assistant' | 'search'>('home');
   const [aiInput, setAiInput] = useState('');
+  const navigate = useNavigate();
+
+  function handleSelectResult(r: any) {
+    if (r.type === 'article') {
+      handleSelectArticle(r.id);
+    } else if (r.type === 'pop') {
+      selectPop(r.id);
+      navigate('/pops');
+    } else if (r.type === 'course') {
+      selectCourse(r.id);
+      navigate('/academia');
+    }
+  }
 
   const featuredArticles = articles.filter(a => a.isFeatured);
   const recentArticles = [...articles].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5);
@@ -204,7 +219,7 @@ export default function SodoPortal() {
         <p style={{ color: '#64748b', marginBottom: 20 }}>{searchResults.length} resultado(s) para "<span style={{ color: '#a5b4fc' }}>{searchQuery}</span>"</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {searchResults.map(r => (
-            <div key={r.id} onClick={() => r.type === 'article' && handleSelectArticle(r.id)} style={{ background: 'rgba(15,23,42,0.7)', borderRadius: 12, padding: '16px 20px', border: '1px solid rgba(99,102,241,0.15)', cursor: r.type === 'article' ? 'pointer' : 'default', transition: 'all 0.2s' }}
+            <div key={r.id} onClick={() => handleSelectResult(r)} style={{ background: 'rgba(15,23,42,0.7)', borderRadius: 12, padding: '16px 20px', border: '1px solid rgba(99,102,241,0.15)', cursor: 'pointer', transition: 'all 0.2s' }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = '#6366f1')}
               onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(99,102,241,0.15)')}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
@@ -288,7 +303,12 @@ export default function SodoPortal() {
         </div>
         {/* Quick stats */}
         <div style={{ display: 'flex', gap: 24, marginTop: 28, paddingTop: 24, borderTop: '1px solid rgba(99,102,241,0.15)' }}>
-          {[{ label: 'Documentos', val: '134' }, { label: 'POPs', val: '10' }, { label: 'Cursos', val: '5' }, { label: 'Certificados Emitidos', val: '387' }].map(s => (
+          {[
+            { label: 'Documentos', val: String(articles.length) },
+            { label: 'POPs', val: String(pops.length) },
+            { label: 'Cursos', val: String(courses.length) },
+            { label: 'Certificados Emitidos', val: String(certificates.length) }
+          ].map(s => (
             <div key={s.label}>
               <div style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 22 }}>{s.val}</div>
               <div style={{ color: '#64748b', fontSize: 12 }}>{s.label}</div>

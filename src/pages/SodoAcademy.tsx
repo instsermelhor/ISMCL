@@ -24,6 +24,13 @@ export default function SodoAcademy() {
   const [simulatingExam, setSimulatingExam] = useState(false);
   const [examScore, setExamScore] = useState<number | null>(null);
 
+  // Sincroniza selectedCourse vindo do contexto de busca
+  React.useEffect(() => {
+    if (selectedCourse) {
+      setViewingCourse(selectedCourse);
+    }
+  }, [selectedCourse]);
+
   function handleStartCourse(course: Course) {
     enrollCourse(course.id);
     setViewingCourse({ ...course, status: 'em_andamento' });
@@ -33,7 +40,7 @@ export default function SodoAcademy() {
     const score = Math.round(68 + Math.random() * 30);
     setExamScore(score);
     completeCourse(courseId, score);
-    setTimeout(() => { setSimulatingExam(false); setViewingCourse(null); setExamScore(null); }, 4000);
+    setTimeout(() => { setSimulatingExam(false); setViewingCourse(null); setExamScore(null); selectCourse(null); }, 4000);
   }
 
   // ─── Course Viewer ────────────────────────────────────────
@@ -43,7 +50,7 @@ export default function SodoAcademy() {
     const progress = Math.round((completedLessons / allLessons.length) * 100);
     return (
       <div>
-        <button onClick={() => { setViewingCourse(null); setSimulatingExam(false); setExamScore(null); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 600, marginBottom: 20, fontSize: 14 }}>← Voltar à Academia</button>
+        <button onClick={() => { selectCourse(null); setViewingCourse(null); setSimulatingExam(false); setExamScore(null); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: 600, marginBottom: 20, fontSize: 14 }}>← Voltar à Academia</button>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
           <div>
             <div style={{ background: 'linear-gradient(135deg, #1e1b4b, #0f172a)', borderRadius: 16, padding: '28px 32px', marginBottom: 20, border: '1px solid rgba(99,102,241,0.2)' }}>
