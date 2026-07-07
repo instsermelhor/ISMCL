@@ -84,11 +84,44 @@ export const PiaraveProvider = ({ children }: { children: ReactNode }) => {
   const { session: areSession } = useAdaptiveRegistration();
   const { startProcessInstance } = useBPMS();
 
+  // Helpers de localStorage
+  const loadStorage = <T,>(key: string, fallback: T): T => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const [lines] = useState<PiaraveLine[]>(mockPiaraveLines);
-  const [cases, setCases] = useState<PiaraveCase[]>(mockPiaraveCases);
-  const [libraryItems, setLibraryItems] = useState<PiaraveLibraryItem[]>(mockPiaraveLibraryItems);
-  const [auditLogs, setAuditLogs] = useState<PiaraveAuditLog[]>(mockPiaraveAuditLogs);
-  const [activeSession, setActiveSession] = useState<PiaraveSession | null>(null);
+  const [cases, setCases] = useState<PiaraveCase[]>(() => loadStorage('piarave_cases', mockPiaraveCases));
+  const [libraryItems, setLibraryItems] = useState<PiaraveLibraryItem[]>(() => loadStorage('piarave_library_items', mockPiaraveLibraryItems));
+  const [auditLogs, setAuditLogs] = useState<PiaraveAuditLog[]>(() => loadStorage('piarave_audit_logs', mockPiaraveAuditLogs));
+  const [activeSession, setActiveSession] = useState<PiaraveSession | null>(() => loadStorage('piarave_active_session', null));
+
+  // Persistência automática via useEffects
+  React.useEffect(() => {
+    try { localStorage.setItem('piarave_cases', JSON.stringify(cases)); } catch {}
+  }, [cases]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('piarave_library_items', JSON.stringify(libraryItems)); } catch {}
+  }, [libraryItems]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('piarave_audit_logs', JSON.stringify(auditLogs)); } catch {}
+  }, [auditLogs]);
+
+  React.useEffect(() => {
+    try {
+      if (activeSession) {
+        localStorage.setItem('piarave_active_session', JSON.stringify(activeSession));
+      } else {
+        localStorage.removeItem('piarave_active_session');
+      }
+    } catch {}
+  }, [activeSession]);
 
   // Security logger
   const logAccess = useCallback((

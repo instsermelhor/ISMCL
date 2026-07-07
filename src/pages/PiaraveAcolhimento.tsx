@@ -56,7 +56,6 @@ export default function PiaraveAcolhimento() {
   const [selectedLineId, setSelectedLineId] = useState<string>('');
   const [fontSizeClass, setFontSizeClass] = useState<'text-normal' | 'text-large' | 'text-xlarge'>('text-normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
-  const [showExitToast, setShowExitToast] = useState<boolean>(false);
 
   // --- Classes CSS Emuladas ---
   const sizeMap = {
@@ -106,6 +105,13 @@ export default function PiaraveAcolhimento() {
       alert('Por favor, selecione pelo menos uma das opções de sofrimento relacional.');
       return;
     }
+    if (activeSession.currentStep === 3) {
+      const plan = activeSession.safetyPlanDraft;
+      if (!plan?.trustedPersonName?.trim() || !plan?.trustedPersonContact?.trim() || !plan?.safePlaceDescription?.trim()) {
+        alert('Por favor, preencha os dados da pessoa de confiança e o local seguro de fuga para o seu Plano de Segurança.');
+        return;
+      }
+    }
     if (activeSession.currentStep < totalSteps) {
       goToNextStep();
     }
@@ -113,7 +119,7 @@ export default function PiaraveAcolhimento() {
 
   const handleSubmit = async () => {
     await submitPiaraveTriage();
-    navigate('/piarave/portal');
+    navigate('/patients'); // Redireciona para listagem geral de beneficiários para acompanhamento
   };
 
   // --- RENDERIZAR WIZARD ---
