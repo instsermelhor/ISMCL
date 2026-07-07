@@ -169,9 +169,128 @@ function AuraLandingColumn() {
           </button>
         ))}
       </div>
+
+      {/* ── Seção de Doação ─────────────────────────────── */}
+      <div className="pt-2">
+        <div
+          className="rounded-2xl overflow-hidden relative"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(99,102,241,0.10) 100%)',
+            border: '1px solid rgba(16,185,129,0.2)',
+          }}
+        >
+          {/* Decoração de fundo */}
+          <div
+            className="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
+          />
+
+          <div className="p-5 relative">
+            {/* Header da seção */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">💚</span>
+              <span
+                className="text-xs font-bold uppercase tracking-widest"
+                style={{ color: '#34d399' }}
+              >
+                Faça a diferença hoje
+              </span>
+            </div>
+
+            {/* Título de impacto */}
+            <h3 className="text-white font-extrabold text-lg leading-tight mb-2">
+              Sua doação transforma<br />
+              <span
+                style={{
+                  background: 'linear-gradient(90deg, #34d399, #a78bfa)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                vidas reais em nossa cidade
+              </span>
+            </h3>
+
+            {/* Texto emocional */}
+            <p className="text-slate-400 text-xs leading-relaxed mb-4">
+              Cada real doado chega diretamente às famílias atendidas pelo Instituto Ser Melhor.
+              Escolha o programa que mais toca seu coração e contribua via{' '}
+              <strong className="text-slate-300">PIX</strong> — simples, seguro e rastreável.
+            </p>
+
+            {/* Programas em destaque */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {[
+                { icon: '🫂', name: 'Escuta Ativa', desc: 'Saúde mental' },
+                { icon: '🏠', name: 'PIARAVE', desc: 'Proteção familiar' },
+                { icon: '👴', name: 'Envelhecer Bem', desc: 'Cuidado ao idoso' },
+                { icon: '🤖', name: 'SATAI', desc: 'Triagem inteligente' },
+              ].map(p => (
+                <div
+                  key={p.name}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <span className="text-base">{p.icon}</span>
+                  <div>
+                    <div className="text-white text-[11px] font-semibold leading-none">{p.name}</div>
+                    <div className="text-slate-500 text-[10px] mt-0.5">{p.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Impacto numérico */}
+            <div
+              className="flex gap-4 mb-4 pb-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              {[
+                { value: '8', label: 'Programas ativos' },
+                { value: '900+', label: 'Pessoas impactadas' },
+                { value: '100%', label: 'Transparente via PIX' },
+              ].map(s => (
+                <div key={s.label} className="text-center flex-1">
+                  <div className="font-extrabold text-white text-sm">{s.value}</div>
+                  <div className="text-slate-500 text-[10px] mt-0.5 leading-tight">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Botão Doe */}
+            <button
+              onClick={() => navigate('/doe')}
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-extrabold text-sm transition-all active:scale-[0.97] shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 0 24px rgba(16,185,129,0.35)',
+                color: '#fff',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 36px rgba(16,185,129,0.55)';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 24px rgba(16,185,129,0.35)';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+              }}
+            >
+              💚 Quero Doar via PIX agora
+            </button>
+
+            <p className="text-center text-slate-600 text-[10px] mt-2">
+              🔐 Processado pelo Banco Central do Brasil · CNPJ 10.527.336/0001-09
+            </p>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }
+
 
 // ----------------------------------------------------------------
 // Tela de Login
