@@ -319,3 +319,93 @@ Instruções:
   }
 }
 
+/**
+ * Generates a complete post-session clinical report including SOAP, issued documents summary, and session metadata.
+ */
+export async function generateSessionReport(sessionData: {
+  patientName: string;
+  professionalName: string;
+  date: string;
+  duration: string;
+  evolutionText: string;
+  issuedDocuments: string[];
+}): Promise<string> {
+  const { patientName, professionalName, date, duration, evolutionText, issuedDocuments } = sessionData;
+
+  const docsLine = issuedDocuments.length > 0
+    ? `Documentos emitidos: ${issuedDocuments.join(', ')}.`
+    : 'Nenhum documento clínico emitido nesta sessão.';
+
+  if (!aiClient) {
+    await new Promise((resolve) => setTimeout(resolve, 1800));
+    const soapBase = evolutionText
+      ? `**SUBJETIVO (S):** ${evolutionText.length > 100 ? evolutionText.substring(0, 100) + '...' : evolutionText}`
+      : '**SUBJETIVO (S):** Paciente presente e participativa durante toda a sessão.';
+
+    return `# RELATÓRIO CLÍNICO DE SESSÃO
+========================================
+**BENEFICIÁRIA:** ${patientName}
+**PROFISSIONAL:** ${professionalName}
+**DATA DA SESSÃO:** ${date}
+**DURAÇÃO:** ${duration}
+========================================
+
+## EVOLUÇÃO CLÍNICA (SOAP)
+
+${soapBase}
+
+**OBJETIVO (O):** Teleconsulta realizada via plataforma Aura (E2EE). Beneficiária demonstrou presença ativa e comunicação adequada.
+
+**AVALIAÇÃO (A):** Sessão transcorreu sem intercorrências. Continuidade do plano terapêutico vigente.
+
+**PLANO (P):**
+- Manutenção das sessões conforme frequência acordada.
+- Monitoramento contínuo dos sintomas e estressores cotidianos.
+- Retorno agendado conforme disponibilidade.
+
+## DOCUMENTOS EMITIDOS
+${docsLine}
+
+## OBSERVAÇÕES GERAIS
+Sessão de teleconsulta concluída. Todos os dados clínicos foram registrados e assinados digitalmente no prontuário eletrônico da Plataforma Aura (Instituto Ser Melhor).
+
+---
+*Relatório gerado automaticamente pelo Copiloto IA Aura.*`;
+  }
+
+  try {
+    const prompt = `Você é o Copiloto IA clínico do Instituto Ser Melhor.
+Gere um relatório clínico completo e estruturado de uma sessão de teleconsulta com base nos dados a seguir:
+
+Beneficiária: ${patientName}
+Profissional: ${professionalName}
+Data da Sessão: ${date}
+Duração: ${duration}
+Anotações Clínicas do Profissional:
+"""
+${evolutionText || 'Sem anotações rascunhadas nesta sessão.'}
+"""
+${docsLine}
+
+Gere o relatório em Markdown com as seções:
+1. Cabeçalho (paciente, profissional, data, duração)
+2. Evolução Clínica no formato SOAP (Subjetivo, Objetivo, Avaliação, Plano)
+3. Documentos Emitidos
+4. Observações Gerais
+
+Escreva em Português do Brasil. Seja objetivo, ético e profissional.`;
+
+    const response = await aiClient.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+
+    if (response.text) {
+      return cleanResponse(response.text);
+    }
+    throw new Error('Resposta vazia da API.');
+  } catch (error) {
+    console.error('Erro na chamada da API do Gemini para Relatório de Sessão:', error);
+    return `# Relatório de Sessão — ${patientName}\n**Data:** ${date} | **Profissional:** ${professionalName}\n**Duração:** ${duration}\n\n${docsLine}\n\n*Relatório gerado com dados locais (API indisponível).*`;
+  }
+}

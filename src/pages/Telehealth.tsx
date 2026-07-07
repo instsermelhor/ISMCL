@@ -31,10 +31,13 @@ import {
   User,
   Settings as SettingsIcon,
   Eye,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '../utils';
-import { generateSOAP, generateSummary } from '../services/gemini';
+import { generateSOAP, generateSummary, generateSessionReport } from '../services/gemini';
+import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../contexts/SecurityContext';
 
 // =========================================================================
 // MÓDULO 04: CENTRAL DE ATENDIMENTO DIGITAL E TELECONSULTA
@@ -73,9 +76,58 @@ interface IssuedDocument {
   sharedWithPatient: boolean;
 }
 
+interface SavedEvolution {
+  appointmentId: string;
+  patientId: string;
+  text: string;
+  isLocked: boolean;
+  savedAt: string;
+  sessionReport?: string;
+}
+
 export function Telehealth() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { logAction } = useSecurity();
+
+  // --- CARREGAR AGENDAMENTO REAL DO LOCALSTORAGE ---
+  const appointment = (() => {
+    try {
+      const list = JSON.parse(localStorage.getItem('appointments_list') || '[]');
+      return list.find((a: any) => String(a.id) === String(id)) || null;
+    } catch { return null; }
+  })();
+
+  // --- DADOS DERIVADOS DO AGENDAMENTO REAL ---
+  const patientName = appointment?.patientName || 'Beneficiário';
+  const patientInitials = patientName.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase();
+  const professionalNameReal = appointment?.professionalName || user?.name || 'Profissional';
+  const appointmentDate = appointment?.date
+    ? new Date(appointment.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  // --- CARREGAR EVOLUÇÃO PERSISTIDA PARA ESTE AGENDAMENTO ---
+  const loadSavedEvolution = (): SavedEvolution | null => {
+    try {
+      const evolutions: SavedEvolution[] = JSON.parse(localStorage.getItem('telehealth_evolutions') || '[]');
+      return evolutions.find(e => e.appointmentId === String(id)) || null;
+    } catch { return null; }
+  };
+
+  const savedEvo = loadSavedEvolution();
+
+  // --- CARREGAR HISTÓRICO DE SESSÕES ANTERIORES DO PACIENTE ---
+  const pastEvolutions: SavedEvolution[] = (() => {
+    try {
+      const all: SavedEvolution[] = JSON.parse(localStorage.getItem('telehealth_evolutions') || '[]');
+      return all.filter(e =>
+        e.patientId === appointment?.patientId &&
+        e.appointmentId !== String(id) &&
+        e.isLocked
+      ).sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+    } catch { return []; }
+  })();
 
   // --- CONTROLE DE SIMULAÇÃO DE REGRAS DE NEGÓCIO ---
   const [simulatedRule, setSimulatedRule] = useState<'valid' | 'invalid_time' | 'invalid_professional' | 'invalid_beneficiary' | 'invalid_status'>('valid');
@@ -95,9 +147,9 @@ export function Telehealth() {
   const [consentProofHash, setConsentProofHash] = useState('');
 
   // --- ESTADOS DO CHAT SEGURO ---
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '1', sender: 'patient', senderName: 'Ana Silva Santos', text: 'Boa tarde, Dra. Roberta. Já estou pronta para a sessão.', timestamp: '14:00' },
-    { id: '2', sender: 'professional', senderName: 'Dra. Roberta', text: 'Boa tarde, Ana. Que bom. Vou iniciar a sala virtual agora.', timestamp: '14:00' }
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    { id: '1', sender: 'patient', senderName: patientName, text: 'Boa tarde! Já estou pronta para a sessão.', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+    { id: '2', sender: 'professional', senderName: professionalNameReal, text: 'Boa tarde! Vou iniciar a sala virtual agora.', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
   ]);
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -106,36 +158,64 @@ export function Telehealth() {
 
   // --- ESTADOS DO PRONTUÁRIO CLÍNICO (EMR) ---
   const [activeTab, setActiveTab] = useState<'evolution' | 'documents' | 'history' | 'audit'>('evolution');
-  const [evolutionText, setEvolutionText] = useState('');
+  const [evolutionText, setEvolutionText] = useState(savedEvo?.text || '');
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [isLocked, setIsLocked] = useState(false);
-  
+  const [lastSaved, setLastSaved] = useState<Date | null>(savedEvo ? new Date(savedEvo.savedAt) : null);
+  const [isLocked, setIsLocked] = useState(savedEvo?.isLocked || false);
+
   // --- ESTADOS DO COPILOTO IA (Gemini API) ---
   const [aiSuggestions, setAiSuggestions] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiActionType, setAiActionType] = useState<'soap' | 'summary' | null>(null);
+  const [aiActionType, setAiActionType] = useState<'soap' | 'summary' | 'report' | null>(null);
+  const [sessionReport, setSessionReport] = useState<string | null>(savedEvo?.sessionReport || null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // --- ESTADOS DE DOCUMENTOS (RN04) ---
   const [docType, setDocType] = useState<'receita' | 'atestado' | 'laudo' | 'encaminhamento'>('receita');
   const [docText, setDocText] = useState('');
   const [docMetadata, setDocMetadata] = useState({
-    professionalName: 'Dra. Roberta de Souza',
-    licenseNumber: 'CRP 06/98765-SP',
+    professionalName: professionalNameReal,
+    licenseNumber: user?.role === 'ref' ? 'CRP/CRESS — Registro Verificado' : 'Profissional Aura',
     validityDays: '30'
   });
   const [issuedDocs, setIssuedDocs] = useState<IssuedDocument[]>([]);
   const [selectedDocForView, setSelectedDocForView] = useState<IssuedDocument | null>(null);
 
   // --- PAINEL DE AUDITORIA ---
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([
-    { timestamp: '13:58:34', action: 'AUTENTICAÇÃO', details: 'Dra. Roberta autenticada com sucesso na rede ISM.', type: 'security' },
-    { timestamp: '14:00:01', action: 'ACESSO À SALA', details: 'Dra. Roberta iniciou a sala virtual para o Agendamento ID ' + id, type: 'info' },
-    { timestamp: '14:00:03', action: 'ACESSO À SALA', details: 'Beneficiária Ana Silva Santos ingressou na chamada.', type: 'info' },
-    { timestamp: '14:00:04', action: 'CRIPTOGRAFIA E2EE', details: 'Canal seguro estabelecido e chaves WebRTC negociadas.', type: 'success' }
-  ]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return [
+      { timestamp: now, action: 'AUTENTICAÇÃO', details: `${professionalNameReal} autenticado(a) com sucesso na rede ISM.`, type: 'security' },
+      { timestamp: now, action: 'ACESSO À SALA', details: `Sala virtual iniciada para Agendamento ID: ${id}`, type: 'info' },
+      { timestamp: now, action: 'ACESSO À SALA', details: `Beneficiário(a) ${patientName} ingressou na chamada.`, type: 'info' },
+      { timestamp: now, action: 'CRIPTOGRAFIA E2EE', details: 'Canal seguro estabelecido e chaves WebRTC negociadas.', type: 'success' }
+    ];
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // --- SALVAR EVOLUÇÃO NO LOCALSTORAGE ---
+  const persistEvolution = (text: string, locked: boolean, report?: string) => {
+    try {
+      const evolutions: SavedEvolution[] = JSON.parse(localStorage.getItem('telehealth_evolutions') || '[]');
+      const idx = evolutions.findIndex(e => e.appointmentId === String(id));
+      const entry: SavedEvolution = {
+        appointmentId: String(id),
+        patientId: appointment?.patientId || '',
+        text,
+        isLocked: locked,
+        savedAt: new Date().toISOString(),
+        sessionReport: report,
+      };
+      if (idx >= 0) evolutions[idx] = entry;
+      else evolutions.push(entry);
+      // Manter apenas últimas 100 evoluções
+      if (evolutions.length > 100) evolutions.splice(0, evolutions.length - 100);
+      localStorage.setItem('telehealth_evolutions', JSON.stringify(evolutions));
+    } catch (e) {
+      console.error('Erro ao persistir evolução:', e);
+    }
+  };
 
   // --- ADICIONAR LOG DE AUDITORIA ---
   const addAuditLog = (action: string, details: string, type: 'info' | 'warning' | 'success' | 'security' = 'info') => {
@@ -158,6 +238,7 @@ export function Telehealth() {
     if (!evolutionText || isLocked) return;
     setIsSaving(true);
     const timer = setTimeout(() => {
+      persistEvolution(evolutionText, false);
       setIsSaving(false);
       setLastSaved(new Date());
     }, 2000);
@@ -184,7 +265,7 @@ export function Telehealth() {
     const newMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: 'professional',
-      senderName: 'Dra. Roberta',
+      senderName: professionalNameReal,
       text: inputText,
       timestamp: timeStr
     };
@@ -210,7 +291,7 @@ export function Telehealth() {
             const newMsg: ChatMessage = {
               id: Date.now().toString(),
               sender: 'professional',
-              senderName: 'Dra. Roberta',
+              senderName: professionalNameReal,
               text: `Enviou um arquivo compartilhado.`,
               timestamp: timeStr,
               attachment: {
@@ -264,7 +345,7 @@ export function Telehealth() {
       const mockHash = 'sha256-' + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
       setConsentProofHash(mockHash);
       setRecordingState('recording');
-      addAuditLog('GRAVAÇÃO_CONSENTIDA', `Gravação autorizada pela beneficiária Ana Silva Santos. Assinatura do consentimento registrada. Hash: ${mockHash}`, 'success');
+    addAuditLog('GRAVAÇÃO_CONSENTIDA', `Gravação autorizada pela beneficiária ${patientName}. Assinatura do consentimento registrada. Hash: ${mockHash}`, 'success');
     }, 2500);
   };
 
@@ -403,8 +484,65 @@ Este documento foi emitido durante teleconsulta segura.
     }
     if (confirm('Atenção: Ao assinar e trancar a evolução clínica, o registro se tornará imutável no prontuário eletrônico. Confirma a assinatura digital?')) {
       setIsLocked(true);
+      persistEvolution(evolutionText, true);
+      // Marcar agendamento como concluído
+      try {
+        const appts = JSON.parse(localStorage.getItem('appointments_list') || '[]');
+        const updated = appts.map((a: any) => String(a.id) === String(id) ? { ...a, status: 'completed' } : a);
+        localStorage.setItem('appointments_list', JSON.stringify(updated));
+      } catch {}
+      // Auditoria MCSI
+      logAction({
+        userId: user?.email ?? 'sistema',
+        userName: user?.name ?? professionalNameReal,
+        action: 'EDIT',
+        targetCode: `TELE-${id}`,
+        description: `[Teleconsulta] Evolução clínica assinada e trancada no prontuário de ${patientName}`,
+        ipAddress: '—',
+        device: navigator.userAgent.slice(0, 80),
+      });
       addAuditLog('PRONTUÁRIO_TRANCADO', 'Evolução clínica assinada digitalmente com sucesso pelo profissional e trancada no prontuário.', 'success');
     }
+  };
+
+  // --- GERAR RELATÓRIO DE SESSÃO COM IA ---
+  const handleGenerateSessionReport = async () => {
+    setIsAiLoading(true);
+    setAiActionType('report');
+    addAuditLog('IA_RELATORIO', 'Gerando relatório clínico completo da sessão via Copiloto IA.', 'info');
+    try {
+      const report = await generateSessionReport({
+        patientName,
+        professionalName: professionalNameReal,
+        date: appointmentDate,
+        duration: formatTime(sessionTime),
+        evolutionText,
+        issuedDocuments: issuedDocs.map(d => d.title),
+      });
+      setSessionReport(report);
+      persistEvolution(evolutionText, isLocked, report);
+      setShowReportModal(true);
+      addAuditLog('IA_RELATORIO_GERADO', 'Relatório clínico pós-sessão gerado e salvo com sucesso.', 'success');
+    } catch (e) {
+      console.error(e);
+      addAuditLog('IA_RELATORIO_ERRO', 'Erro ao gerar relatório clínico.', 'warning');
+    } finally {
+      setIsAiLoading(false);
+      setAiActionType(null);
+    }
+  };
+
+  // --- DOWNLOAD DO RELATÓRIO DE SESSÃO ---
+  const handleDownloadSessionReport = () => {
+    if (!sessionReport) return;
+    const blob = new Blob([sessionReport], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio_sessao_${patientName.replace(/ /g, '_')}_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addAuditLog('RELATORIO_DOWNLOAD', `Relatório clínico da sessão baixado pelo profissional.`, 'info');
   };
 
   // --- REGRAS DE NEGÓCIO: TRATAMENTO DE ERROS DE ACESSO (RN01, RN02) ---
@@ -518,12 +656,15 @@ Este documento foi emitido durante teleconsulta segura.
           {/* Beneficiary Profiler Card */}
           <div className="flex flex-col items-center p-4 bg-stone-50 rounded-2xl border border-stone-100">
             <div className="w-16 h-16 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xl font-bold mb-3 shadow-inner relative">
-              AS
+              {patientInitials || 'B'}
               <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" title="Beneficiário Online" />
             </div>
-            <h3 className="text-base font-semibold text-stone-900 text-center">Ana Silva Santos</h3>
-            <p className="text-xs text-stone-500 mt-0.5">28 anos • CPF: 123.***.***-00</p>
-            <span className="mt-2 text-[10px] bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full font-medium">Cadastrado Ativo</span>
+            <h3 className="text-base font-semibold text-stone-900 text-center">{patientName}</h3>
+            <p className="text-xs text-stone-500 mt-0.5">{appointmentDate}</p>
+            {appointment?.type === 'online' && (
+              <span className="mt-1.5 text-[10px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium border border-teal-100">Teleconsulta Online</span>
+            )}
+            <span className="mt-1.5 text-[10px] bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full font-medium">Cadastrado Ativo</span>
           </div>
 
           {/* Trauma-Informed Alertas de Risco */}
@@ -726,10 +867,24 @@ Este documento foi emitido durante teleconsulta segura.
           )}
 
           <button 
-            onClick={() => {
+            onClick={async () => {
               if (confirm("Encerrar o atendimento e fechar a sala de teleconsulta?")) {
-                addAuditLog('SESSÃO_ENCERRADA', 'Profissional encerrou o atendimento clínico remoto.', 'info');
-                navigate('/dashboard');
+                addAuditLog('SESSÃO_ENCERRADA', `Profissional encerrou o atendimento clínico remoto de ${patientName}. Duração: ${formatTime(sessionTime)}.`, 'info');
+                persistEvolution(evolutionText, isLocked);
+                logAction({
+                  userId: user?.email ?? 'sistema',
+                  userName: user?.name ?? professionalNameReal,
+                  action: 'VIEW',
+                  targetCode: `TELE-${id}`,
+                  description: `[Teleconsulta] Sessão encerrada. Duração: ${formatTime(sessionTime)}. Beneficiário: ${patientName}`,
+                  ipAddress: '—',
+                  device: navigator.userAgent.slice(0, 80),
+                });
+                if (evolutionText.trim() && confirm('Deseja gerar o relatório clínico pós-sessão com o Copiloto IA?')) {
+                  await handleGenerateSessionReport();
+                } else {
+                  navigate('/calendar');
+                }
               }
             }}
             className="w-14 h-11 rounded-full bg-rose-600 hover:bg-rose-500 flex items-center justify-center transition-colors ml-4 shadow-lg shadow-rose-950/40"
@@ -1249,37 +1404,43 @@ Este documento foi emitido durante teleconsulta segura.
                 exit={{ opacity: 0, y: -5 }}
                 className="space-y-4 text-xs"
               >
-                <h4 className="text-xs font-bold text-stone-900 uppercase">Anotações Terapêuticas Anteriores</h4>
-                
-                <div className="space-y-3">
-                  <div className="border border-stone-200 rounded-2xl p-4 bg-stone-50/50">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-stone-850">Sessão #4 — Psicoterapia</span>
-                      <span className="text-stone-400 font-mono">14/06/2026</span>
-                    </div>
-                    <p className="text-stone-600 leading-relaxed">
-                      Paciente reporta crises de ansiedade semanais disparadas por sobrecarga no trabalho. Refere dificuldades frequentes para manter o sono contínuo. Demonstrou cansaço físico. Focamos em discutir estratégias de limites nas horas extras de trabalho.
-                    </p>
-                    <div className="mt-3 pt-2.5 border-t border-stone-200/50 flex justify-between items-center text-[10px] text-stone-400">
-                      <span>Assinado por: Dra. Roberta (CRP 06/98765-SP)</span>
-                      <span className="font-mono text-emerald-650 flex items-center gap-0.5"><Lock className="w-3 h-3" /> ICP-Brasil</span>
-                    </div>
-                  </div>
-
-                  <div className="border border-stone-200 rounded-2xl p-4 bg-stone-50/50">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-stone-850">Sessão #3 — Acolhimento Social</span>
-                      <span className="text-stone-400 font-mono">07/06/2026</span>
-                    </div>
-                    <p className="text-stone-600 leading-relaxed">
-                      Realizado encaminhamento para assessoria jurídica e apoio psicossocial em decorrência do alerta de vulnerabilidade doméstica. Paciente manifestou receio e pediu sigilo absoluto sobre os atendimentos.
-                    </p>
-                    <div className="mt-3 pt-2.5 border-t border-stone-200/50 flex justify-between items-center text-[10px] text-stone-400">
-                      <span>Assinado por: Assistente Social Fernando (CRESS 1234)</span>
-                      <span className="font-mono text-emerald-650 flex items-center gap-0.5"><Lock className="w-3 h-3" /> ICP-Brasil</span>
-                    </div>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-bold text-stone-900 uppercase">Evoluções Clínicas Anteriores</h4>
+                  {sessionReport && (
+                    <button
+                      onClick={() => setShowReportModal(true)}
+                      className="flex items-center gap-1 text-[10px] bg-teal-50 text-teal-700 px-2 py-1 rounded-lg border border-teal-100 hover:bg-teal-100 transition-colors"
+                    >
+                      <ClipboardList className="w-3 h-3" /> Ver Relatório
+                    </button>
+                  )}
                 </div>
+
+                {pastEvolutions.length === 0 ? (
+                  <div className="border border-stone-200 rounded-2xl p-6 bg-stone-50/50 text-center text-stone-400">
+                    <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-xs">Nenhuma evolução clínica anterior registrada para este beneficiário.</p>
+                    <p className="text-[10px] mt-1 text-stone-300">Sessões anteriores aparecerão aqui após serem assinadas e trancadas.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pastEvolutions.map((evo, i) => (
+                      <div key={evo.appointmentId} className="border border-stone-200 rounded-2xl p-4 bg-stone-50/50">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-semibold text-stone-850">Sessão #{pastEvolutions.length - i} — Teleconsulta</span>
+                          <span className="text-stone-400 font-mono">{new Date(evo.savedAt).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <p className="text-stone-600 leading-relaxed line-clamp-4">
+                          {evo.text.length > 300 ? evo.text.substring(0, 300) + '...' : evo.text}
+                        </p>
+                        <div className="mt-3 pt-2.5 border-t border-stone-200/50 flex justify-between items-center text-[10px] text-stone-400">
+                          <span>Assinado por: {professionalNameReal}</span>
+                          <span className="font-mono text-emerald-650 flex items-center gap-0.5"><Lock className="w-3 h-3" /> Trancado</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -1340,6 +1501,18 @@ Este documento foi emitido durante teleconsulta segura.
           >
             <Lock className="w-3.5 h-3.5" />
             Assinar e Trancar Evolução
+          </button>
+          <button 
+            onClick={handleGenerateSessionReport}
+            disabled={isAiLoading || !evolutionText.trim()}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 disabled:text-stone-500 text-white px-3 py-2.5 rounded-xl font-semibold text-xs shadow-sm transition-all focus:outline-none"
+            title="Gerar Relatório Clínico Pós-Sessão com IA"
+          >
+            {isAiLoading && aiActionType === 'report' ? (
+              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Gerando...</>
+            ) : (
+              <><ClipboardList className="w-3.5 h-3.5" /> Relatório IA</>
+            )}
           </button>
         </footer>
       </section>
@@ -1507,6 +1680,58 @@ Este documento foi emitido durante teleconsulta segura.
                   className="px-4 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-500 transition-colors flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" /> Baixar Documento
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE RELATÓRIO CLÍNICO PÓS-SESSÃO */}
+      <AnimatePresence>
+        {showReportModal && sessionReport && (
+          <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl border border-stone-200 flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-stone-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                    <ClipboardList className="w-5 h-5 text-indigo-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-stone-900">Relatório Clínico Pós-Sessão</h3>
+                    <p className="text-xs text-stone-500 mt-0.5">Gerado pelo Copiloto IA Aura • {patientName}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowReportModal(false)} className="p-2 hover:bg-stone-100 rounded-xl transition-colors">
+                  <CheckCircle className="w-5 h-5 text-stone-400" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <pre className="text-xs text-stone-700 leading-relaxed whitespace-pre-wrap font-sans">{sessionReport}</pre>
+              </div>
+              <div className="p-6 border-t border-stone-100 flex gap-3 shrink-0">
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  className="flex-1 py-3 border border-stone-200 text-stone-700 font-medium text-sm rounded-xl hover:bg-stone-50 transition-colors"
+                >
+                  Fechar
+                </button>
+                <button
+                  onClick={handleDownloadSessionReport}
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" /> Baixar Relatório (.txt)
+                </button>
+                <button
+                  onClick={() => { navigate('/calendar'); }}
+                  className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-medium text-sm rounded-xl transition-colors"
+                >
+                  Concluir e Sair
                 </button>
               </div>
             </motion.div>

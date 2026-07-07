@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../contexts/SecurityContext';
 import {
   costCenters, financialCategories, donors, campaigns,
   agreements, transactions as initialTransactions, cashFlowSeries,
@@ -14,7 +16,7 @@ import {
   type Donor, type Campaign, type Agreement, type BankStatementItem,
 } from '../data/financial-mock';
 
-// ─── Helpers ───────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────
 function formatBRL(val: number) {
   return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -23,18 +25,33 @@ function formatDate(dt: string) {
   return new Date(dt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 }
 
+// ─── localStorage helpers ───────────────────────────────────────
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+
+function saveToStorage<T>(key: string, data: T): void {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
 export function Financial() {
+  const { user } = useAuth();
+  const { logAction } = useSecurity();
+
   const [tab, setTab] = useState<'cockpit' | 'transacoes' | 'doacoes' | 'convenios' | 'conciliacao' | 'relatorios'>('cockpit');
 
-  // Core Data States
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [statementItems, setStatementItems] = useState<BankStatementItem[]>(initialStatementItems);
+  // Core Data States — inicialização híbrida (localStorage > mock seed)
+  const [transactions, setTransactions] = useState<Transaction[]>(() => loadFromStorage('financial_transactions', initialTransactions));
+  const [statementItems, setStatementItems] = useState<BankStatementItem[]>(() => loadFromStorage('financial_bank_statement', initialStatementItems));
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeDetailsId, setActiveDetailsId] = useState<string | null>(null);
 
   // Módulo 08 Dynamic States
-  const [donorList, setDonorList] = useState<Donor[]>(donors);
-  const [campaignList, setCampaignList] = useState<Campaign[]>(campaigns);
+  const [donorList, setDonorList] = useState<Donor[]>(() => loadFromStorage('financial_donors', donors));
+  const [campaignList, setCampaignList] = useState<Campaign[]>(() => loadFromStorage('financial_campaigns', campaigns));
   const [showAddDonorModal, setShowAddDonorModal] = useState(false);
   const [showAddCampaignModal, setShowAddCampaignModal] = useState(false);
   const [showReverseModal, setShowReverseModal] = useState(false);
@@ -95,6 +112,17 @@ export function Financial() {
   const pendingExpense = transactions.filter(t => t.type === 'EXPENSE' && t.status === 'PENDING').reduce((s, t) => s + t.amount, 0);
 
   // ─── Event Handlers ──────────────────────────────────────────
+  function handleExportData() {
+    const dataStr = JSON.stringify({ transactions, donorList, campaignList }, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relatorio-financeiro-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleAddTransaction(e: React.FormEvent) {
     e.preventDefault();
     if (!newTxTitle || !newTxAmount || !newTxDueDate) return;
@@ -110,7 +138,7 @@ export function Financial() {
     }
 
     const newTx: Transaction = {
-      id: `t${transactions.length + 1}`,
+      id: `t${Date.now()}`,
       type: newTxType,
       title: newTxTitle,
       amount: parsedAmount,
@@ -120,12 +148,22 @@ export function Financial() {
       projectName: newTxProject,
       costCenters: [{ name: newTxCostCenter, percentage: 100.0 }],
       documentUrl: newTxAnexo || undefined,
-      createdBy: 'Financeiro',
+      createdBy: user?.name || 'Financeiro',
     };
 
-    setTransactions([newTx, ...transactions]);
+    const updated = [newTx, ...transactions];
+    setTransactions(updated);
+    saveToStorage('financial_transactions', updated);
+    logAction({
+      userId: user?.email ?? 'sistema',
+      userName: user?.name ?? 'Financeiro',
+      action: 'EDIT',
+      targetCode: `TX-${newTx.id}`,
+      description: `[Financeiro] Nova transação criada: ${newTx.title} (${formatBRL(parsedAmount)}) — ${newTx.type}`,
+      ipAddress: '—',
+      device: navigator.userAgent.slice(0, 80),
+    });
     setShowAddModal(false);
-    // Reset Form
     setNewTxTitle('');
     setNewTxAmount('');
     setNewTxDueDate('');
@@ -133,16 +171,29 @@ export function Financial() {
   }
 
   function handleQuickReconcile(statementId: string, txId: string) {
-    setStatementItems(prev => prev.map(item => item.id === statementId ? { ...item, reconciled: true } : item));
-    setTransactions(prev => prev.map(t => t.id === txId ? { ...t, status: 'COMPLETED', paymentDate: '2026-06-29' } : t));
+    const updatedStmt = statementItems.map(item => item.id === statementId ? { ...item, reconciled: true } : item);
+    const updatedTx = transactions.map(t => t.id === txId ? { ...t, status: 'COMPLETED' as const, paymentDate: new Date().toISOString().split('T')[0] } : t);
+    setStatementItems(updatedStmt);
+    setTransactions(updatedTx);
+    saveToStorage('financial_bank_statement', updatedStmt);
+    saveToStorage('financial_transactions', updatedTx);
     setReconciledCount(c => c + 1);
+    logAction({
+      userId: user?.email ?? 'sistema',
+      userName: user?.name ?? 'Financeiro',
+      action: 'EDIT',
+      targetCode: `CONC-${statementId}`,
+      description: `[Financeiro] Conciliação bancária realizada. Extrato ID: ${statementId} conciliado com transação ID: ${txId}`,
+      ipAddress: '—',
+      device: navigator.userAgent.slice(0, 80),
+    });
   }
 
   function handleAddDonor(e: React.FormEvent) {
     e.preventDefault();
     if (!newDonorName || !newDonorEmail) return;
     const newDonor: Donor = {
-      id: `d${donorList.length + 1}`,
+      id: `d${Date.now()}`,
       name: newDonorName,
       email: newDonorEmail,
       phone: newDonorPhone || undefined,
@@ -154,7 +205,18 @@ export function Financial() {
       joinedAt: new Date().toISOString().split('T')[0],
       totalDonated: 0,
     };
-    setDonorList([newDonor, ...donorList]);
+    const updated = [newDonor, ...donorList];
+    setDonorList(updated);
+    saveToStorage('financial_donors', updated);
+    logAction({
+      userId: user?.email ?? 'sistema',
+      userName: user?.name ?? 'Financeiro',
+      action: 'EDIT',
+      targetCode: `DONOR-${newDonor.id}`,
+      description: `[Financeiro] Novo doador cadastrado: ${newDonor.name} (${newDonor.type})`,
+      ipAddress: '—',
+      device: navigator.userAgent.slice(0, 80),
+    });
     setShowAddDonorModal(false);
     setNewDonorName('');
     setNewDonorEmail('');
@@ -168,7 +230,7 @@ export function Financial() {
     e.preventDefault();
     if (!newCampName || !newCampTarget) return;
     const newCamp: Campaign = {
-      id: `camp${campaignList.length + 1}`,
+      id: `camp${Date.now()}`,
       name: newCampName,
       description: newCampDesc,
       targetAmount: parseFloat(newCampTarget) || 0,
@@ -177,7 +239,9 @@ export function Financial() {
       endDate: newCampEnd || new Date().toISOString().split('T')[0],
       status: 'PLANNING',
     };
-    setCampaignList([newCamp, ...campaignList]);
+    const updated = [newCamp, ...campaignList];
+    setCampaignList(updated);
+    saveToStorage('financial_campaigns', updated);
     setShowAddCampaignModal(false);
     setNewCampName('');
     setNewCampDesc('');
@@ -210,8 +274,9 @@ export function Financial() {
     const updatedTransactions = transactions.map(t => 
       t.id === reversingTxId ? { ...t, status: 'CANCELLED' as const } : t
     );
-
-    setTransactions([reverseTx, ...updatedTransactions]);
+    const finalTx = [reverseTx, ...updatedTransactions];
+    setTransactions(finalTx);
+    saveToStorage('financial_transactions', finalTx);
     setShowReverseModal(false);
     setReversingTxId(null);
     setReversalJustification('');
@@ -219,9 +284,11 @@ export function Financial() {
   }
 
   function handleApproveExpense(txId: string) {
-    setTransactions(prev => prev.map(t => 
+    const updated = transactions.map(t => 
       t.id === txId ? { ...t, status: 'COMPLETED' as const, paymentDate: new Date().toISOString().split('T')[0] } : t
-    ));
+    );
+    setTransactions(updated);
+    saveToStorage('financial_transactions', updated);
     alert('Despesa aprovada e liberada para pagamento com sucesso (RN04).');
   }
 

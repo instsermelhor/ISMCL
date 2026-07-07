@@ -3,6 +3,8 @@ import { Search, Plus, Download, Star, Clock, Award, CheckCircle2, Pause, Chevro
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../utils';
 import { voluntarios as defaultVoluntarios, type Voluntario } from '../../data/cgi-mock';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 const statusConfig = {
   ativo: { label: 'Ativo', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
@@ -119,6 +121,9 @@ function EditVolunteerModal({
   const [status, setStatus] = useState(volunteer.status);
   const [projetos, setProjetos] = useState(volunteer.projetos.join(', '));
   const [capacitacoes, setCapacitacoes] = useState(volunteer.capacitacoes.join(', '));
+  const [horasMes, setHorasMes] = useState(volunteer.horasMes.toString());
+  const [horasTotais, setHorasTotais] = useState(volunteer.horasTotais.toString());
+  const [avaliacao, setAvaliacao] = useState(volunteer.avaliacao.toString());
   const [saved, setSaved] = useState(false);
 
   const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all';
@@ -130,6 +135,9 @@ function EditVolunteerModal({
       name,
       area,
       status,
+      horasMes: parseInt(horasMes) || 0,
+      horasTotais: parseInt(horasTotais) || 0,
+      avaliacao: parseFloat(avaliacao) || 5.0,
       projetos: projetos.split(',').map(p => p.trim()).filter(Boolean),
       capacitacoes: capacitacoes.split(',').map(c => c.trim()).filter(Boolean),
     });
@@ -195,6 +203,21 @@ function EditVolunteerModal({
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1">Capacitações (separadas por vírgula)</label>
             <input type="text" value={capacitacoes} onChange={e => setCapacitacoes(e.target.value)} className={inputCls} />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Horas Mês</label>
+              <input type="number" value={horasMes} onChange={e => setHorasMes(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Horas Total</label>
+              <input type="number" value={horasTotais} onChange={e => setHorasTotais(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Avaliação (1-5)</label>
+              <input type="number" step="0.1" min="1" max="5" value={avaliacao} onChange={e => setAvaliacao(e.target.value)} className={inputCls} />
+            </div>
           </div>
         </div>
 
@@ -430,6 +453,8 @@ type ActiveModal =
   | null;
 
 export function CGIVoluntarios() {
+  const { user } = useAuth();
+  const { logAction } = useSecurity();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -455,6 +480,40 @@ export function CGIVoluntarios() {
   function handleSaveVolunteer(updated: Voluntario) {
     const list = voluntariosList.map(v => v.id === updated.id ? updated : v);
     persist(list);
+    logAction({
+      userId: user?.email ?? 'sistema',
+      userName: user?.name ?? 'Coordenador',
+      action: 'EDIT',
+      targetCode: `VOL-${updated.id}`,
+      description: `[Voluntariado] Editou perfil do voluntário: ${updated.name}`,
+      ipAddress: '—',
+      device: navigator.userAgent.slice(0, 80),
+    });
+  }
+
+  function handleExportVolunteers() {
+    try {
+      const dataStr = JSON.stringify(voluntariosList, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `voluntarios_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      logAction({
+        userId: user?.email ?? 'sistema',
+        userName: user?.name ?? 'Coordenador',
+        action: 'VIEW',
+        targetCode: 'VOL-EXPORT',
+        description: `[Voluntariado] Exportou base de dados de voluntários (${voluntariosList.length} registros)`,
+        ipAddress: '—',
+        device: navigator.userAgent.slice(0, 80),
+      });
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao exportar base de dados.');
+    }
   }
 
   const filtered = voluntariosList.filter(v => {
@@ -519,7 +578,10 @@ export function CGIVoluntarios() {
           <option value="inativo">Inativo</option>
           <option value="ferias">Férias</option>
         </select>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+        <button
+          onClick={handleExportVolunteers}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+        >
           <Download className="w-4 h-4" /> Exportar
         </button>
         <button
@@ -630,6 +692,15 @@ export function CGIVoluntarios() {
         onCreate={(newVolunteer) => {
           const updated = [...voluntariosList, newVolunteer];
           persist(updated);
+          logAction({
+            userId: user?.email ?? 'sistema',
+            userName: user?.name ?? 'Coordenador',
+            action: 'EDIT',
+            targetCode: `VOL-${newVolunteer.id}`,
+            description: `[Voluntariado] Cadastrou novo voluntário: ${newVolunteer.name}`,
+            ipAddress: '—',
+            device: navigator.userAgent.slice(0, 80),
+          });
         }}
       />
     </div>

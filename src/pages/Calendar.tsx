@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Video, MapPin, Plus, Filter, Users, Calendar as CalendarIcon, Clock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
@@ -20,6 +21,7 @@ const MOCK_WAITLIST = [
 export function Calendar() {
   const { user } = useAuth();
   const { logAction } = useSecurity();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('minha-agenda');
   const [isAiModalOpen, setAiModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -233,8 +235,30 @@ export function Calendar() {
                               </div>
                               
                               {slot.status === 'upcoming' && (
-                                <button className="px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-500 transition-colors w-full sm:w-auto text-center shadow-sm">
-                                  Acessar Sala
+                                <button
+                                  onClick={() => {
+                                    if (slot.type === 'online') {
+                                      logAction({
+                                        userId: user?.email ?? 'sistema',
+                                        userName: user?.name ?? 'Profissional',
+                                        action: 'VIEW',
+                                        targetCode: `TELE-${slot.id}`,
+                                        description: `[Teleconsulta] Profissional acessou sala virtual para beneficiário: ${slot.patientName}`,
+                                        ipAddress: '—',
+                                        device: navigator.userAgent.slice(0, 80),
+                                      });
+                                      navigate(`/telehealth/${slot.id}`);
+                                    } else {
+                                      alert(`Consulta presencial confirmada no ${slot.room || 'consultório'}. Dirija-se ao local.`);
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-500 transition-colors w-full sm:w-auto text-center shadow-sm"
+                                >
+                                  {slot.type === 'online' ? (
+                                    <><Video className="w-3.5 h-3.5" /> Entrar na Sala</>
+                                  ) : (
+                                    <><MapPin className="w-3.5 h-3.5" /> Ver Local</>
+                                  )}
                                 </button>
                               )}
                             </div>
