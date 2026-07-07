@@ -56,6 +56,9 @@ import SodoAcademy from './pages/SodoAcademy';
 import SodoPops from './pages/SodoPops';
 import SodoAdmin from './pages/SodoAdmin';
 
+// Painel Público de Doações via PIX
+import DonationPublic from './pages/DonationPublic';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -79,6 +82,9 @@ export default function App() {
         {/* Rota pública: PIARAVE Acolhimento e Biblioteca */}
         <Route path="/piarave/acolhimento" element={<PiaraveAcolhimento />} />
         <Route path="/piarave/biblioteca" element={<PiaraveBiblioteca />} />
+
+        {/* Rota pública: Painel de Doações via PIX */}
+        <Route path="/doe" element={<DonationPublic />} />
 
         {/* Rotas protegidas */}
         <Route element={<ProtectedRoute />}>

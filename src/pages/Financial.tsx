@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   DollarSign, TrendingUp, TrendingDown, FileText, Download, Filter,
   Calendar, Users, Target, BookOpen, AlertCircle, CheckCircle2,
   XCircle, BarChart2, Plus, ArrowUpRight, Search, FileSpreadsheet,
   RefreshCw, ClipboardCheck, Sparkles, Brain, Check, FileDown, ShieldAlert, X,
+  Building2, QrCode, Wifi, WifiOff, ExternalLink, Copy, Landmark,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
@@ -12,9 +13,11 @@ import { useSecurity } from '../contexts/SecurityContext';
 import {
   costCenters, financialCategories, donors, campaigns,
   agreements, transactions as initialTransactions, cashFlowSeries,
-  bankStatementItems as initialStatementItems, type Transaction,
-  type Donor, type Campaign, type Agreement, type BankStatementItem,
+  bankStatementItems as initialStatementItems, bankIntegrations as initialBankIntegrations,
+  platformProjects, type Transaction, type Donor, type Campaign,
+  type Agreement, type BankStatementItem, type BankIntegration, type PixDonation,
 } from '../data/financial-mock';
+import { generatePixPayload, generateQRDataUrl } from '../services/pixService';
 
 // ─── Helpers ───────────────────────────────────────────────
 function formatBRL(val: number) {
@@ -41,7 +44,7 @@ export function Financial() {
   const { user } = useAuth();
   const { logAction } = useSecurity();
 
-  const [tab, setTab] = useState<'cockpit' | 'transacoes' | 'doacoes' | 'convenios' | 'conciliacao' | 'relatorios'>('cockpit');
+  const [tab, setTab] = useState<'cockpit' | 'transacoes' | 'doacoes' | 'convenios' | 'conciliacao' | 'bancario' | 'relatorios'>('cockpit');
 
   // Core Data States — inicialização híbrida (localStorage > mock seed)
   const [transactions, setTransactions] = useState<Transaction[]>(() => loadFromStorage('financial_transactions', initialTransactions));
@@ -99,6 +102,116 @@ export function Financial() {
   const [txSearch, setTxSearch] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'INCOME' | 'EXPENSE'>('all');
   const [txStatusFilter, setTxStatusFilter] = useState<'all' | 'PENDING' | 'COMPLETED'>('all');
+
+  // Banking Integration States
+  const [bankList, setBankList] = useState<BankIntegration[]>(() => {
+    try { const r = localStorage.getItem('banking_integrations_list'); return r ? JSON.parse(r) : initialBankIntegrations; } catch { return initialBankIntegrations; }
+  });
+  const [pixDonations, setPixDonations] = useState<PixDonation[]>(() => {
+    try { const r = localStorage.getItem('financial_pix_donations'); return r ? JSON.parse(r) : []; } catch { return []; }
+  });
+  const [bankConnectModal, setBankConnectModal] = useState<BankIntegration | null>(null);
+  const [bankClientId, setBankClientId] = useState('');
+  const [bankClientSecret, setBankClientSecret] = useState('');
+  const [bankPixKey, setBankPixKey] = useState('');
+  const [bankEnv, setBankEnv] = useState<'sandbox' | 'production'>('sandbox');
+
+  // PIX Generator States
+  const [pixProject, setPixProject] = useState(platformProjects[0]?.id ?? '');
+  const [pixAmount, setPixAmount] = useState('');
+  const [pixDesc, setPixDesc] = useState('');
+  const [pixQrUrl, setPixQrUrl] = useState('');
+  const [pixPayloadStr, setPixPayloadStr] = useState('');
+  const [pixGenerating, setPixGenerating] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
+
+  // Sync pix donations from localStorage (updated by public page)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const r = localStorage.getItem('financial_pix_donations');
+        if (r) setPixDonations(JSON.parse(r));
+      } catch { /* noop */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function handleConnectBank(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bankConnectModal) return;
+    const updated = bankList.map(b =>
+      b.id === bankConnectModal.id
+        ? { ...b, status: 'CONNECTED' as const, pixKey: bankPixKey || b.pixKey, lastSync: new Date().toISOString(), environment: bankEnv }
+        : b
+    );
+    setBankList(updated);
+    localStorage.setItem('banking_integrations_list', JSON.stringify(updated));
+    setBankConnectModal(null);
+    setBankClientId(''); setBankClientSecret(''); setBankPixKey('');
+    alert('✅ Banco conectado em modo ' + bankEnv + '. Configure o webhook no painel do banco para notificações de pagamento em tempo real.');
+  }
+
+  function handleDisconnectBank(bankId: string) {
+    const updated = bankList.map(b => b.id === bankId ? { ...b, status: 'DISCONNECTED' as const, lastSync: undefined } : b);
+    setBankList(updated);
+    localStorage.setItem('banking_integrations_list', JSON.stringify(updated));
+  }
+
+  function handleSyncBank(bankId: string) {
+    const updated = bankList.map(b => b.id === bankId ? { ...b, lastSync: new Date().toISOString(), balance: Math.round(Math.random() * 50000 + 5000) } : b);
+    setBankList(updated);
+    localStorage.setItem('banking_integrations_list', JSON.stringify(updated));
+    alert('✅ Extrato sincronizado. Os lançamentos foram importados para a Conciliação Bancária.');
+  }
+
+  async function handleGeneratePix(e: React.FormEvent) {
+    e.preventDefault();
+    const proj = platformProjects.find(p => p.id === pixProject);
+    if (!proj || !pixAmount) return;
+    setPixGenerating(true);
+    const amount = parseFloat(pixAmount);
+    const txId = `ISM${Date.now()}`.slice(0, 25);
+    const payload = generatePixPayload({
+      pixKey: proj.pixKey,
+      merchantName: 'Instituto Ser Melhor',
+      merchantCity: 'SAO PAULO',
+      amount,
+      txId,
+      description: pixDesc || `Doacao ${proj.shortName}`,
+    });
+    const qrUrl = await generateQRDataUrl(payload, 220);
+    setPixPayloadStr(payload);
+    setPixQrUrl(qrUrl);
+    setPixGenerating(false);
+    // Save as pending donation
+    const donation: PixDonation = {
+      id: `pix-int-${Date.now()}`,
+      projectId: proj.id,
+      projectName: proj.name,
+      amount,
+      pixPayload: payload,
+      txId,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+    };
+    const allDonations = [donation, ...pixDonations];
+    setPixDonations(allDonations);
+    localStorage.setItem('financial_pix_donations', JSON.stringify(allDonations));
+  }
+
+  function handleCopyPix() {
+    navigator.clipboard.writeText(pixPayloadStr).then(() => {
+      setPixCopied(true);
+      setTimeout(() => setPixCopied(false), 2500);
+    });
+  }
+
+  function handleDownloadPixQr() {
+    const link = document.createElement('a');
+    link.href = pixQrUrl;
+    link.download = `qr-pix-${pixProject}-${Date.now()}.png`;
+    link.click();
+  }
 
   // AI Summary state
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(true);
@@ -306,6 +419,7 @@ export function Financial() {
     { id: 'doacoes', label: 'Doações & Campanhas', icon: Users },
     { id: 'convenios', label: 'Convênios & Editais', icon: Target },
     { id: 'conciliacao', label: 'Conciliação Bancária', icon: ClipboardCheck },
+    { id: 'bancario', label: '🏦 Bancos & PIX', icon: Landmark },
     { id: 'relatorios', label: 'Relatórios & Prestação', icon: FileSpreadsheet },
   ] as const;
 
@@ -974,6 +1088,251 @@ export function Financial() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Integrações Bancárias & PIX Tab ─────────────────────── */}
+        {tab === 'bancario' && (
+          <div className="space-y-6">
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 text-white border border-indigo-700/30">
+              <div className="flex items-center gap-3 mb-2">
+                <Landmark className="w-6 h-6 text-indigo-400" />
+                <h2 className="text-xl font-bold">Integrações Bancárias & PIX</h2>
+              </div>
+              <p className="text-indigo-300 text-sm">Gerencie contas bancárias conectadas, gere cobranças PIX e acompanhe doações recebidas. Preparado para integração real com APIs dos principais bancos nacionais e internacionais.</p>
+              <div className="flex gap-6 mt-4 pt-4 border-t border-indigo-700/30">
+                {[
+                  { label: 'Bancos Conectados', val: bankList.filter(b => b.status === 'CONNECTED').length },
+                  { label: 'Doações PIX Pendentes', val: pixDonations.filter(d => d.status === 'PENDING').length },
+                  { label: 'Total Recebido via PIX', val: 'R$ ' + pixDonations.filter(d => d.status !== 'EXPIRED').reduce((s, d) => s + d.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
+                ].map(s => (
+                  <div key={s.label}>
+                    <div className="text-2xl font-bold text-white">{s.val}</div>
+                    <div className="text-indigo-400 text-xs mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+              {/* ─── Painel de Bancos ─────────────────────── */}
+              <div className="xl:col-span-2 space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Building2 className="w-4 h-4 text-indigo-600" />Contas & Bancos Integrados</h3>
+                <div className="space-y-3">
+                  {bankList.map(bank => (
+                    <div key={bank.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="text-3xl w-10 text-center">{bank.bankLogo}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-slate-900 text-sm">{bank.bankName}</span>
+                          <span className={cn('text-xs px-2 py-0.5 rounded-full font-semibold',
+                            bank.status === 'CONNECTED' ? 'bg-emerald-100 text-emerald-700' :
+                            bank.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                            bank.status === 'ERROR' ? 'bg-rose-100 text-rose-700' :
+                            'bg-slate-100 text-slate-500'
+                          )}>
+                            {bank.status === 'CONNECTED' ? '● Conectado' : bank.status === 'PENDING' ? '● Pendente' : bank.status === 'ERROR' ? '● Erro' : '○ Desconectado'}
+                          </span>
+                          <span className={cn('text-xs px-2 py-0.5 rounded-full',
+                            bank.countryCode === 'BR' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
+                          )}>{bank.countryCode === 'BR' ? '🇧🇷 BR' : bank.countryCode === 'US' ? '🇺🇸 US' : '🌍 INT'}</span>
+                        </div>
+                        <div className="text-xs text-slate-500 flex gap-3 flex-wrap">
+                          <span>{bank.type === 'PIX' ? '⚡ PIX' : bank.type === 'OPEN_BANKING' ? '🔗 Open Banking' : bank.type === 'GATEWAY' ? '💳 Gateway' : '🌐 Internacional'}</span>
+                          {bank.status === 'CONNECTED' && bank.balance !== undefined && <span className="text-emerald-600 font-semibold">Saldo: {bank.currency === 'BRL' ? 'R$' : bank.currency === 'USD' ? 'US$' : '€'} {bank.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
+                          {bank.lastSync && <span>Sync: {new Date(bank.lastSync).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                          {bank.pixKey && <span>Chave PIX: <code className="bg-slate-100 px-1 rounded">{bank.pixKey}</code></span>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        {bank.status === 'CONNECTED' ? (
+                          <>
+                            <button onClick={() => handleSyncBank(bank.id)} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-xl hover:bg-indigo-100 transition-colors">
+                              <RefreshCw className="w-3.5 h-3.5" />Sincronizar
+                            </button>
+                            <button onClick={() => handleDisconnectBank(bank.id)} className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-700 text-xs font-semibold rounded-xl hover:bg-rose-100 transition-colors">
+                              <WifiOff className="w-3.5 h-3.5" />Desconectar
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => { setBankConnectModal(bank); setBankPixKey(bank.pixKey || ''); }} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-500 transition-colors">
+                            <Wifi className="w-3.5 h-3.5" />Conectar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Histório de Doações PIX */}
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 pt-2"><QrCode className="w-4 h-4 text-indigo-600" />Doações via PIX Recebidas</h3>
+                {pixDonations.length === 0 ? (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-sm">Nenhuma doação via PIX registrada ainda. Gere um QR Code ou compartilhe a página pública <a href="/doe" target="_blank" className="text-indigo-600 font-semibold hover:underline">/doe</a>.</div>
+                ) : (
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Programa</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Doador</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Valor</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Data</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {pixDonations.slice(0, 20).map(d => (
+                          <tr key={d.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-4 py-3 font-medium text-slate-900 text-xs">{d.projectName}</td>
+                            <td className="px-4 py-3 text-slate-500 text-xs">{d.donorName || '—'}</td>
+                            <td className="px-4 py-3 text-right font-bold text-emerald-600 text-sm">R$ {d.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={cn('text-xs px-2 py-0.5 rounded-full font-semibold',
+                                d.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700' :
+                                d.status === 'EXPIRED' ? 'bg-slate-100 text-slate-500' :
+                                'bg-amber-100 text-amber-700'
+                              )}>{d.status === 'CONFIRMED' ? '✅ Confirmado' : d.status === 'EXPIRED' ? 'Expirado' : '⏳ Pendente'}</span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-400 text-xs">{new Date(d.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ─── Painel Gerador de PIX ─────────────────── */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><QrCode className="w-4 h-4 text-indigo-600" />Gerador de QR PIX</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                  <form onSubmit={handleGeneratePix} className="space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 block mb-1">Programa / Projeto destino *</label>
+                      <select value={pixProject} onChange={e => setPixProject(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        {platformProjects.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 block mb-1">Valor (R$) *</label>
+                      <input type="number" min="1" step="0.01" value={pixAmount} onChange={e => setPixAmount(e.target.value)} placeholder="Ex: 50.00" required
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 block mb-1">Descrição (opcional)</label>
+                      <input type="text" value={pixDesc} onChange={e => setPixDesc(e.target.value)} placeholder="Ex: Doação campanha inverno"
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <button type="submit" disabled={pixGenerating || !pixAmount}
+                      className="w-full py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                      <QrCode className="w-4 h-4" />{pixGenerating ? 'Gerando...' : 'Gerar QR Code PIX'}
+                    </button>
+                  </form>
+
+                  {pixQrUrl && (
+                    <div className="border-t border-slate-100 pt-4 space-y-3">
+                      <div className="flex justify-center">
+                        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                          <img src={pixQrUrl} alt="QR PIX" style={{ width: 180, height: 180, display: 'block' }} />
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                        <div className="text-xs font-semibold text-slate-500 mb-1">PIX Copia e Cola</div>
+                        <div className="text-xs text-indigo-600 font-mono break-all leading-relaxed select-all">{pixPayloadStr}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={handleCopyPix}
+                          className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl transition-all',
+                            pixCopied ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          )}>
+                          <Copy className="w-3.5 h-3.5" />{pixCopied ? 'Copiado!' : 'Copiar'}
+                        </button>
+                        <button onClick={handleDownloadPixQr}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+                          <Download className="w-3.5 h-3.5" />Baixar QR
+                        </button>
+                      </div>
+                      <a href="/doe" target="_blank"
+                        className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-semibold rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                        <ExternalLink className="w-3.5 h-3.5" />Abrir Painel Público de Doações
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Link para página pública */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
+                  <div className="text-sm font-bold text-indigo-900 mb-1">🌐 Página Pública de Doações</div>
+                  <p className="text-xs text-indigo-700 leading-relaxed mb-3">Compartilhe o link <strong>/doe</strong> para que doadores possam escolher um programa e pagar diretamente via PIX, sem necessidade de login.</p>
+                  <a href="/doe" target="_blank" className="flex items-center gap-2 w-full py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 transition-colors justify-center">
+                    <ExternalLink className="w-4 h-4" />Acessar /doe
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Connect Modal */}
+            <AnimatePresence>
+              {bankConnectModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setBankConnectModal(null)}>
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={e => e.stopPropagation()}
+                    className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                    <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100">
+                      <span className="text-2xl">{bankConnectModal.bankLogo}</span>
+                      <div>
+                        <h3 className="font-bold text-slate-900">Conectar {bankConnectModal.bankName}</h3>
+                        <p className="text-xs text-slate-500">Configure as credenciais OAuth2 da API do banco</p>
+                      </div>
+                      <button onClick={() => setBankConnectModal(null)} className="ml-auto p-1.5 rounded-lg hover:bg-slate-100"><X className="w-4 h-4 text-slate-400" /></button>
+                    </div>
+                    <form onSubmit={handleConnectBank} className="px-6 py-5 space-y-4">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 block mb-1">Client ID (API) *</label>
+                        <input type="text" required value={bankClientId} onChange={e => setBankClientId(e.target.value)} placeholder="Obtido no painel do banco"
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 block mb-1">Client Secret *</label>
+                        <input type="password" required value={bankClientSecret} onChange={e => setBankClientSecret(e.target.value)} placeholder="••••••••••••"
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                      </div>
+                      {bankConnectModal.type === 'PIX' && (
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 block mb-1">Chave PIX do beneficiário</label>
+                          <input type="text" value={bankPixKey} onChange={e => setBankPixKey(e.target.value)} placeholder="CNPJ, email, celular ou aleatória"
+                            className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 block mb-1">Ambiente</label>
+                        <select value={bankEnv} onChange={e => setBankEnv(e.target.value as 'sandbox' | 'production')}
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                          <option value="sandbox">🧪 Sandbox (Homologação)</option>
+                          <option value="production">🚀 Produção</option>
+                        </select>
+                      </div>
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                          ⚠️ As credenciais são armazenadas localmente neste dispositivo. Em produção, use um backend seguro com variáveis de ambiente para não expor o Client Secret.
+                        </p>
+                      </div>
+                      <div className="flex gap-3 pt-2 border-t border-slate-100">
+                        <button type="button" onClick={() => setBankConnectModal(null)}
+                          className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50">Cancelar</button>
+                        <button type="submit"
+                          className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500">Conectar Banco</button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
           </div>
         )}
 
