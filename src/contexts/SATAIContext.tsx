@@ -80,16 +80,53 @@ export const SATAIProvider = ({ children }: { children: ReactNode }) => {
   const { session: areSession } = useAdaptiveRegistration();
   const { startProcessInstance } = useBPMS();
 
-  const [protocols, setProtocols] = useState<SataiProtocol[]>(mockProtocols);
-  const [dossiers, setDossiers] = useState<SataiDossier[]>(mockDossiers);
-  const [programs, setPrograms] = useState<SataiProgram[]>(mockPrograms);
-  const [auditLogs, setAuditLogs] = useState<SataiAuditLog[]>(mockAuditLogs);
-  const [activeSession, setActiveSession] = useState<SataiSession | null>(null);
+  // Helpers de localStorage
+  const loadStorage = <T,>(key: string, fallback: T): T => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const [protocols, setProtocols] = useState<SataiProtocol[]>(() => loadStorage('satai_protocols', mockProtocols));
+  const [dossiers, setDossiers] = useState<SataiDossier[]>(() => loadStorage('satai_dossiers', mockDossiers));
+  const [programs, setPrograms] = useState<SataiProgram[]>(() => loadStorage('satai_programs', mockPrograms));
+  const [auditLogs, setAuditLogs] = useState<SataiAuditLog[]>(() => loadStorage('satai_audit_logs', mockAuditLogs));
+  const [activeSession, setActiveSession] = useState<SataiSession | null>(() => loadStorage('satai_active_session', null));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Acessibilidade
   const [fontSizeClass, setFontSizeClass] = useState<'text-normal' | 'text-large' | 'text-xlarge'>('text-normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
+
+  // Persistência automática via useEffects
+  React.useEffect(() => {
+    try { localStorage.setItem('satai_protocols', JSON.stringify(protocols)); } catch {}
+  }, [protocols]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('satai_dossiers', JSON.stringify(dossiers)); } catch {}
+  }, [dossiers]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('satai_programs', JSON.stringify(programs)); } catch {}
+  }, [programs]);
+
+  React.useEffect(() => {
+    try { localStorage.setItem('satai_audit_logs', JSON.stringify(auditLogs)); } catch {}
+  }, [auditLogs]);
+
+  React.useEffect(() => {
+    try {
+      if (activeSession) {
+        localStorage.setItem('satai_active_session', JSON.stringify(activeSession));
+      } else {
+        localStorage.removeItem('satai_active_session');
+      }
+    } catch {}
+  }, [activeSession]);
 
   // ─────────────────────────────────────────────────────────
   // AUDITORIA
@@ -298,7 +335,7 @@ export const SATAIProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setDossiers(prev => [newDossier, ...prev]);
-    setActiveSession(prev => (prev ? { ...prev, status: 'completed' } : null));
+    setActiveSession(prev => (prev ? { ...prev, status: 'completed', currentStep: 8 } : null));
     setIsSubmitting(false);
 
     addAuditLog('session_completed', 'session', activeSession.id, name, `Dossiê ${newDossier.id} gerado com prioridade ${priority}.`);

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSATAI } from '../contexts/SATAIContext';
 import { useAdaptiveRegistration } from '../contexts/AdaptiveRegistrationContext';
@@ -20,7 +20,21 @@ const SataiWizard: React.FC = () => {
     setHighContrast,
   } = useSATAI();
 
-  const { session: areSession } = useAdaptiveRegistration();
+  const { session: areSession, saveAnswer: saveAreAnswer } = useAdaptiveRegistration();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string } | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile({
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+      });
+      saveAnswer('attached_file', file.name);
+    }
+  };
 
   // Inicializar a sessão de acolhimento assim que a página carregar
   useEffect(() => {
@@ -68,7 +82,7 @@ const SataiWizard: React.FC = () => {
       ? prev.filter((v) => v !== value)
       : [...prev, value];
     // Salvando na sessão do ARE para manter sincronizado com IIP
-    areSession.answers['attendance_motives'] = next;
+    saveAreAnswer('attendance_motives', next);
   };
 
   // --- RENDERIZAR ETAPAS (1 a 8) ---
@@ -128,7 +142,7 @@ const SataiWizard: React.FC = () => {
                   type="text"
                   style={inputStyle}
                   defaultValue={areSession.answers['full_name'] as string || ''}
-                  onChange={(e) => { areSession.answers['full_name'] = e.target.value; }}
+                  onChange={(e) => { saveAreAnswer('full_name', e.target.value); }}
                 />
               </div>
               <div>
@@ -137,7 +151,7 @@ const SataiWizard: React.FC = () => {
                   type="text"
                   style={inputStyle}
                   defaultValue={areSession.answers['cpf'] as string || ''}
-                  onChange={(e) => { areSession.answers['cpf'] = e.target.value; }}
+                  onChange={(e) => { saveAreAnswer('cpf', e.target.value); }}
                 />
               </div>
             </div>
@@ -147,7 +161,7 @@ const SataiWizard: React.FC = () => {
                 type="text"
                 style={inputStyle}
                 defaultValue={areSession.answers['phone'] as string || ''}
-                onChange={(e) => { areSession.answers['phone'] = e.target.value; }}
+                onChange={(e) => { saveAreAnswer('phone', e.target.value); }}
               />
             </div>
           </div>
@@ -287,27 +301,43 @@ const SataiWizard: React.FC = () => {
           </div>
         );
 
-      case 5: // ETAPA 5 — FATORES DE PRIORIDADE
+      case 5: // ETAPA 5 — IDENTIFICAÇÃO DE FATORES DE PRIORIDADE E URGÊNCIA (IIP)
+        const motivesList = (areSession.answers['attendance_motives'] as string[]) || [];
+        const dynamicFactors = [
+          'Necessidade de acolhimento multidisciplinar (Psicologia + Social)',
+          'Acompanhamento contínuo e monitorado por escala de vulnerabilidade',
+        ];
+        if (motivesList.includes('violencia')) {
+          dynamicFactors.push('⚠️ Risco de integridade física / violência relacional ativado');
+        }
+        if (motivesList.includes('suicidio')) {
+          dynamicFactors.push('🚨 Fator de Sofrimento Agudo / Ideação Autodestrutiva (Urgência)');
+        }
+        if (motivesList.includes('burnout')) {
+          dynamicFactors.push('💼 Sobrecarga laboral importante / Burnout em monitoramento');
+        }
+        if (motivesList.includes('depressao')) {
+          dynamicFactors.push('🧠 Suporte continuado de saúde mental recomendado');
+        }
+        if (dynamicFactors.length === 2) {
+          dynamicFactors.push('Priorização de acolhimento de rotina padrão');
+        }
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h3 style={{ fontSize: activeSizes.label, fontWeight: 700, color: themeColors.textColor }}>
-              Registro de Fatores de Atenção
+              Fatores de Prioridade Identificados (IIP)
             </h3>
-            <p style={{ fontSize: activeSizes.text, color: themeColors.subText, lineHeight: 1.5 }}>
-              Para organizar o seu acolhimento de forma humanizada, o sistema sinalizou preliminarmente
-              as seguintes necessidades:
+            <p style={{ fontSize: activeSizes.text, color: themeColors.subText }}>
+              Com base nos seus relatos, nossa inteligência de acolhimento identificou os seguintes fatores-chave:
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                'Necessidade de acolhimento multidisciplinar (Psicologia + Social)',
-                'Acompanhamento contínuo e monitorado por escala de vulnerabilidade',
-                'Priorização institucional de alocação de equipe técnica',
-              ].map((factor) => (
+              {dynamicFactors.map((factor) => (
                 <div key={factor} style={{
                   background: 'rgba(255,255,255,0.03)', border: `1px solid ${themeColors.borderColor}`,
                   borderRadius: '8px', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'center'
                 }}>
-                  <span style={{ color: '#10b981', fontSize: '18px' }}>✓</span>
+                  <span style={{ color: factor.startsWith('⚠️') || factor.startsWith('🚨') ? '#ef4444' : '#10b981', fontSize: '18px' }}>✓</span>
                   <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{factor}</span>
                 </div>
               ))}
@@ -372,17 +402,29 @@ const SataiWizard: React.FC = () => {
               <div>PACIENTE: {areSession.answers['full_name'] as string || 'Anônimo'}</div>
               <div>IIP SCORE: {areSession.iipScore} / 100</div>
               <div>CLASSIFICAÇÃO: {areSession.priorityLevel.toUpperCase()}</div>
+              {uploadedFile && (
+                <div style={{ color: '#10b981', marginTop: '4px' }}>ANEXO: {uploadedFile.name} ({uploadedFile.size})</div>
+              )}
             </div>
             <div>
               <label style={{ fontSize: '13px', fontWeight: 600, color: themeColors.textColor, display: 'block', marginBottom: '6px' }}>
                 Deseja anexar algum laudo ou documento anterior? (Opcional)
               </label>
-              <div style={{
-                border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '8px', padding: '20px',
-                textAlign: 'center', background: 'rgba(255,255,255,0.02)', color: themeColors.subText, cursor: 'pointer'
-              }}>
-                📎 Clique para selecionar arquivos
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '8px', padding: '20px',
+                  textAlign: 'center', background: 'rgba(255,255,255,0.02)', color: themeColors.subText, cursor: 'pointer'
+                }}
+              >
+                {uploadedFile ? `📎 ${uploadedFile.name} (${uploadedFile.size})` : '📎 Clique para selecionar arquivos'}
               </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                style={{ display: 'none' }} 
+              />
             </div>
           </div>
         );
@@ -470,12 +512,12 @@ const SataiWizard: React.FC = () => {
         {activeSession.currentStep < 8 && (
           <div style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: themeColors.subText, marginBottom: '6px' }}>
-              <span>Etapa {activeSession.currentStep} de 7</span>
-              <span>Progresso: {Math.round((activeSession.currentStep / 7) * 100)}%</span>
+              <span>Etapa {Math.min(activeSession.currentStep, 7)} de 7</span>
+              <span>Progresso: {Math.min(Math.round((activeSession.currentStep / 7) * 100), 100)}%</span>
             </div>
             <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{
-                height: '100%', width: `${(activeSession.currentStep / 7) * 100}%`,
+                height: '100%', width: `${Math.min((activeSession.currentStep / 7) * 100, 100)}%`,
                 background: themeColors.primary, transition: 'width 0.3s'
               }} />
             </div>
