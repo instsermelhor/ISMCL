@@ -58,8 +58,69 @@ export function Calendar() {
   const [formType, setFormType] = useState<'online' | 'presencial'>('online');
   const [formDate, setFormDate] = useState('2026-06-28');
 
-  const currentDate = '2026-06-28';
-  const timeSlots = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:30', '16:30'];
+  const [currentDate, setCurrentDate] = useState('2026-06-28');
+  const [timeSlots, setTimeSlots] = useState<string[]>(['09:00', '10:00', '11:00', '13:00', '14:00', '15:30', '16:30']);
+
+  // Efeito para sincronizar os horários livres com base na escala do profissional selecionado no localStorage
+  React.useEffect(() => {
+    if (!formProfId) {
+      setTimeSlots(['09:00', '10:00', '11:00', '13:00', '14:00', '15:30', '16:30']);
+      return;
+    }
+    const profDetailsKey = `professional_details_${formProfId}`;
+    const savedDetails = localStorage.getItem(profDetailsKey);
+    if (savedDetails) {
+      try {
+        const parsed = JSON.parse(savedDetails);
+        const availability = parsed.schedule?.weeklyAvailability;
+        if (availability) {
+          // Coleta horários marcados como "free" em qualquer dia configurado
+          const allSlots: string[] = [];
+          Object.keys(availability).forEach(day => {
+            const dayConfig = availability[day];
+            if (dayConfig.enabled && Array.isArray(dayConfig.slots)) {
+              dayConfig.slots.forEach((s: any) => {
+                if (s.status === 'free') {
+                  allSlots.push(s.time);
+                }
+              });
+            }
+          });
+          if (allSlots.length > 0) {
+            // Remove duplicados e ordena
+            const uniqueSlots = Array.from(new Set(allSlots)).sort();
+            setTimeSlots(uniqueSlots);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao ler disponibilidade", e);
+      }
+    }
+    setTimeSlots(['09:00', '10:00', '11:00', '13:00', '14:00', '15:30', '16:30']);
+  }, [formProfId]);
+
+  const handlePrevDay = () => {
+    const d = new Date(currentDate + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    const newDateStr = d.toISOString().split('T')[0];
+    setCurrentDate(newDateStr);
+    setFormDate(newDateStr);
+  };
+
+  const handleNextDay = () => {
+    const d = new Date(currentDate + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    const newDateStr = d.toISOString().split('T')[0];
+    setCurrentDate(newDateStr);
+    setFormDate(newDateStr);
+  };
+
+  const formatDateDisplay = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+    return d.toLocaleDateString('pt-BR', options);
+  };
 
   const handleCreateAppointment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,14 +232,22 @@ export function Calendar() {
             <motion.div key="minha-agenda" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
               
               <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <button 
+                  onClick={handlePrevDay} 
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="text-center">
-                  <h2 className="text-lg font-semibold text-slate-900">Hoje</h2>
-                  <p className="text-sm text-slate-500">28 de Junho, 2026</p>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    {currentDate === '2026-06-28' ? 'Hoje' : 'Consulta'}
+                  </h2>
+                  <p className="text-sm text-slate-500">{formatDateDisplay(currentDate)}</p>
                 </div>
-                <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <button 
+                  onClick={handleNextDay} 
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                >
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>

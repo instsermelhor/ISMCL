@@ -2694,21 +2694,27 @@ export function PatientRecord() {
 
                   {/* Histórico */}
                   <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Histórico de Atendimentos (últimos 30 dias)</h3>
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Histórico de Atendimentos</h3>
                     <div className="space-y-2">
-                      {[
-                        { date: '28/06/2026', prof: 'Dra. Roberta de Souza', type: 'Psicoterapia', duration: '50min', presence: 'PRESENTE' },
-                        { date: '21/06/2026', prof: 'Dra. Roberta de Souza', type: 'Psicoterapia', duration: '50min', presence: 'PRESENTE' },
-                        { date: '14/06/2026', prof: 'Dra. Roberta de Souza', type: 'Triagem', duration: '60min', presence: 'PRESENTE' },
-                      ].map((hist, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                          <div>
-                            <div className="text-xs font-bold text-slate-800">{hist.date} — {hist.type} ({hist.duration})</div>
-                            <div className="text-[10px] text-slate-500">{hist.prof}</div>
+                      {(() => {
+                        const saved = localStorage.getItem('appointments_list');
+                        const allAppts = saved ? JSON.parse(saved) : [];
+                        const historyAppts = allAppts.filter((a: any) => String(a.patientId) === String(patient.id) && a.status === 'completed');
+                        if (historyAppts.length === 0) {
+                          return (
+                            <p className="text-xs text-slate-400 text-center py-4">Nenhum atendimento realizado anteriormente.</p>
+                          );
+                        }
+                        return historyAppts.map((appt: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <div>
+                              <div className="text-xs font-bold text-slate-800">{appt.date} — {appt.type === 'online' ? 'Teleconsulta' : 'Presencial'} ({appt.duration})</div>
+                              <div className="text-[10px] text-slate-500">{appt.professionalName}</div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">PRESENTE</span>
                           </div>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">{hist.presence}</span>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </div>
                 </motion.div>

@@ -27,6 +27,7 @@ import { cn } from '../utils';
 // Interfaces
 interface CaseItem {
   id: string;
+  patientId: string;
   beneficiaryName: string;
   beneficiaryAge: number;
   project: string;
@@ -46,92 +47,119 @@ interface CaseItem {
 export function Records() {
   const navigate = useNavigate();
   
-  // --- MOCK DATA PARA CASOS ---
-  const [cases, setCases] = useState<CaseItem[]>([
-    {
-      id: 'CAS-001',
-      beneficiaryName: 'Ana Silva Santos',
-      beneficiaryAge: 32,
-      project: 'Acolher Saúde Mental',
-      priority: 'HIGH',
-      stage: 'acompanhamento',
-      openedBy: 'Roberta de Souza',
-      openedAt: '14/06/2026',
-      classification: 'Violência Doméstica / Ansiedade',
-      reason: 'Paciente acolhida após encaminhamento judicial com queixas de pânico e agressões físicas por ex-parceiro.',
-      assignedProfessionals: [
-        { name: 'Dra. Roberta de Souza', role: 'Psicóloga' },
-        { name: 'Fernando Lima', role: 'Assistente Social' },
-        { name: 'Dr. Marcos Mendes', role: 'Psiquiatra' }
-      ],
-      alertsCount: 2
-    },
-    {
-      id: 'CAS-002',
-      beneficiaryName: 'Marcos Santos Oliveira',
-      beneficiaryAge: 14,
-      project: 'Acolher Infância',
-      priority: 'VERY_HIGH',
-      stage: 'acolhimento',
-      openedBy: 'Carla Dias',
-      openedAt: '20/06/2026',
-      classification: 'Bullying / Conflitos Familiares',
-      reason: 'Jovem encaminhado pela coordenação escolar devido a risco de evasão escolar, agressividade e marcas corporais de negligência.',
-      assignedProfessionals: [
-        { name: 'Dr. Carlos Alberto', role: 'Pedagogo' }
-      ],
-      alertsCount: 1
-    },
-    {
-      id: 'CAS-003',
-      beneficiaryName: 'Júlia Costa',
-      beneficiaryAge: 45,
-      project: 'Acolher Saúde Mental',
-      priority: 'NORMAL',
-      stage: 'revisao',
-      openedBy: 'Roberta de Souza',
-      openedAt: '05/06/2026',
-      classification: 'Sofrimento Psíquico / Luto',
-      reason: 'Demanda espontânea decorrente de processo de luto prolongado de cônjuge e isolamento social severo.',
-      assignedProfessionals: [
-        { name: 'Dra. Roberta de Souza', role: 'Psicóloga' }
-      ],
-      alertsCount: 0
-    },
-    {
-      id: 'CAS-004',
-      beneficiaryName: 'Amanda Rocha',
-      beneficiaryAge: 27,
-      project: 'Projeto Mulheres',
-      priority: 'EMERGENTIAL',
-      stage: 'triagem',
-      openedBy: 'Carla Dias',
-      openedAt: '28/06/2026',
-      classification: 'Violência Sexual / Risco Imediato',
-      reason: 'Encaminhamento urgente da Defensoria Pública para proteção integral, acolhimento psicossocial e assistência social emergencial.',
-      assignedProfessionals: [],
-      alertsCount: 3
-    },
-    {
-      id: 'CAS-005',
-      beneficiaryName: 'Ricardo Lima',
-      beneficiaryAge: 51,
-      project: 'Acolher Saúde Mental',
-      priority: 'LOW',
-      stage: 'alta',
-      openedBy: 'Roberta de Souza',
-      openedAt: '10/05/2026',
-      classification: 'Ansiedade Moderada',
-      reason: 'Paciente referia episódios de insônia inicial vinculados a estresse profissional temporário.',
-      assignedProfessionals: [
-        { name: 'Dra. Roberta de Souza', role: 'Psicóloga' }
-      ],
-      alertsCount: 0,
-      closedAt: '20/06/2026',
-      closureReason: 'Conclusão do plano de cuidado (PIC atingido)',
-      resultsAchieved: 'Remissão total dos sintomas de insônia e ansiedade, restabelecimento de hábitos de lazer e rotina laboral saudável.'
-    }
-  ]);
+  // --- CARREGAMENTO E PERSISTÊNCIA DE CASOS ---
+  const [cases, setCases] = useState<CaseItem[]>(() => {
+    const saved = localStorage.getItem('clinical_cases_list');
+    if (saved) return JSON.parse(saved);
+
+    const initial: CaseItem[] = [
+      {
+        id: 'CAS-001',
+        patientId: '1',
+        beneficiaryName: 'Ana Silva Santos',
+        beneficiaryAge: 32,
+        project: 'Acolher Saúde Mental',
+        priority: 'HIGH',
+        stage: 'acompanhamento',
+        openedBy: 'Roberta de Souza',
+        openedAt: '14/06/2026',
+        classification: 'Violência Doméstica / Ansiedade',
+        reason: 'Paciente acolhida após encaminhamento judicial com queixas de pânico e agressões físicas por ex-parceiro.',
+        assignedProfessionals: [
+          { name: 'Dra. Roberta de Souza', role: 'Psicóloga' },
+          { name: 'Fernando Lima', role: 'Assistente Social' },
+          { name: 'Dr. Marcos Mendes', role: 'Psiquiatra' }
+        ],
+        alertsCount: 2
+      },
+      {
+        id: 'CAS-002',
+        patientId: '2',
+        beneficiaryName: 'Marcos Santos Oliveira',
+        beneficiaryAge: 14,
+        project: 'Acolher Infância',
+        priority: 'VERY_HIGH',
+        stage: 'acolhimento',
+        openedBy: 'Carla Dias',
+        openedAt: '20/06/2026',
+        classification: 'Bullying / Conflitos Familiares',
+        reason: 'Jovem encaminhado pela coordenação escolar devido a risco de evasão escolar, agressividade e marcas corporais de negligência.',
+        assignedProfessionals: [
+          { name: 'Dr. Carlos Alberto', role: 'Pedagogo' }
+        ],
+        alertsCount: 1
+      },
+      {
+        id: 'CAS-003',
+        patientId: '3',
+        beneficiaryName: 'Júlia Costa',
+        beneficiaryAge: 45,
+        project: 'Acolher Saúde Mental',
+        priority: 'NORMAL',
+        stage: 'revisao',
+        openedBy: 'Roberta de Souza',
+        openedAt: '05/06/2026',
+        classification: 'Sofrimento Psíquico / Luto',
+        reason: 'Demanda espontânea decorrente de processo de luto prolongado de cônjuge e isolamento social severo.',
+        assignedProfessionals: [
+          { name: 'Dra. Roberta de Souza', role: 'Psicóloga' }
+        ],
+        alertsCount: 0
+      },
+      {
+        id: 'CAS-004',
+        patientId: '4',
+        beneficiaryName: 'Amanda Rocha',
+        beneficiaryAge: 27,
+        project: 'Projeto Mulheres',
+        priority: 'EMERGENTIAL',
+        stage: 'triagem',
+        openedBy: 'Carla Dias',
+        openedAt: '28/06/2026',
+        classification: 'Violência Sexual / Risco Imediato',
+        reason: 'Encaminhamento urgente da Defensoria Pública para proteção integral, acolhimento psicossocial e assistência social emergencial.',
+        assignedProfessionals: [],
+        alertsCount: 3
+      },
+      {
+        id: 'CAS-005',
+        patientId: '5',
+        beneficiaryName: 'Ricardo Lima',
+        beneficiaryAge: 51,
+        project: 'Acolher Saúde Mental',
+        priority: 'LOW',
+        stage: 'alta',
+        openedBy: 'Roberta de Souza',
+        openedAt: '10/05/2026',
+        classification: 'Ansiedade Moderada',
+        reason: 'Paciente referia episódios de insônia inicial vinculados a estresse profissional temporário.',
+        assignedProfessionals: [
+          { name: 'Dra. Roberta de Souza', role: 'Psicóloga' }
+        ],
+        alertsCount: 0,
+        closedAt: '20/06/2026',
+        closureReason: 'Conclusão do plano de cuidado (PIC atingido)',
+        resultsAchieved: 'Remissão total dos sintomas de insônia e ansiedade, restabelecimento de hábitos de lazer e rotina laboral saudável.'
+      }
+    ];
+    localStorage.setItem('clinical_cases_list', JSON.stringify(initial));
+    return initial;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('clinical_cases_list', JSON.stringify(cases));
+  }, [cases]);
+
+  // Lista dinâmica de profissionais vindos do localStorage
+  const [professionalsList] = useState<any[]>(() => {
+    const saved = localStorage.getItem('professionals_list');
+    return saved ? JSON.parse(saved) : [
+      { name: 'Fernando Lima', profession: 'Assistente Social' },
+      { name: 'Dr. Marcos Mendes', profession: 'Psiquiatra' },
+      { name: 'Dra. Camila Nogueira', profession: 'Advogada' },
+      { name: 'Dra. Roberta de Souza', profession: 'Psicóloga' }
+    ];
+  });
 
   // --- FILTROS E BUSCA ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,8 +185,16 @@ export function Records() {
   const [newOrigin, setNewOrigin] = useState('TRIAGE');
 
   // Form fields for Assign Professional
-  const [assignName, setAssignName] = useState('Fernando Lima');
-  const [assignRole, setAssignRole] = useState('Assistente Social');
+  const [assignName, setAssignName] = useState(() => {
+    const saved = localStorage.getItem('professionals_list');
+    const list = saved ? JSON.parse(saved) : [];
+    return list.length > 0 ? list[0].name : 'Fernando Lima';
+  });
+  const [assignRole, setAssignRole] = useState(() => {
+    const saved = localStorage.getItem('professionals_list');
+    const list = saved ? JSON.parse(saved) : [];
+    return list.length > 0 ? list[0].profession : 'Assistente Social';
+  });
 
   // Form fields for Discharge
   const [dischargeReason, setDischargeReason] = useState('PLAN_COMPLETED');
@@ -180,8 +216,45 @@ export function Records() {
       return;
     }
 
+    // Busca beneficiário existente na lista global de pacientes ou cria um novo
+    const savedPatients = localStorage.getItem('patients_list');
+    const patientsList = savedPatients ? JSON.parse(savedPatients) : [];
+    let patientObj = patientsList.find((p: any) => p.name.toLowerCase() === newBeneficiary.toLowerCase());
+    let patientId = patientObj ? String(patientObj.id) : '';
+
+    if (!patientObj) {
+      patientId = `p-${Date.now()}`;
+      const newPatient = {
+        id: patientId,
+        name: newBeneficiary,
+        socialName: '',
+        age: Number(newAge),
+        gender: 'Não Informado',
+        birthDate: '1998-05-10',
+        cpf: '***.000.000-**',
+        rg: '**.***.***-*',
+        status: 'Em avaliação',
+        risk: newPriority === 'HIGH' || newPriority === 'VERY_HIGH' || newPriority === 'EMERGENTIAL' ? 'high' : 'low',
+        lastSeen: new Date().toLocaleDateString('pt-BR'),
+        professional: 'Sem Profissional designado',
+        phone: '(11) 90000-0000',
+        email: 'beneficiario@email.com',
+        address: 'Endereço não informado',
+        emergencyContact: 'Contato de Emergência - (11) 90000-0000',
+        socialProject: newProject,
+        photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        income: 'none',
+        housing: 'owned',
+        education: 'Ensino Médio',
+        occupation: 'Não informada',
+        familyRenda: 'Até 1 SM'
+      };
+      localStorage.setItem('patients_list', JSON.stringify([...patientsList, newPatient]));
+    }
+
     const newCaseItem: CaseItem = {
       id: `CAS-00${cases.length + 1}`,
+      patientId,
       beneficiaryName: newBeneficiary,
       beneficiaryAge: Number(newAge),
       project: newProject,
@@ -566,16 +639,16 @@ ${c.assignedProfessionals.map(p => `- ${p.name} (${p.role})`).join('\n')}
                 <select 
                   value={assignName}
                   onChange={(e) => {
-                    setAssignName(e.target.value);
-                    if (e.target.value === 'Fernando Lima') setAssignRole('Assistente Social');
-                    if (e.target.value === 'Dr. Marcos Mendes') setAssignRole('Médico Psiquiatra');
-                    if (e.target.value === 'Dra. Camila Nogueira') setAssignRole('Advogada');
+                    const selectedName = e.target.value;
+                    setAssignName(selectedName);
+                    const foundProf = professionalsList.find(p => p.name === selectedName);
+                    setAssignRole(foundProf ? foundProf.profession : 'Profissional');
                   }}
                   className="w-full bg-slate-50 border-slate-200 rounded-xl focus:ring-teal-500 py-2.5 px-3"
                 >
-                  <option value="Fernando Lima">Fernando Lima (Assistência Social)</option>
-                  <option value="Dr. Marcos Mendes">Dr. Marcos Mendes (Psiquiatria)</option>
-                  <option value="Dra. Camila Nogueira">Dra. Camila Nogueira (Assessoria Jurídica)</option>
+                  {professionalsList.map((p, idx) => (
+                    <option key={idx} value={p.name}>{p.name} ({p.profession})</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
@@ -815,7 +888,7 @@ function CaseCard({
         </div>
         
         <h4 
-          onClick={() => c.stage !== 'triagem' && navigate(`/patients/1`)}
+          onClick={() => c.stage !== 'triagem' && navigate(`/patients/${c.patientId || '1'}`)}
           className={cn(
             "text-xs font-bold text-slate-900 truncate",
             c.stage !== 'triagem' ? "cursor-pointer hover:text-teal-650 hover:underline" : ""
