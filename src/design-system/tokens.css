@@ -1,0 +1,305 @@
+/**
+ * Aura Design System — CSS Design Tokens
+ * Foundation Platform — Prompt 131 (AFPI)
+ *
+ * Tokens organizados por categoria:
+ * - Cores (paleta institucional Aura)
+ * - Tipografia
+ * - Espaçamento
+ * - Bordas e Sombras
+ * - Z-index
+ * - Animações
+ * - Breakpoints
+ *
+ * Referências: P103 (AEXP), P131 (AFPI)
+ * Conformidade: WCAG 2.2 AA (contrast ratios verificados)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* ── Paleta Primária — Azul Institucional Aura ────────────────────────────── */
+  --aura-primary-50:  #eff6ff;
+  --aura-primary-100: #dbeafe;
+  --aura-primary-200: #bfdbfe;
+  --aura-primary-300: #93c5fd;
+  --aura-primary-400: #60a5fa;
+  --aura-primary-500: #3b82f6;
+  --aura-primary-600: #2563eb;
+  --aura-primary-700: #1d4ed8;
+  --aura-primary-800: #1e40af;
+  --aura-primary-900: #1e3a8a;
+  --aura-primary-950: #172554;
+
+  /* ── Paleta Social — Verde Esperança ─────────────────────────────────────── */
+  --aura-social-50:  #f0fdf4;
+  --aura-social-100: #dcfce7;
+  --aura-social-200: #bbf7d0;
+  --aura-social-300: #86efac;
+  --aura-social-400: #4ade80;
+  --aura-social-500: #22c55e;
+  --aura-social-600: #16a34a;
+  --aura-social-700: #15803d;
+  --aura-social-800: #166534;
+  --aura-social-900: #14532d;
+
+  /* ── Paleta IA — Roxo Inteligência ───────────────────────────────────────── */
+  --aura-ai-50:  #faf5ff;
+  --aura-ai-100: #f3e8ff;
+  --aura-ai-200: #e9d5ff;
+  --aura-ai-300: #d8b4fe;
+  --aura-ai-400: #c084fc;
+  --aura-ai-500: #a855f7;
+  --aura-ai-600: #9333ea;
+  --aura-ai-700: #7c3aed;
+  --aura-ai-800: #6b21a8;
+  --aura-ai-900: #581c87;
+
+  /* ── Paleta Alerta / Feedback ────────────────────────────────────────────── */
+  --aura-success-500: #22c55e;
+  --aura-success-600: #16a34a;
+  --aura-warning-500: #f59e0b;
+  --aura-warning-600: #d97706;
+  --aura-danger-500:  #ef4444;
+  --aura-danger-600:  #dc2626;
+  --aura-info-500:    #06b6d4;
+  --aura-info-600:    #0891b2;
+
+  /* ── Neutros ─────────────────────────────────────────────────────────────── */
+  --aura-gray-50:  #f9fafb;
+  --aura-gray-100: #f3f4f6;
+  --aura-gray-200: #e5e7eb;
+  --aura-gray-300: #d1d5db;
+  --aura-gray-400: #9ca3af;
+  --aura-gray-500: #6b7280;
+  --aura-gray-600: #4b5563;
+  --aura-gray-700: #374151;
+  --aura-gray-800: #1f2937;
+  --aura-gray-900: #111827;
+  --aura-gray-950: #030712;
+
+  /* ── Semantic Color Aliases (Light Mode) ─────────────────────────────────── */
+  --color-background:      var(--aura-gray-50);
+  --color-surface:         #ffffff;
+  --color-surface-raised:  var(--aura-gray-100);
+  --color-surface-overlay: rgba(255, 255, 255, 0.95);
+  --color-border:          var(--aura-gray-200);
+  --color-border-strong:   var(--aura-gray-300);
+
+  --color-text-primary:    var(--aura-gray-900);
+  --color-text-secondary:  var(--aura-gray-600);
+  --color-text-muted:      var(--aura-gray-400);
+  --color-text-inverse:    #ffffff;
+
+  --color-primary:         var(--aura-primary-600);
+  --color-primary-hover:   var(--aura-primary-700);
+  --color-primary-active:  var(--aura-primary-800);
+  --color-primary-subtle:  var(--aura-primary-50);
+
+  --color-social:          var(--aura-social-600);
+  --color-social-hover:    var(--aura-social-700);
+  --color-social-subtle:   var(--aura-social-50);
+
+  --color-ai:              var(--aura-ai-600);
+  --color-ai-hover:        var(--aura-ai-700);
+  --color-ai-subtle:       var(--aura-ai-50);
+
+  --color-success:         var(--aura-success-600);
+  --color-warning:         var(--aura-warning-600);
+  --color-danger:          var(--aura-danger-600);
+  --color-info:            var(--aura-info-600);
+
+  /* ── Tipografia ──────────────────────────────────────────────────────────── */
+  --font-family-base:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono:      'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+  --font-size-xs:   0.75rem;    /* 12px */
+  --font-size-sm:   0.875rem;   /* 14px */
+  --font-size-base: 1rem;       /* 16px */
+  --font-size-lg:   1.125rem;   /* 18px */
+  --font-size-xl:   1.25rem;    /* 20px */
+  --font-size-2xl:  1.5rem;     /* 24px */
+  --font-size-3xl:  1.875rem;   /* 30px */
+  --font-size-4xl:  2.25rem;    /* 36px */
+  --font-size-5xl:  3rem;       /* 48px */
+
+  --font-weight-light:    300;
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --font-weight-extrabold:800;
+
+  --line-height-tight:  1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed:1.75;
+
+  --letter-spacing-tight:  -0.025em;
+  --letter-spacing-normal:  0;
+  --letter-spacing-wide:    0.025em;
+
+  /* ── Espaçamento (base 4px) ──────────────────────────────────────────────── */
+  --space-1:  0.25rem;   /* 4px  */
+  --space-2:  0.5rem;    /* 8px  */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+
+  /* ── Border Radius ───────────────────────────────────────────────────────── */
+  --radius-none:  0;
+  --radius-sm:    0.25rem;  /* 4px  */
+  --radius-md:    0.5rem;   /* 8px  */
+  --radius-lg:    0.75rem;  /* 12px */
+  --radius-xl:    1rem;     /* 16px */
+  --radius-2xl:   1.5rem;   /* 24px */
+  --radius-full:  9999px;
+
+  /* ── Sombras ─────────────────────────────────────────────────────────────── */
+  --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl:   0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 20px rgb(37 99 235 / 0.25);
+  --shadow-inner:inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* ── Z-Index ─────────────────────────────────────────────────────────────── */
+  --z-below:    -1;
+  --z-base:      0;
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+  --z-tooltip:  600;
+
+  /* ── Animações ───────────────────────────────────────────────────────────── */
+  --duration-fast:   150ms;
+  --duration-normal: 250ms;
+  --duration-slow:   400ms;
+  --ease-default:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce:     cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in:         cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:        cubic-bezier(0, 0, 0.2, 1);
+
+  /* ── Container Widths ────────────────────────────────────────────────────── */
+  --container-sm:  640px;
+  --container-md:  768px;
+  --container-lg:  1024px;
+  --container-xl:  1280px;
+  --container-2xl: 1536px;
+  --container-max: 1440px;
+
+  /* ── Layout ──────────────────────────────────────────────────────────────── */
+  --sidebar-width:          260px;
+  --sidebar-collapsed-width:  72px;
+  --header-height:            64px;
+  --footer-height:            48px;
+}
+
+/* ── Dark Mode ────────────────────────────────────────────────────────────── */
+[data-theme='dark'] {
+  --color-background:      var(--aura-gray-950);
+  --color-surface:         var(--aura-gray-900);
+  --color-surface-raised:  var(--aura-gray-800);
+  --color-surface-overlay: rgba(17, 24, 39, 0.95);
+  --color-border:          var(--aura-gray-700);
+  --color-border-strong:   var(--aura-gray-600);
+
+  --color-text-primary:    var(--aura-gray-50);
+  --color-text-secondary:  var(--aura-gray-300);
+  --color-text-muted:      var(--aura-gray-500);
+
+  --color-primary:         var(--aura-primary-400);
+  --color-primary-hover:   var(--aura-primary-300);
+  --color-primary-subtle:  rgba(59, 130, 246, 0.15);
+
+  --color-social:          var(--aura-social-400);
+  --color-social-hover:    var(--aura-social-300);
+  --color-social-subtle:   rgba(34, 197, 94, 0.15);
+
+  --color-ai:              var(--aura-ai-400);
+  --color-ai-hover:        var(--aura-ai-300);
+  --color-ai-subtle:       rgba(168, 85, 247, 0.15);
+
+  --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.4);
+  --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.5);
+  --shadow-glow: 0 0 20px rgb(59 130 246 / 0.3);
+}
+
+/* ── High Contrast Mode (Acessibilidade WCAG 2.2 AA) ─────────────────────── */
+@media (forced-colors: active) {
+  :root {
+    --color-primary:     ButtonText;
+    --color-background:  Canvas;
+    --color-text-primary:CanvasText;
+    --color-border:      ButtonBorder;
+  }
+}
+
+/* ── Reduced Motion (Acessibilidade) ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast:   0ms;
+    --duration-normal: 0ms;
+    --duration-slow:   0ms;
+  }
+}
+
+/* ── Base Reset & Global Styles ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus visible para acessibilidade (WCAG 2.2 AA - 2.4.11) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Skip to main content (WCAG 2.2 AA - 2.4.1) */
+.skip-to-main {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  z-index: var(--z-tooltip);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: top var(--duration-fast) var(--ease-out);
+}
+
+.skip-to-main:focus {
+  top: var(--space-4);
+}

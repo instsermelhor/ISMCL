@@ -1,0 +1,152 @@
+# ── Aura Foundation — Helm Values ────────────────────────────────────────────
+# Foundation Platform — Prompt 131 (AFPI)
+# Referências: P127 (AECP), P128 (AECS), P131 (AFPI)
+
+# ── Réplicas ──────────────────────────────────────────────────────────────────
+replicaCount: 2
+
+# ── Imagem ───────────────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/instsermelhor/aura-backend
+  pullPolicy: IfNotPresent
+  tag: ""  # Preenchido pelo CI com o SHA do commit
+
+imagePullSecrets:
+  - name: ghcr-credentials
+
+# ── ServiceAccount com IRSA (IAM Roles for Service Accounts) ─────────────────
+serviceAccount:
+  create: true
+  automount: true
+  annotations:
+    eks.amazonaws.com/role-arn: ""  # Preencher com ARN da Role IAM em produção
+  name: "aura-backend-sa"
+
+# ── Service ───────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 3001
+  targetPort: 3001
+  annotations: {}
+
+# ── Ingress ──────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.aura.sermelhor.org.br
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: aura-backend-tls
+      hosts:
+        - api.aura.sermelhor.org.br
+
+# ── Resources (Requests & Limits) ────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# ── Autoscaling (HPA) ─────────────────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ── PodDisruptionBudget ───────────────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ── Health Probes ─────────────────────────────────────────────────────────────
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3001
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  failureThreshold: 3
+  timeoutSeconds: 5
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 3001
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  failureThreshold: 3
+  timeoutSeconds: 5
+
+startupProbe:
+  httpGet:
+    path: /health/startup
+    port: 3001
+  failureThreshold: 30
+  periodSeconds: 10
+
+# ── Variáveis de Ambiente (de Kubernetes Secrets) ───────────────────────────
+envFrom:
+  - secretRef:
+      name: aura-backend-secrets
+
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "3001"
+
+# ── Segurança do Pod ──────────────────────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ── Topology Spread (Multi-AZ) ────────────────────────────────────────────────
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: aura-backend
+
+# ── Affinity ──────────────────────────────────────────────────────────────────
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - aura-backend
+          topologyKey: kubernetes.io/hostname
+
+# ── Annotations para Prometheus ──────────────────────────────────────────────
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/api/metrics"
+  prometheus.io/port: "3001"

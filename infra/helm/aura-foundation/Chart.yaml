@@ -1,0 +1,24 @@
+apiVersion: v2
+name: aura-foundation
+description: |
+  Helm Chart para a Foundation Platform da Plataforma Aura.
+  Inclui Backend NestJS, configurações de Ingress, HPA e PodDisruptionBudget.
+  Referências: P127 (AECP), P131 (AFPI)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://sermelhor.org.br
+sources:
+  - https://github.com/instsermelhor/ISMCL
+keywords:
+  - aura
+  - nestjs
+  - social
+  - healthcare
+  - brazil
+maintainers:
+  - name: Instituto Ser Melhor — Plataforma Aura
+    email: ti@sermelhor.org.br
+annotations:
+  category: Application
+  licenses: Private
