@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { EventBusModule } from './events/event-bus.module';
 import { AuthModule } from './domain/auth/auth.module';
 import { RegistrationModule } from './domain/registration/registration.module';
+import { IntakeModule } from './domain/intake/intake.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -153,6 +154,7 @@ import { RegistrationModule } from './domain/registration/registration.module';
     EventBusModule,
     AuthModule,
     RegistrationModule,
+    IntakeModule,
   ],
 })
 export class AppModule {}
