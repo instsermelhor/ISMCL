@@ -13,6 +13,8 @@ import { EventBusModule } from './events/event-bus.module';
 import { AuthModule } from './domain/auth/auth.module';
 import { RegistrationModule } from './domain/registration/registration.module';
 import { IntakeModule } from './domain/intake/intake.module';
+import { CaseManagementModule } from './domain/case-management/case-management.module';
+import { EhrModule } from './domain/ehr/ehr.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -155,6 +157,8 @@ import { IntakeModule } from './domain/intake/intake.module';
     AuthModule,
     RegistrationModule,
     IntakeModule,
+    CaseManagementModule,
+    EhrModule,
   ],
 })
 export class AppModule {}
