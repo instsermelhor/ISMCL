@@ -11,6 +11,7 @@ import * as Joi from 'joi';
 import { HealthModule } from './health/health.module';
 import { EventBusModule } from './events/event-bus.module';
 import { AuthModule } from './domain/auth/auth.module';
+import { RegistrationModule } from './domain/registration/registration.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -151,6 +152,7 @@ import { AuthModule } from './domain/auth/auth.module';
     HealthModule,
     EventBusModule,
     AuthModule,
+    RegistrationModule,
   ],
 })
 export class AppModule {}
