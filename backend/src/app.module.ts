@@ -26,6 +26,7 @@ import { GovernanceModule } from './domain/governance/governance.module';
 import { ContentManagementModule } from './domain/content-management/content-management.module';
 import { CorporateUniversityModule } from './domain/corporate-university/corporate-university.module';
 import { IntegrationModule } from './domain/integration/integration.module';
+import { ArchitectureGovernanceModule } from './domain/architecture-governance/architecture-governance.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -181,6 +182,7 @@ import { IntegrationModule } from './domain/integration/integration.module';
     ContentManagementModule,
     CorporateUniversityModule,
     IntegrationModule,
+    ArchitectureGovernanceModule,
   ],
 })
 export class AppModule {}
