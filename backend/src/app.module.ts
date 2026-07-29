@@ -30,6 +30,7 @@ import { ArchitectureGovernanceModule } from './domain/architecture-governance/a
 import { ProductionReadinessModule } from './domain/production-readiness/production-readiness.module';
 import { MasterCertificationModule } from './domain/master-certification/master-certification.module';
 import { InstitutionalIntelligenceModule } from './domain/institutional-intelligence/institutional-intelligence.module';
+import { CognitiveOrchestrationModule } from './domain/cognitive-orchestration/cognitive-orchestration.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -189,6 +190,7 @@ import { InstitutionalIntelligenceModule } from './domain/institutional-intellig
     ProductionReadinessModule,
     MasterCertificationModule,
     InstitutionalIntelligenceModule,
+    CognitiveOrchestrationModule,
   ],
 })
 export class AppModule {}
