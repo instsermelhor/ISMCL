@@ -22,6 +22,7 @@ import { AnalyticsModule } from './domain/analytics/analytics.module';
 import { AiModule } from './domain/ai/ai.module';
 import { ObservabilityModule } from './domain/observability/observability.module';
 import { OperationsModule } from './domain/operations/operations.module';
+import { GovernanceModule } from './domain/governance/governance.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -173,6 +174,7 @@ import { OperationsModule } from './domain/operations/operations.module';
     AiModule,
     ObservabilityModule,
     OperationsModule,
+    GovernanceModule,
   ],
 })
 export class AppModule {}
