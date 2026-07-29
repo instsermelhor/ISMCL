@@ -21,6 +21,7 @@ import { WorkflowModule } from './domain/workflow/workflow.module';
 import { AnalyticsModule } from './domain/analytics/analytics.module';
 import { AiModule } from './domain/ai/ai.module';
 import { ObservabilityModule } from './domain/observability/observability.module';
+import { OperationsModule } from './domain/operations/operations.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -171,6 +172,7 @@ import { ObservabilityModule } from './domain/observability/observability.module
     AnalyticsModule,
     AiModule,
     ObservabilityModule,
+    OperationsModule,
   ],
 })
 export class AppModule {}
