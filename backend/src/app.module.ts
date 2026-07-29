@@ -24,6 +24,7 @@ import { ObservabilityModule } from './domain/observability/observability.module
 import { OperationsModule } from './domain/operations/operations.module';
 import { GovernanceModule } from './domain/governance/governance.module';
 import { ContentManagementModule } from './domain/content-management/content-management.module';
+import { CorporateUniversityModule } from './domain/corporate-university/corporate-university.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -177,6 +178,7 @@ import { ContentManagementModule } from './domain/content-management/content-man
     OperationsModule,
     GovernanceModule,
     ContentManagementModule,
+    CorporateUniversityModule,
   ],
 })
 export class AppModule {}
