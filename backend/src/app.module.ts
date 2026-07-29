@@ -23,6 +23,7 @@ import { AiModule } from './domain/ai/ai.module';
 import { ObservabilityModule } from './domain/observability/observability.module';
 import { OperationsModule } from './domain/operations/operations.module';
 import { GovernanceModule } from './domain/governance/governance.module';
+import { ContentManagementModule } from './domain/content-management/content-management.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -175,6 +176,7 @@ import { GovernanceModule } from './domain/governance/governance.module';
     ObservabilityModule,
     OperationsModule,
     GovernanceModule,
+    ContentManagementModule,
   ],
 })
 export class AppModule {}
