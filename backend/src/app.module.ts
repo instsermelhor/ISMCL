@@ -16,6 +16,7 @@ import { IntakeModule } from './domain/intake/intake.module';
 import { CaseManagementModule } from './domain/case-management/case-management.module';
 import { EhrModule } from './domain/ehr/ehr.module';
 import { SchedulingModule } from './domain/scheduling/scheduling.module';
+import { DocumentsModule } from './domain/documents/documents.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -161,6 +162,7 @@ import { SchedulingModule } from './domain/scheduling/scheduling.module';
     CaseManagementModule,
     EhrModule,
     SchedulingModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}
