@@ -1,0 +1,301 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Autonomous Evolution Engine — Event Catalog (AAEE)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pelo Motor de Evolução Autônoma (AAEE)
+    da Plataforma Aura — Prompt 153, Fase IV.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.evolution.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Plataforma Aura
+    email: ti@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/evolution/opportunity/detected:
+    description: Publicado quando uma nova oportunidade de evolução é identificada pelo AutonomousEvolutionEngineService
+    publish:
+      operationId: onEvolutionOpportunityDetected
+      summary: Oportunidade de Evolução Detectada
+      message:
+        $ref: '#/components/messages/EvolutionOpportunityDetected'
+
+  aura/evolution/improvement_plan/created:
+    description: Publicado quando um plano estruturado de melhoria contínua é criado pelo ContinuousImprovementService
+    publish:
+      operationId: onImprovementPlanCreated
+      summary: Plano de Melhoria Contínua Criado
+      message:
+        $ref: '#/components/messages/ImprovementPlanCreated'
+
+  aura/evolution/process/optimized:
+    description: Publicado quando uma otimização adaptativa parametrizável é aplicada a um processo
+    publish:
+      operationId: onProcessOptimized
+      summary: Processo Otimizado Adaptativamente
+      message:
+        $ref: '#/components/messages/ProcessOptimized'
+
+  aura/evolution/innovation/proposed:
+    description: Publicado quando uma nova proposta de inovação institucional é submetida
+    publish:
+      operationId: onInnovationProposed
+      summary: Proposta de Inovação Submetida
+      message:
+        $ref: '#/components/messages/InnovationProposed'
+
+  aura/evolution/innovation/approved:
+    description: Publicado quando o piloto experimental de uma inovação é aprovado pela governança
+    publish:
+      operationId: onInnovationApproved
+      summary: Piloto de Inovação Aprovado
+      message:
+        $ref: '#/components/messages/InnovationApproved'
+
+  aura/evolution/change_impact/calculated:
+    description: Publicado quando a matriz de impacto multidimensional (10 dimensões) é calculada
+    publish:
+      operationId: onChangeImpactCalculated
+      summary: Matriz de Impacto Calculada
+      message:
+        $ref: '#/components/messages/ChangeImpactCalculated'
+
+  aura/evolution/strategic_recommendation/generated:
+    description: Publicado quando uma recomendação estratégica institucional é gerada
+    publish:
+      operationId: onStrategicRecommendationGenerated
+      summary: Recomendação Estratégica Gerada
+      message:
+        $ref: '#/components/messages/StrategicRecommendationGenerated'
+
+  aura/evolution/governance/approval_granted:
+    description: Publicado quando uma aprovação formal de governança em multi-etapas é concedida
+    publish:
+      operationId: onGovernanceApprovalGranted
+      summary: Aprovação de Governança Concedida
+      message:
+        $ref: '#/components/messages/GovernanceApprovalGranted'
+
+  aura/evolution/learning/updated:
+    description: Publicado quando um aprendizado institucional é registrado e sincronizado com a Base de Conhecimento
+    publish:
+      operationId: onInstitutionalLearningUpdated
+      summary: Aprendizado Institucional Registrado
+      message:
+        $ref: '#/components/messages/InstitutionalLearningUpdated'
+
+  aura/evolution/audit/completed:
+    description: Publicado quando um ciclo de auditoria contínua da evolução é concluído
+    publish:
+      operationId: onEvolutionAuditCompleted
+      summary: Auditoria de Evolução Concluída
+      message:
+        $ref: '#/components/messages/EvolutionAuditCompleted'
+
+components:
+  messages:
+
+    EvolutionOpportunityDetected:
+      name: aura.evolution.opportunity.detected.v1
+      title: Oportunidade de Evolução Detectada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [opportunityId, type, title, urgency]
+            properties:
+              opportunityId:
+                type: string
+              type:
+                type: string
+              title:
+                type: string
+              detectedInModule:
+                type: string
+              urgency:
+                type: string
+
+    ImprovementPlanCreated:
+      name: aura.evolution.improvement_plan.created.v1
+      title: Plano de Melhoria Contínua Criado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              planId:
+                type: string
+              category:
+                type: string
+              title:
+                type: string
+              targetKpi:
+                type: string
+
+    ProcessOptimized:
+      name: aura.evolution.process.optimized.v1
+      title: Processo Otimizado Adaptativamente
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              proposalId:
+                type: string
+              processId:
+                type: string
+              humanApproverId:
+                type: string
+
+    InnovationProposed:
+      name: aura.evolution.innovation.proposed.v1
+      title: Proposta de Inovação Submetida
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              innovationId:
+                type: string
+              title:
+                type: string
+              domainArea:
+                type: string
+
+    InnovationApproved:
+      name: aura.evolution.innovation.approved.v1
+      title: Piloto de Inovação Aprovado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              innovationId:
+                type: string
+              approvedBy:
+                type: string
+              phase:
+                type: string
+
+    ChangeImpactCalculated:
+      name: aura.evolution.change_impact.calculated.v1
+      title: Matriz de Impacto Calculada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              impactAnalysisId:
+                type: string
+              changeId:
+                type: string
+              overallImpactLevel:
+                type: string
+              overallRiskScore:
+                type: number
+              isBlocked:
+                type: boolean
+
+    StrategicRecommendationGenerated:
+      name: aura.evolution.strategic_recommendation.generated.v1
+      title: Recomendação Estratégica Gerada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              category:
+                type: string
+              title:
+                type: string
+              estimatedCostBrl:
+                type: number
+
+    GovernanceApprovalGranted:
+      name: aura.evolution.governance.approval_granted.v1
+      title: Aprovação de Governança Concedida
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              approvalId:
+                type: string
+              changeId:
+                type: string
+              adrReference:
+                type: string
+              approverId:
+                type: string
+
+    InstitutionalLearningUpdated:
+      name: aura.evolution.learning.updated.v1
+      title: Aprendizado Institucional Registrado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              learningId:
+                type: string
+              category:
+                type: string
+              title:
+                type: string
+              knowledgeBaseRef:
+                type: string
+
+    EvolutionAuditCompleted:
+      name: aura.evolution.audit.completed.v1
+      title: Auditoria de Evolução Concluída
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              componentName:
+                type: string
+              actionName:
+                type: string

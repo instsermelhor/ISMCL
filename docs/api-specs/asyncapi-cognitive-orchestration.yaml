@@ -1,0 +1,520 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Cognitive Orchestration Platform — Event Catalog (ACOP)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pela Plataforma de Orquestração
+    Cognitiva (ACOP) da Plataforma Aura — Prompt 152, Fase III.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.<domain>.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Plataforma Aura
+    email: ti@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção (MSK AWS)
+    security:
+      - saslScram: []
+  kafka-staging:
+    url: kafka-staging.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Staging
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  # ── Orquestração Central ───────────────────────────────────────────────────
+
+  aura/cognitive/orchestration/started:
+    description: Publicado quando uma orquestração cognitiva é iniciada pelo CognitiveOrchestratorService
+    publish:
+      operationId: onOrchestrationStarted
+      summary: Orquestração Cognitiva Iniciada
+      tags:
+        - name: orchestration
+      message:
+        $ref: '#/components/messages/OrchestrationStarted'
+
+  aura/cognitive/orchestration/completed:
+    description: Publicado quando uma orquestração cognitiva é concluída com sucesso ou escalada
+    publish:
+      operationId: onOrchestrationCompleted
+      summary: Orquestração Cognitiva Concluída
+      tags:
+        - name: orchestration
+      message:
+        $ref: '#/components/messages/OrchestrationCompleted'
+
+  # ── Coordenação Multi-Agente ───────────────────────────────────────────────
+
+  aura/cognitive/task/assigned:
+    description: Publicado quando uma tarefa é atribuída a agentes especializados
+    publish:
+      operationId: onCognitiveTaskAssigned
+      summary: Tarefa Cognitiva Atribuída
+      tags:
+        - name: coordination
+      message:
+        $ref: '#/components/messages/CognitiveTaskAssigned'
+
+  aura/cognitive/agent/selected:
+    description: Publicado quando um agente especializado é selecionado pelo roteador de tarefas
+    publish:
+      operationId: onAIAgentSelected
+      summary: Agente de IA Selecionado
+      tags:
+        - name: routing
+      message:
+        $ref: '#/components/messages/AIAgentSelected'
+
+  # ── Raciocínio Institucional ───────────────────────────────────────────────
+
+  aura/cognitive/reasoning/completed:
+    description: Publicado quando o motor de raciocínio institucional conclui uma análise baseada em evidências
+    publish:
+      operationId: onInstitutionalReasoningCompleted
+      summary: Raciocínio Institucional Concluído
+      tags:
+        - name: reasoning
+      message:
+        $ref: '#/components/messages/InstitutionalReasoningCompleted'
+
+  # ── Recomendações Autônomas ────────────────────────────────────────────────
+
+  aura/cognitive/recommendation/generated:
+    description: Publicado quando uma nova recomendação autônoma é gerada (aguardando aprovação humana)
+    publish:
+      operationId: onRecommendationGenerated
+      summary: Recomendação Institucional Gerada
+      tags:
+        - name: recommendation
+      message:
+        $ref: '#/components/messages/RecommendationGenerated'
+
+  aura/cognitive/recommendation/approved:
+    description: Publicado quando um supervisor humano aprova uma recomendação (Human-in-the-Loop)
+    publish:
+      operationId: onRecommendationApproved
+      summary: Recomendação Aprovada
+      tags:
+        - name: recommendation
+        - name: hitl
+      message:
+        $ref: '#/components/messages/RecommendationApproved'
+
+  aura/cognitive/recommendation/rejected:
+    description: Publicado quando um supervisor humano rejeita uma recomendação (Human-in-the-Loop)
+    publish:
+      operationId: onRecommendationRejected
+      summary: Recomendação Rejeitada
+      tags:
+        - name: recommendation
+        - name: hitl
+      message:
+        $ref: '#/components/messages/RecommendationRejected'
+
+  # ── Ciclo de Vida de Modelos ───────────────────────────────────────────────
+
+  aura/cognitive/model/registered:
+    description: Publicado quando um novo modelo de IA é registrado no catálogo corporativo
+    publish:
+      operationId: onModelRegistered
+      summary: Modelo de IA Registrado
+      tags:
+        - name: model-lifecycle
+      message:
+        $ref: '#/components/messages/ModelRegistered'
+
+  aura/cognitive/model/transitioned:
+    description: Publicado quando um modelo transiciona de estado no ciclo de vida (ex: STAGING → PRODUCTION)
+    publish:
+      operationId: onModelPerformanceChanged
+      summary: Estado do Modelo Alterado
+      tags:
+        - name: model-lifecycle
+      message:
+        $ref: '#/components/messages/ModelTransitioned'
+
+  # ── Memória Cognitiva ──────────────────────────────────────────────────────
+
+  aura/cognitive/memory/updated:
+    description: Publicado quando a memória cognitiva institucional é atualizada com novo aprendizado
+    publish:
+      operationId: onCognitiveMemoryUpdated
+      summary: Memória Cognitiva Atualizada
+      tags:
+        - name: memory
+      message:
+        $ref: '#/components/messages/CognitiveMemoryUpdated'
+
+  # ── Colaboração Multi-Agente ───────────────────────────────────────────────
+
+  aura/cognitive/collaboration/session-started:
+    description: Publicado quando uma sessão de colaboração multi-agente é iniciada
+    publish:
+      operationId: onCollaborationSessionStarted
+      summary: Sessão de Colaboração Iniciada
+      tags:
+        - name: collaboration
+      message:
+        $ref: '#/components/messages/CollaborationSessionStarted'
+
+  # ── Monitoramento de Performance ──────────────────────────────────────────
+
+  aura/cognitive/performance/recorded:
+    description: Publicado quando métricas de telemetria são registradas para um modelo ou agente
+    publish:
+      operationId: onPerformanceRecorded
+      summary: Telemetria de Performance Registrada
+      tags:
+        - name: monitoring
+      message:
+        $ref: '#/components/messages/PerformanceRecorded'
+
+  aura/cognitive/performance/changed:
+    description: Publicado quando drift de modelo ou degradação de performance é detectado automaticamente
+    publish:
+      operationId: onPerformanceChanged
+      summary: Performance de Modelo Alterada (Drift Alert)
+      tags:
+        - name: monitoring
+        - name: alert
+      message:
+        $ref: '#/components/messages/PerformanceChanged'
+
+# ── Components ─────────────────────────────────────────────────────────────────
+
+components:
+  messages:
+
+    OrchestrationStarted:
+      name: aura.cognitive.orchestration.started.v1
+      title: Orquestração Cognitiva Iniciada
+      contentType: application/json
+      payload:
+        type: object
+        required: [specversion, id, source, type, time, tenantid, data]
+        properties:
+          specversion:
+            type: string
+            const: '1.0'
+          id:
+            type: string
+            format: uuid
+          source:
+            type: string
+            example: 'https://api.aura.sermelhor.org.br'
+          type:
+            type: string
+            const: 'aura.cognitive.orchestration.started.v1'
+          time:
+            type: string
+            format: date-time
+          tenantid:
+            type: string
+          data:
+            type: object
+            properties:
+              orchestrationId:
+                type: string
+                example: 'ORCH-2026-ABC123'
+              taskId:
+                type: string
+              priority:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, CRITICAL, URGENT_EMERGENCY]
+              domains:
+                type: array
+                items:
+                  type: string
+
+    OrchestrationCompleted:
+      name: aura.cognitive.orchestration.completed.v1
+      title: Orquestração Cognitiva Concluída
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              orchestrationId:
+                type: string
+              taskId:
+                type: string
+              status:
+                type: string
+                enum: [COMPLETED, ESCALATED, FAILED]
+              consensusScore:
+                type: number
+                minimum: 0
+                maximum: 1
+
+    CognitiveTaskAssigned:
+      name: aura.cognitive.task.assigned.v1
+      title: Tarefa Cognitiva Atribuída
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              coordinationId:
+                type: string
+                example: 'COORD-2026-XYZ789'
+              assignedAgents:
+                type: array
+                items:
+                  type: string
+              priority:
+                type: string
+              domains:
+                type: array
+                items:
+                  type: string
+
+    AIAgentSelected:
+      name: aura.cognitive.agent.selected.v1
+      title: Agente de IA Selecionado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              routingId:
+                type: string
+                example: 'RTE-2026-DEF456'
+              selectedAgentId:
+                type: string
+              taskType:
+                type: string
+              priority:
+                type: string
+
+    InstitutionalReasoningCompleted:
+      name: aura.cognitive.reasoning.completed.v1
+      title: Raciocínio Institucional Concluído
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [reasoningId, goal, confidenceScore]
+            properties:
+              reasoningId:
+                type: string
+                example: 'RSN-2026-GHI012'
+              goal:
+                type: string
+              confidenceScore:
+                type: number
+                minimum: 0
+                maximum: 1
+              tenantId:
+                type: string
+
+    RecommendationGenerated:
+      name: aura.cognitive.recommendation.generated.v1
+      title: Recomendação Institucional Gerada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [recommendationId, category, title, confidenceScore]
+            properties:
+              recommendationId:
+                type: string
+                example: 'REC-2026-JKL345'
+              category:
+                type: string
+                enum: [PROCESS_IMPROVEMENT, OPERATIONAL_OPTIMIZATION, RESOURCE_ALLOCATION, CAPACITY_BUILDING, RISK_MANAGEMENT, SECURITY_GOVERNANCE, CARE_QUALITY, STRATEGIC_KPI, CLINICAL_PROTOCOL]
+              title:
+                type: string
+              confidenceScore:
+                type: number
+
+    RecommendationApproved:
+      name: aura.cognitive.recommendation.approved.v1
+      title: Recomendação Aprovada por Supervisor Humano
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              approved:
+                type: boolean
+                const: true
+              reviewerId:
+                type: string
+              comments:
+                type: string
+
+    RecommendationRejected:
+      name: aura.cognitive.recommendation.rejected.v1
+      title: Recomendação Rejeitada por Supervisor Humano
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              approved:
+                type: boolean
+                const: false
+              reviewerId:
+                type: string
+              comments:
+                type: string
+
+    ModelRegistered:
+      name: aura.cognitive.model.registered.v1
+      title: Modelo de IA Registrado no Catálogo
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              modelId:
+                type: string
+              modelName:
+                type: string
+              version:
+                type: string
+              status:
+                type: string
+                enum: [STAGING, PRODUCTION, RETIRED, DEPRECATED]
+
+    ModelTransitioned:
+      name: aura.cognitive.model.transitioned.v1
+      title: Estado do Modelo de IA Alterado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              modelId:
+                type: string
+              previousStatus:
+                type: string
+              newStatus:
+                type: string
+              humanApproverId:
+                type: string
+                description: Obrigatório para transições para PRODUCTION
+
+    CognitiveMemoryUpdated:
+      name: aura.cognitive.memory.updated.v1
+      title: Memória Cognitiva Institucional Atualizada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              memoryId:
+                type: string
+                example: 'MEM-2026-MNO678'
+              key:
+                type: string
+              memoryType:
+                type: string
+                enum: [short_term, long_term, working]
+              tenantId:
+                type: string
+
+    CollaborationSessionStarted:
+      name: aura.cognitive.collaboration.session_started.v1
+      title: Sessão de Colaboração Multi-Agente Iniciada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              sessionId:
+                type: string
+                example: 'COL-2026-PQR901'
+              topic:
+                type: string
+              participantCount:
+                type: integer
+                minimum: 2
+
+    PerformanceRecorded:
+      name: aura.cognitive.performance_recorded
+      title: Telemetria de Performance Registrada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              metricId:
+                type: string
+                example: 'TEL-2026-STU234'
+              modelId:
+                type: string
+              latencyMs:
+                type: integer
+              successStatus:
+                type: boolean
+
+    PerformanceChanged:
+      name: aura.cognitive.performance.changed.v1
+      title: Drift ou Degradação de Modelo Detectado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              agentOrModelId:
+                type: string
+              status:
+                type: string
+                enum: [OPTIMAL, DEGRADED, DRIFT_ALERT, CRITICAL]
+              driftIndex:
+                type: number
+                description: Índice de deriva (> 0.25 = alerta)
+              approvalRate:
+                type: number
+                description: Taxa de aprovação humana (< 0.75 = alerta)
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM-SHA-256 para autenticação no Kafka

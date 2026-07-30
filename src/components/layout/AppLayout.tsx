@@ -25,6 +25,13 @@ import {
   BookOpen,
   GraduationCap,
   FileCheck,
+  Scale,
+  FolderOpen,
+  Network,
+  Building,
+  Rocket,
+  Brain,
+  Cpu,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { QuickExitButton } from '../QuickExitButton';
@@ -58,6 +65,15 @@ const adminNavigation = [
   { name: 'SODO — Academia', href: '/academia', icon: GraduationCap },
   { name: 'SODO — POPs', href: '/pops', icon: FileCheck },
   { name: 'SODO — Governança', href: '/governanca-conhecimento', icon: ShieldCheck },
+  { name: 'AEGRC — Governança', href: '/aegrc', icon: Scale },
+  { name: 'AECM — Gestão Documental', href: '/aecm', icon: FolderOpen },
+  { name: 'ACU — Universidade Corporativa', href: '/acu', icon: GraduationCap },
+  { name: 'AEIP — Integrações & APIs', href: '/aeip', icon: Network },
+  { name: 'AEAGO — Governança Arquitetural', href: '/aeago', icon: Building },
+  { name: 'APRCG — Production Readiness', href: '/aprcg', icon: Rocket },
+  { name: 'AMAC — Certificação Mestre', href: '/amac', icon: Award },
+  { name: 'AIIC — Inteligência Institucional', href: '/aiic', icon: Brain },
+  { name: 'ACOP — Orquestração Cognitiva', href: '/acop', icon: Cpu },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {

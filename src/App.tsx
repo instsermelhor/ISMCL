@@ -59,6 +59,33 @@ import SodoAdmin from './pages/SodoAdmin';
 // Painel Público de Doações via PIX
 import DonationPublic from './pages/DonationPublic';
 
+// AEGRC — Governança, Riscos, Compliance e Gestão Estratégica
+import { AEGRC } from './pages/AEGRC';
+
+// AECM-KG — Gestão Documental, Arquivo Digital e Governança
+import { AECM } from './pages/AECM';
+
+// ACU-LMS — Universidade Corporativa e Gestão de Competências
+import { ACU } from './pages/ACU';
+
+// AEIP — Integrações, Interoperabilidade e APIs
+import { AEIP } from './pages/AEIP';
+
+// AEAGO — Arquitetura Corporativa e Digital Twin
+import { AEAGO } from './pages/AEAGO';
+
+// APRCG — Production Readiness, Certificação Corporativa e Go-Live
+import { APRCG } from './pages/APRCG';
+
+// AMAC — Certificação Mestre e Baseline Final (Prompt 150)
+import { AMAC } from './pages/AMAC';
+
+// AIIC — Centro de Inteligência Institucional (Prompt 151 — Fase II)
+import { AIIC } from './pages/AIIC';
+
+// ACOP — Orquestração Cognitiva Multi-Agente (Prompt 152 — Fase III)
+import { ACOP } from './pages/ACOP';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -129,6 +156,33 @@ export default function App() {
             <Route path="academia" element={<SodoAcademy />} />
             <Route path="pops" element={<SodoPops />} />
             <Route path="governanca-conhecimento" element={<SodoAdmin />} />
+
+            {/* AEGRC — Governança, Riscos, Compliance e Planejamento Estratégico */}
+            <Route path="aegrc" element={<AEGRC />} />
+
+            {/* AECM — Gestão Documental e Arquivo Digital */}
+            <Route path="aecm" element={<AECM />} />
+
+            {/* ACU — Universidade Corporativa e Gestão de Competências */}
+            <Route path="acu" element={<ACU />} />
+
+            {/* AEIP — Integrações, Barramento e APIs */}
+            <Route path="aeip" element={<AEIP />} />
+
+            {/* AEAGO — Governança Arquitetural e Digital Twin */}
+            <Route path="aeago" element={<AEAGO />} />
+
+            {/* APRCG — Production Readiness & Go-Live */}
+            <Route path="aprcg" element={<APRCG />} />
+
+            {/* AMAC — Certificação Mestre e Baseline Final (Prompt 150) */}
+            <Route path="amac" element={<AMAC />} />
+
+            {/* AIIC — Centro de Inteligência Institucional (Prompt 151 — Fase II) */}
+            <Route path="aiic" element={<AIIC />} />
+
+            {/* ACOP — Orquestração Cognitiva Multi-Agente (Prompt 152 — Fase III) */}
+            <Route path="acop" element={<ACOP />} />
 
             {/* Alias semânticos de redirecionamento por perfil */}
             <Route path="area-familia" element={<BeneficiaryPortal />} />
