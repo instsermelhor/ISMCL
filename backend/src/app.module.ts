@@ -51,6 +51,7 @@ import { PlatformLifecycleModule } from './domain/platform-lifecycle/platform-li
 import { EnterpriseReadinessModule } from './domain/enterprise-readiness/enterprise-readiness.module';
 import { AutonomousOperationsModule } from './domain/autonomous-operations/autonomous-operations.module';
 import { SocialImpactModule } from './domain/social-impact/social-impact.module';
+import { EnterpriseIntegrationModule } from './domain/enterprise-integration/enterprise-integration.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -216,6 +217,7 @@ import { SocialImpactModule } from './domain/social-impact/social-impact.module'
     EnterpriseReadinessModule,
     AutonomousOperationsModule,
     SocialImpactModule,
+    EnterpriseIntegrationModule,
   ],
 })
 export class AppModule {}

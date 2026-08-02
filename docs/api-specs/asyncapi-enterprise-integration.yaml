@@ -1,0 +1,267 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Integration, Interoperability & Digital Ecosystem (EIIP) — Event Bus
+  version: 1.0.0
+  description: |
+    Especificação AsyncAPI 2.6.0 para os eventos CloudEvents v1.0.3 publicados pela
+    Plataforma EIIP (Prompt 166 — Fase XVI do Projeto Aura).
+
+    Interoperabilidade Externa, API Gateway, Gestão de Parceiros e Barramento de Eventos — Instituto Ser Melhor.
+    Padrão de canal: aura.integration.<entity>.<action>.v<version>.
+  contact:
+    name: Chief Integration Officer (CInO) — Instituto Ser Melhor
+    email: cino@sermelhorcoop.com.br
+  license:
+    name: Proprietary
+
+defaultContentType: application/cloudevents+json; charset=UTF-8
+
+servers:
+  production-kafka:
+    url: kafka.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Produção — Plataforma Aura
+    security:
+      - saslScram512: []
+
+channels:
+
+  aura.integration.created.v1:
+    description: Publicado quando uma nova integração externa é proposta.
+    publish:
+      operationId: onIntegrationCreated
+      summary: Proposta de integração criada
+      tags:
+        - name: enterprise-integration
+      message:
+        $ref: '#/components/messages/IntegrationCreated'
+
+  aura.integration.approved.v1:
+    description: Publicado quando uma integração externa é aprovada pela governança.
+    publish:
+      operationId: onIntegrationApproved
+      summary: Integração aprovada pela governança
+      tags:
+        - name: integration-governance
+      message:
+        $ref: '#/components/messages/IntegrationApproved'
+
+  aura.integration.rejected.v1:
+    description: Publicado quando uma integração externa é rejeitada.
+    publish:
+      operationId: onIntegrationRejected
+      summary: Integração rejeitada
+      tags:
+        - name: integration-governance
+      message:
+        $ref: '#/components/messages/IntegrationRejected'
+
+  aura.integration.api.version.released.v1:
+    description: Publicado quando uma nova versão de API é lançada no API Gateway.
+    publish:
+      operationId: onAPIVersionReleased
+      summary: Nova versão de API lançada no Gateway
+      tags:
+        - name: api-gateway
+      message:
+        $ref: '#/components/messages/APIVersionReleased'
+
+  aura.integration.external.partner.registered.v1:
+    description: Publicado quando um parceiro institucional é credenciado.
+    publish:
+      operationId: onExternalPartnerRegistered
+      summary: Parceiro institucional credenciado
+      tags:
+        - name: partner-integration
+      message:
+        $ref: '#/components/messages/ExternalPartnerRegistered'
+
+  aura.integration.event.published.v1:
+    description: Publicado quando um evento é enviado ao barramento de eventos.
+    publish:
+      operationId: onEventPublished
+      summary: Evento publicado no barramento
+      tags:
+        - name: event-exchange
+      message:
+        $ref: '#/components/messages/EventPublished'
+
+  aura.integration.health.updated.v1:
+    description: Publicado quando as métricas de saúde das integrações são atualizadas.
+    publish:
+      operationId: onIntegrationHealthUpdated
+      summary: Métricas de saúde das integrações atualizadas
+      tags:
+        - name: integration-monitoring
+      message:
+        $ref: '#/components/messages/IntegrationHealthUpdated'
+
+  aura.integration.audit.completed.v1:
+    description: Publicado após registro SHA-256 de auditoria de integração.
+    publish:
+      operationId: onIntegrationAuditCompleted
+      summary: Auditoria de integração concluída
+      tags:
+        - name: integration-audit
+      message:
+        $ref: '#/components/messages/IntegrationAuditCompleted'
+
+components:
+  securitySchemes:
+    saslScram512:
+      type: scramSha512
+      description: SASL/SCRAM-SHA-512 para autenticação no Kafka
+
+  messages:
+    IntegrationCreated:
+      name: IntegrationCreated
+      title: Proposta de Integração Criada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.created.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              integrationId: { type: string }
+              integrationName: { type: string }
+              partnerId: { type: string }
+              protocol: { type: string }
+
+    IntegrationApproved:
+      name: IntegrationApproved
+      title: Integração Aprovada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.approved.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              reviewId: { type: string }
+              integrationId: { type: string }
+              reviewedBy: { type: string }
+
+    IntegrationRejected:
+      name: IntegrationRejected
+      title: Integração Rejeitada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.rejected.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              reviewId: { type: string }
+              integrationId: { type: string }
+              reviewedBy: { type: string }
+
+    APIVersionReleased:
+      name: APIVersionReleased
+      title: Versão de API Lançada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.api.version.released.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              routeId: { type: string }
+              path: { type: string }
+              version: { type: string }
+
+    ExternalPartnerRegistered:
+      name: ExternalPartnerRegistered
+      title: Parceiro Externo Credenciado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.external.partner.registered.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              partnerId: { type: string }
+              partnerName: { type: string }
+              partnerType: { type: string }
+
+    EventPublished:
+      name: EventPublished
+      title: Evento Publicado no Barramento
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.event.published.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              publicationId: { type: string }
+              topic: { type: string }
+
+    IntegrationHealthUpdated:
+      name: IntegrationHealthUpdated
+      title: Saúde das Integrações Atualizada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.health.updated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              healthId: { type: string }
+              overallAvailabilityPercent: { type: number }
+              averageLatencyMs: { type: number }
+
+    IntegrationAuditCompleted:
+      name: IntegrationAuditCompleted
+      title: Auditoria de Integração Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.integration.audit.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              auditId: { type: string }
+              action: { type: string }
+              subject: { type: string }
+              sha256Signature: { type: string }
