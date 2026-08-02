@@ -1,0 +1,490 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Autonomous Governance & Continuous Compliance Platform (AGCC) — Event Bus
+  version: 1.0.0
+  description: |
+    Especificação AsyncAPI 2.6.0 para os eventos CloudEvents v1.0.3 publicados pela
+    Plataforma AGCC (Prompt 161 — Fase XI do Projeto Aura).
+
+    Governança Autônoma, Conformidade Contínua e Garantia Institucional do
+    Instituto Ser Melhor. Todos os eventos são imutáveis, assinados com SHA-256
+    e seguem o padrão de canal: aura.<domain>.<entity>.<action>.v<version>.
+  contact:
+    name: Chief Governance Officer (CGO) — Instituto Ser Melhor
+    email: governance@sermelhorcoop.com.br
+  license:
+    name: Proprietary
+    url: https://www.sermelhorcoop.com.br/legal
+
+defaultContentType: application/cloudevents+json; charset=utf-8
+
+servers:
+  production-kafka:
+    url: kafka.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Produção — Plataforma Aura
+    security:
+      - saslScram512: []
+  staging-kafka:
+    url: kafka.staging.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Homologação
+
+channels:
+
+  aura.governance.check.executed.v1:
+    description: Publicado quando uma inspeção autônoma de governança é executada no ecossistema.
+    publish:
+      operationId: onGovernanceCheckExecuted
+      summary: Inspeção autônoma de governança concluída
+      tags:
+        - name: autonomous-governance
+      message:
+        $ref: '#/components/messages/GovernanceCheckExecuted'
+
+  aura.governance.compliance.validated.v1:
+    description: Publicado após verificação de conformidade (LGPD, Zero Trust, Privacy by Design, etc.).
+    publish:
+      operationId: onComplianceValidated
+      summary: Verificação de conformidade contínua concluída
+      tags:
+        - name: continuous-compliance
+      message:
+        $ref: '#/components/messages/ComplianceValidated'
+
+  aura.governance.policy.violation.detected.v1:
+    description: Publicado quando uma política ou POP apresenta conflito ou violação.
+    publish:
+      operationId: onPolicyViolationDetected
+      summary: Violação ou conflito de política detectado
+      tags:
+        - name: policy-validation
+      message:
+        $ref: '#/components/messages/PolicyViolationDetected'
+
+  aura.governance.regulatory.updated.v1:
+    description: Publicado quando um requisito regulatório é atualizado ou mapeado.
+    publish:
+      operationId: onRegulatoryRequirementUpdated
+      summary: Requisito regulatório atualizado
+      tags:
+        - name: regulatory-monitoring
+      message:
+        $ref: '#/components/messages/RegulatoryRequirementUpdated'
+
+  aura.governance.assurance.completed.v1:
+    description: Publicado após verificação de garantia institucional.
+    publish:
+      operationId: onInstitutionalAssuranceCompleted
+      summary: Verificação de garantia institucional concluída
+      tags:
+        - name: institutional-assurance
+      message:
+        $ref: '#/components/messages/InstitutionalAssuranceCompleted'
+
+  aura.governance.recommendation.generated.v1:
+    description: Publicado quando uma recomendação de governança fundamentada é gerada.
+    publish:
+      operationId: onGovernanceRecommendationGenerated
+      summary: Recomendação de governança gerada
+      tags:
+        - name: governance-recommendation
+      message:
+        $ref: '#/components/messages/GovernanceRecommendationGenerated'
+
+  aura.governance.risk.validation.completed.v1:
+    description: Publicado após avaliação ou atualização da matriz corporativa de riscos.
+    publish:
+      operationId: onRiskValidationCompleted
+      summary: Validação de risco corporativo concluída
+      tags:
+        - name: enterprise-risk-validation
+      message:
+        $ref: '#/components/messages/RiskValidationCompleted'
+
+  aura.governance.evidence.registered.v1:
+    description: Publicado quando uma evidência de conformidade é registrada e preservada.
+    publish:
+      operationId: onAuditEvidenceRegistered
+      summary: Evidência de conformidade registrada
+      tags:
+        - name: compliance-evidence
+      message:
+        $ref: '#/components/messages/AuditEvidenceRegistered'
+
+  aura.governance.dashboard.updated.v1:
+    description: Publicado quando o painel executivo de governança é atualizado.
+    publish:
+      operationId: onGovernanceDashboardUpdated
+      summary: Painel executivo de governança atualizado
+      tags:
+        - name: governance-dashboard
+      message:
+        $ref: '#/components/messages/GovernanceDashboardUpdated'
+
+  aura.governance.audit.completed.v1:
+    description: Publicado após registro criptográfico (SHA-256) de cada verificação de auditoria contínua.
+    publish:
+      operationId: onContinuousComplianceAuditCompleted
+      summary: Auditoria contínua concluída e assinada SHA-256
+      tags:
+        - name: continuous-audit
+      message:
+        $ref: '#/components/messages/ContinuousAuditCompleted'
+
+components:
+  securitySchemes:
+    saslScram512:
+      type: scramSha512
+      description: SASL/SCRAM-SHA-512 para autenticação no Kafka
+
+  messages:
+    GovernanceCheckExecuted:
+      name: GovernanceCheckExecuted
+      title: Inspeção Autônoma de Governança Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.check.executed.v1
+          source:
+            type: string
+            example: /aura/agcc/autonomous-governance-service
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          datacontenttype:
+            type: string
+            const: application/json
+          data:
+            type: object
+            properties:
+              checkId:
+                type: string
+              overallHealthScorePercent:
+                type: number
+                minimum: 0
+                maximum: 100
+            required:
+              - checkId
+              - overallHealthScorePercent
+        required:
+          - specversion
+          - type
+          - source
+          - id
+          - time
+          - data
+
+    ComplianceValidated:
+      name: ComplianceValidated
+      title: Verificação de Conformidade Contínua Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.compliance.validated.v1
+          source:
+            type: string
+            example: /aura/agcc/continuous-compliance-service
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              checkId:
+                type: string
+              framework:
+                type: string
+                enum:
+                  - LGPD
+                  - PRIVACY_BY_DESIGN
+                  - SECURITY_BY_DESIGN
+                  - ZERO_TRUST
+                  - INTERNAL_POLICIES
+                  - SEGREGATION_OF_DUTIES
+                  - ENTERPRISE_ARCHITECTURE
+              score:
+                type: number
+              level:
+                type: string
+                enum:
+                  - FULLY_COMPLIANT
+                  - SUBSTANTIALLY_COMPLIANT
+                  - PARTIALLY_COMPLIANT
+                  - NON_COMPLIANT
+
+    PolicyViolationDetected:
+      name: PolicyViolationDetected
+      title: Violação ou Conflito de Política Detectado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.policy.violation.detected.v1
+          source:
+            type: string
+            example: /aura/agcc/policy-validation-service
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              policyId:
+                type: string
+              title:
+                type: string
+              conflictsCount:
+                type: integer
+                minimum: 1
+
+    RegulatoryRequirementUpdated:
+      name: RegulatoryRequirementUpdated
+      title: Requisito Regulatório Atualizado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.regulatory.updated.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              requirementId:
+                type: string
+              legalNormName:
+                type: string
+
+    InstitutionalAssuranceCompleted:
+      name: InstitutionalAssuranceCompleted
+      title: Verificação de Garantia Institucional Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.assurance.completed.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              assuranceId:
+                type: string
+              overallAssuranceScorePercent:
+                type: number
+
+    GovernanceRecommendationGenerated:
+      name: GovernanceRecommendationGenerated
+      title: Recomendação de Governança Gerada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.recommendation.generated.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              title:
+                type: string
+              priority:
+                type: string
+                enum:
+                  - LOW
+                  - MEDIUM
+                  - HIGH
+                  - CRITICAL
+
+    RiskValidationCompleted:
+      name: RiskValidationCompleted
+      title: Validação de Risco Corporativo Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.risk.validation.completed.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              riskId:
+                type: string
+              riskName:
+                type: string
+              severity:
+                type: string
+                enum:
+                  - LOW
+                  - MEDIUM
+                  - HIGH
+                  - CRITICAL
+
+    AuditEvidenceRegistered:
+      name: AuditEvidenceRegistered
+      title: Evidência de Conformidade Registrada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.evidence.registered.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              evidenceId:
+                type: string
+              title:
+                type: string
+              framework:
+                type: string
+
+    GovernanceDashboardUpdated:
+      name: GovernanceDashboardUpdated
+      title: Painel Executivo de Governança Atualizado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.dashboard.updated.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              dashboardId:
+                type: string
+              overallComplianceScorePercent:
+                type: number
+
+    ContinuousAuditCompleted:
+      name: ContinuousAuditCompleted
+      title: Auditoria Contínua Concluída (SHA-256)
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+          type:
+            type: string
+            const: aura.governance.audit.completed.v1
+          source:
+            type: string
+          id:
+            type: string
+            format: uuid
+          time:
+            type: string
+            format: date-time
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              scope:
+                type: string
+              checkName:
+                type: string
+              sha256Signature:
+                type: string
+                minLength: 64
+                maxLength: 64
