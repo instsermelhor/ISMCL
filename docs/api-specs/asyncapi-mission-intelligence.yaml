@@ -1,0 +1,270 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Enterprise Mission Intelligence Platform — Event Catalog (AEMIAG)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pela Plataforma Corporativa de
+    Inteligência de Missão, Governança Autônoma e Comando Institucional (AEMIAG)
+    da Plataforma Aura — Prompt 160, Fase XI (Marco Final).
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.mission.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Executive Strategy Office
+    email: comando@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/mission/alignment/validated:
+    description: Publicado quando o alinhamento estratégico de uma iniciativa à missão é validado
+    publish:
+      operationId: onMissionAlignmentValidated
+      summary: Alinhamento de Missão Validado
+      message:
+        $ref: '#/components/messages/MissionAlignmentValidated'
+
+  aura/mission/deviation/detected:
+    description: Publicado quando um desalinhamento estratégico é identificado
+    publish:
+      operationId: onStrategicDeviationDetected
+      summary: Desalinhamento Estratégico Detectado
+      message:
+        $ref: '#/components/messages/StrategicDeviationDetected'
+
+  aura/mission/alert/generated:
+    description: Publicado quando o Centro de Comando gera um alerta executivo
+    publish:
+      operationId: onExecutiveAlertGenerated
+      summary: Alerta Executivo Gerado
+      message:
+        $ref: '#/components/messages/ExecutiveAlertGenerated'
+
+  aura/mission/crossdomain/insight/generated:
+    description: Publicado quando um insight de inteligência transversal é gerado
+    publish:
+      operationId: onCrossDomainInsightGenerated
+      summary: Insight Transversal Gerado
+      message:
+        $ref: '#/components/messages/CrossDomainInsightGenerated'
+
+  aura/mission/governance/action/executed:
+    description: Publicado quando uma ação de governança autônoma é executada
+    publish:
+      operationId: onAutonomousGovernanceActionExecuted
+      summary: Ação de Governança Autônoma Executada
+      message:
+        $ref: '#/components/messages/AutonomousGovernanceActionExecuted'
+
+  aura/mission/decision/coordinated:
+    description: Publicado quando uma decisão corporativa executiva é coordenada
+    publish:
+      operationId: onInstitutionalDecisionCoordinated
+      summary: Decisão Institucional Coordenada
+      message:
+        $ref: '#/components/messages/InstitutionalDecisionCoordinated'
+
+  aura/mission/performance/calculated:
+    description: Publicado quando o desempenho da missão é calculado
+    publish:
+      operationId: onMissionPerformanceCalculated
+      summary: Desempenho da Missão Calculado
+      message:
+        $ref: '#/components/messages/MissionPerformanceCalculated'
+
+  aura/mission/resilience/simulated:
+    description: Publicado quando um cenário de estresse/resiliência institucional é simulado
+    publish:
+      operationId: onResilienceScenarioSimulated
+      summary: Cenário de Resiliência Simulado
+      message:
+        $ref: '#/components/messages/ResilienceScenarioSimulated'
+
+  aura/mission/risk/escalated:
+    description: Publicado quando um risco institucional é escalado para o comitê executivo
+    publish:
+      operationId: onInstitutionalRiskEscalated
+      summary: Risco Institucional Escalado
+      message:
+        $ref: '#/components/messages/InstitutionalRiskEscalated'
+
+  aura/mission/audit/completed:
+    description: Publicado quando uma entrada de auditoria executiva é registrada (SHA-256)
+    publish:
+      operationId: onExecutiveGovernanceAuditCompleted
+      summary: Auditoria Executiva Registrada
+      message:
+        $ref: '#/components/messages/ExecutiveGovernanceAuditCompleted'
+
+components:
+  messages:
+
+    MissionAlignmentValidated:
+      name: aura.mission.alignment.validated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [title, targetObjective, status, alignmentPercent]
+            properties:
+              title:
+                type: string
+              targetObjective:
+                type: string
+              status:
+                type: string
+              alignmentPercent:
+                type: number
+
+    StrategicDeviationDetected:
+      name: aura.mission.deviation.detected.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              checkId:
+                type: string
+              misalignedCount:
+                type: integer
+
+    ExecutiveAlertGenerated:
+      name: aura.mission.alert.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              commandCenterId:
+                type: string
+              alertLevel:
+                type: string
+
+    CrossDomainInsightGenerated:
+      name: aura.mission.crossdomain.insight.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              insightId:
+                type: string
+              confidenceScorePercent:
+                type: number
+
+    AutonomousGovernanceActionExecuted:
+      name: aura.mission.governance.action.executed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              executionId:
+                type: string
+              actionType:
+                type: string
+              isCompliant:
+                type: boolean
+
+    InstitutionalDecisionCoordinated:
+      name: aura.mission.decision.coordinated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              coordinationId:
+                type: string
+              title:
+                type: string
+              coordinatedBy:
+                type: string
+
+    MissionPerformanceCalculated:
+      name: aura.mission.performance.calculated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              metricsId:
+                type: string
+              overallMissionScore:
+                type: number
+
+    ResilienceScenarioSimulated:
+      name: aura.mission.resilience.simulated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              simulationId:
+                type: string
+              scenarioType:
+                type: string
+              systemicResilienceScore:
+                type: number
+
+    InstitutionalRiskEscalated:
+      name: aura.mission.risk.escalated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              riskId:
+                type: string
+              severity:
+                type: string
+
+    ExecutiveGovernanceAuditCompleted:
+      name: aura.mission.audit.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              actionName:
+                type: string
+              executiveRole:
+                type: string
+              sha256Signature:
+                type: string
