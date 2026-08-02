@@ -48,6 +48,7 @@ import { DecisionIntelligenceModule } from './domain/decision-intelligence/decis
 import { MissionIntelligenceModule } from './domain/mission-intelligence/mission-intelligence.module';
 import { GovernanceComplianceModule } from './domain/governance-compliance/governance-compliance.module';
 import { PlatformLifecycleModule } from './domain/platform-lifecycle/platform-lifecycle.module';
+import { EnterpriseReadinessModule } from './domain/enterprise-readiness/enterprise-readiness.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -210,6 +211,7 @@ import { PlatformLifecycleModule } from './domain/platform-lifecycle/platform-li
     MissionIntelligenceModule,
     GovernanceComplianceModule,
     PlatformLifecycleModule,
+    EnterpriseReadinessModule,
   ],
 })
 export class AppModule {}

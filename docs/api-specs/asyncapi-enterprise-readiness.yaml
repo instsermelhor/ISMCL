@@ -1,0 +1,385 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Readiness, Certification & Production Governance (ERCP) — Event Bus
+  version: 1.0.0
+  description: |
+    Especificação AsyncAPI 2.6.0 para os eventos CloudEvents v1.0.3 publicados pela
+    Plataforma ERCP (Prompt 163 — Fase XIII do Projeto Aura).
+
+    Preparação para Produção, Certificação Corporativa e Governança de Releases — Instituto Ser Melhor.
+    Padrão de canal: aura.readiness.<entity>.<action>.v<version>.
+  contact:
+    name: Chief Quality Officer (CQO) — Instituto Ser Melhor
+    email: cqo@sermelhorcoop.com.br
+  license:
+    name: Proprietary
+
+defaultContentType: application/cloudevents+json; charset=UTF-8
+
+servers:
+  production-kafka:
+    url: kafka.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Produção — Plataforma Aura
+    security:
+      - saslScram512: []
+
+channels:
+
+  aura.readiness.assessment.completed.v1:
+    description: Publicado quando a avaliação de prontidão (Readiness Assessment) é concluída.
+    publish:
+      operationId: onReadinessAssessmentCompleted
+      summary: Avaliação de prontidão concluída
+      tags:
+        - name: enterprise-readiness
+      message:
+        $ref: '#/components/messages/ReadinessAssessmentCompleted'
+
+  aura.readiness.functional.validation.completed.v1:
+    description: Publicado quando a validação funcional completa é concluída.
+    publish:
+      operationId: onFunctionalValidationCompleted
+      summary: Validação funcional concluída
+      tags:
+        - name: functional-validation
+      message:
+        $ref: '#/components/messages/FunctionalValidationCompleted'
+
+  aura.readiness.nonfunctional.validation.completed.v1:
+    description: Publicado quando a validação de NFRs (desempenho, resiliência, etc.) é concluída.
+    publish:
+      operationId: onNonfunctionalValidationCompleted
+      summary: Validação não funcional concluída
+      tags:
+        - name: nonfunctional-validation
+      message:
+        $ref: '#/components/messages/NonfunctionalValidationCompleted'
+
+  aura.readiness.compliance.certified.v1:
+    description: Publicado quando um certificado de conformidade institucional é emitido.
+    publish:
+      operationId: onComplianceCertified
+      summary: Certificado de conformidade emitido
+      tags:
+        - name: compliance-certification
+      message:
+        $ref: '#/components/messages/ComplianceCertified'
+
+  aura.readiness.production.certified.v1:
+    description: Publicado quando a certificação final de produção é concedida aos módulos.
+    publish:
+      operationId: onProductionCertified
+      summary: Certificação de produção emitida
+      tags:
+        - name: production-certification
+      message:
+        $ref: '#/components/messages/ProductionCertified'
+
+  aura.readiness.release.candidate.approved.v1:
+    description: Publicado quando um candidato a release é aprovado formalmente para produção.
+    publish:
+      operationId: onReleaseCandidateApproved
+      summary: Release candidate aprovado
+      tags:
+        - name: release-governance
+      message:
+        $ref: '#/components/messages/ReleaseCandidateApproved'
+
+  aura.readiness.release.candidate.blocked.v1:
+    description: Publicado quando um candidato a release é bloqueado.
+    publish:
+      operationId: onReleaseCandidateBlocked
+      summary: Release candidate bloqueado
+      tags:
+        - name: release-governance
+      message:
+        $ref: '#/components/messages/ReleaseCandidateBlocked'
+
+  aura.readiness.production.risk.assessed.v1:
+    description: Publicado após a avaliação de riscos para produção.
+    publish:
+      operationId: onProductionRiskAssessed
+      summary: Risco para produção avaliado
+      tags:
+        - name: risk-assessment
+      message:
+        $ref: '#/components/messages/ProductionRiskAssessed'
+
+  aura.readiness.production.approval.granted.v1:
+    description: Publicado quando a autorização de implantação em produção é concedida.
+    publish:
+      operationId: onProductionApprovalGranted
+      summary: Autorização de implantação concedida
+      tags:
+        - name: deployment-approval
+      message:
+        $ref: '#/components/messages/ProductionApprovalGranted'
+
+  aura.readiness.production.approval.rejected.v1:
+    description: Publicado quando a autorização de implantação é rejeitada.
+    publish:
+      operationId: onProductionApprovalRejected
+      summary: Autorização de implantação rejeitada
+      tags:
+        - name: deployment-approval
+      message:
+        $ref: '#/components/messages/ProductionApprovalRejected'
+
+  aura.readiness.certification.evidence.generated.v1:
+    description: Publicado após geração de evidência SHA-256 de certificação.
+    publish:
+      operationId: onCertificationEvidenceGenerated
+      summary: Evidência de certificação registrada
+      tags:
+        - name: certification-evidence
+      message:
+        $ref: '#/components/messages/CertificationEvidenceGenerated'
+
+  aura.readiness.enterprise.audit.completed.v1:
+    description: Publicado após consolidação do painel de prontidão e auditoria corporativa.
+    publish:
+      operationId: onEnterpriseReadinessAuditCompleted
+      summary: Auditoria corporativa de prontidão concluída
+      tags:
+        - name: readiness-dashboard
+      message:
+        $ref: '#/components/messages/EnterpriseReadinessAuditCompleted'
+
+components:
+  securitySchemes:
+    saslScram512:
+      type: scramSha512
+      description: SASL/SCRAM-SHA-512 para autenticação no Kafka
+
+  messages:
+    ReadinessAssessmentCompleted:
+      name: ReadinessAssessmentCompleted
+      title: Avaliação de Prontidão Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.assessment.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              assessmentId: { type: string }
+              moduleName: { type: string }
+              overallReadinessIndexPercent: { type: number }
+              isProductionReady: { type: boolean }
+
+    FunctionalValidationCompleted:
+      name: FunctionalValidationCompleted
+      title: Validação Funcional Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.functional.validation.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              validationId: { type: string }
+              moduleName: { type: string }
+              coveragePercent: { type: number }
+
+    NonfunctionalValidationCompleted:
+      name: NonfunctionalValidationCompleted
+      title: Validação Não Funcional Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.nonfunctional.validation.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              validationId: { type: string }
+              moduleName: { type: string }
+              overallNFRScore: { type: number }
+
+    ComplianceCertified:
+      name: ComplianceCertified
+      title: Certificado de Conformidade Emitido
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.compliance.certified.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              certificateId: { type: string }
+              moduleName: { type: string }
+              version: { type: string }
+              status: { type: string }
+
+    ProductionCertified:
+      name: ProductionCertified
+      title: Certificação de Produção Concedida
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.production.certified.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              certificationId: { type: string }
+              totalModulesCertified: { type: integer }
+              overallCertificationScorePercent: { type: number }
+
+    ReleaseCandidateApproved:
+      name: ReleaseCandidateApproved
+      title: Release Candidate Aprovado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.release.candidate.approved.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              releaseId: { type: string }
+              releaseTag: { type: string }
+              approvedBy: { type: string }
+
+    ReleaseCandidateBlocked:
+      name: ReleaseCandidateBlocked
+      title: Release Candidate Bloqueado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.release.candidate.blocked.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              releaseId: { type: string }
+              releaseTag: { type: string }
+              blockedBy: { type: string }
+              reason: { type: string }
+
+    ProductionRiskAssessed:
+      name: ProductionRiskAssessed
+      title: Risco para Produção Avaliado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.production.risk.assessed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              riskId: { type: string }
+              releaseTag: { type: string }
+              overallRiskLevel: { type: string }
+
+    ProductionApprovalGranted:
+      name: ProductionApprovalGranted
+      title: Autorização de Implantação Concedida
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.production.approval.granted.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              approvalId: { type: string }
+              releaseTag: { type: string }
+              decision: { type: string, const: "APPROVED" }
+
+    ProductionApprovalRejected:
+      name: ProductionApprovalRejected
+      title: Autorização de Implantação Rejeitada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.production.approval.rejected.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              approvalId: { type: string }
+              releaseTag: { type: string }
+              decision: { type: string, const: "REJECTED" }
+
+    CertificationEvidenceGenerated:
+      name: CertificationEvidenceGenerated
+      title: Evidência de Certificação Gerada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.certification.evidence.generated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              auditId: { type: string }
+              action: { type: string }
+              subject: { type: string }
+              sha256Signature: { type: string }
+
+    EnterpriseReadinessAuditCompleted:
+      name: EnterpriseReadinessAuditCompleted
+      title: Auditoria Corporativa de Prontidão Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.readiness.enterprise.audit.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              dashboardId: { type: string }
+              overallReadinessIndexPercent: { type: number }
