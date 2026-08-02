@@ -1,0 +1,307 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Enterprise Interoperability Platform — Event Catalog (AEIDIP)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pela Plataforma Corporativa de Interoperabilidade
+    (AEIDIP) da Plataforma Aura — Prompt 155, Fase VI.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.interoperability.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Plataforma Aura
+    email: ti@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/interoperability/integration/created:
+    description: Publicado quando um fluxo de integração corporativo é iniciado pelo EnterpriseIntegrationService
+    publish:
+      operationId: onIntegrationCreated
+      summary: Fluxo de Integração Criado
+      message:
+        $ref: '#/components/messages/IntegrationCreated'
+
+  aura/interoperability/integration/updated:
+    description: Publicado quando o status de um fluxo de integração é atualizado
+    publish:
+      operationId: onIntegrationUpdated
+      summary: Fluxo de Integração Atualizado
+      message:
+        $ref: '#/components/messages/IntegrationUpdated'
+
+  aura/interoperability/integration/validated:
+    description: Publicado quando uma requisição no API Gateway é validada com sucesso
+    publish:
+      operationId: onIntegrationValidated
+      summary: Requisição no API Gateway Validada
+      message:
+        $ref: '#/components/messages/IntegrationValidated'
+
+  aura/interoperability/connection/established:
+    description: Publicado quando uma conexão com conector externo é estabelecida
+    publish:
+      operationId: onExternalConnectionEstablished
+      summary: Conexão Externa Estabelecida
+      message:
+        $ref: '#/components/messages/ExternalConnectionEstablished'
+
+  aura/interoperability/consent/granted:
+    description: Publicado quando um consentimento LGPD é registrado para um beneficiário
+    publish:
+      operationId: onConsentGranted
+      summary: Consentimento LGPD Concedido
+      message:
+        $ref: '#/components/messages/ConsentGranted'
+
+  aura/interoperability/consent/revoked:
+    description: Publicado quando um consentimento LGPD é revogado
+    publish:
+      operationId: onConsentRevoked
+      summary: Consentimento LGPD Revogado
+      message:
+        $ref: '#/components/messages/ConsentRevoked'
+
+  aura/interoperability/data_exchange/completed:
+    description: Publicado quando uma transação de intercâmbio de dados é concluída com sucesso
+    publish:
+      operationId: onDataExchangeCompleted
+      summary: Intercâmbio de Dados Concluído
+      message:
+        $ref: '#/components/messages/DataExchangeCompleted'
+
+  aura/interoperability/partner/registered:
+    description: Publicado quando um novo parceiro institucional é cadastrado
+    publish:
+      operationId: onPartnerRegistered
+      summary: Parceiro Institucional Cadastrado
+      message:
+        $ref: '#/components/messages/PartnerRegistered'
+
+  aura/interoperability/failure/detected:
+    description: Publicado quando uma falha ou degradação de integração é detectada pelo serviço de monitoramento
+    publish:
+      operationId: onIntegrationFailureDetected
+      summary: Falha de Integração Detectada
+      message:
+        $ref: '#/components/messages/IntegrationFailureDetected'
+
+  aura/interoperability/audit/completed:
+    description: Publicado quando uma entrada de auditoria externa é registrada com assinatura SHA-256
+    publish:
+      operationId: onIntegrationAuditCompleted
+      summary: Auditoria Externa Concluída
+      message:
+        $ref: '#/components/messages/IntegrationAuditCompleted'
+
+components:
+  messages:
+
+    IntegrationCreated:
+      name: aura.interoperability.integration.created.v1
+      title: Fluxo de Integração Criado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [flowId, partnerCode, transactionType]
+            properties:
+              flowId:
+                type: string
+              partnerCode:
+                type: string
+              transactionType:
+                type: string
+
+    IntegrationUpdated:
+      name: aura.interoperability.integration.updated.v1
+      title: Fluxo de Integração Atualizado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              flowId:
+                type: string
+              partnerCode:
+                type: string
+              status:
+                type: string
+              durationMs:
+                type: integer
+
+    IntegrationValidated:
+      name: aura.interoperability.integration.validated.v1
+      title: Requisição no API Gateway Validada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              routeId:
+                type: string
+              path:
+                type: string
+              method:
+                type: string
+              partnerCode:
+                type: string
+
+    ExternalConnectionEstablished:
+      name: aura.interoperability.connection.established.v1
+      title: Conexão Externa Estabelecida
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              connectorId:
+                type: string
+              connectorType:
+                type: string
+              endpointUrl:
+                type: string
+              securityLevel:
+                type: string
+
+    ConsentGranted:
+      name: aura.interoperability.consent.granted.v1
+      title: Consentimento LGPD Concedido
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              consentId:
+                type: string
+              beneficiaryId:
+                type: string
+              partnerCode:
+                type: string
+              scope:
+                type: array
+                items:
+                  type: string
+
+    ConsentRevoked:
+      name: aura.interoperability.consent.revoked.v1
+      title: Consentimento LGPD Revogado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              consentId:
+                type: string
+              beneficiaryId:
+                type: string
+              partnerCode:
+                type: string
+              reason:
+                type: string
+
+    DataExchangeCompleted:
+      name: aura.interoperability.data_exchange.completed.v1
+      title: Intercâmbio de Dados Concluído
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              transactionId:
+                type: string
+              partnerCode:
+                type: string
+              transactionType:
+                type: string
+              status:
+                type: string
+
+    PartnerRegistered:
+      name: aura.interoperability.partner.registered.v1
+      title: Parceiro Institucional Cadastrado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              partnerId:
+                type: string
+              partnerCode:
+                type: string
+              name:
+                type: string
+              partnerType:
+                type: string
+
+    IntegrationFailureDetected:
+      name: aura.interoperability.failure.detected.v1
+      title: Falha de Integração Detectada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              alertId:
+                type: string
+              partnerCode:
+                type: string
+              severity:
+                type: string
+              message:
+                type: string
+
+    IntegrationAuditCompleted:
+      name: aura.interoperability.audit.completed.v1
+      title: Auditoria Externa Concluída
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              logId:
+                type: string
+              serviceName:
+                type: string
+              partnerCode:
+                type: string
+              sha256Signature:
+                type: string

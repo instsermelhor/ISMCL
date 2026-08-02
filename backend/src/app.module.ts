@@ -40,6 +40,7 @@ import { CognitiveOrchestrationModule } from './domain/cognitive-orchestration/c
 // TODO(Sprint 6): import { SocialModule } from './domain/social/social.module';
 
 import { AutonomousEvolutionModule } from './domain/autonomous-evolution/autonomous-evolution.module';
+import { EnterpriseInteroperabilityModule } from './domain/enterprise-interoperability/enterprise-interoperability.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -194,6 +195,7 @@ import { AutonomousEvolutionModule } from './domain/autonomous-evolution/autonom
     InstitutionalIntelligenceModule,
     CognitiveOrchestrationModule,
     AutonomousEvolutionModule,
+    EnterpriseInteroperabilityModule,
   ],
 })
 export class AppModule {}
