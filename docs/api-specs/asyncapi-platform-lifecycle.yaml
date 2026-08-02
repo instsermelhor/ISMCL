@@ -1,0 +1,335 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Platform Lifecycle Management (EPLM) — Event Bus
+  version: 1.0.0
+  description: |
+    Especificação AsyncAPI 2.6.0 para os eventos CloudEvents v1.0.3 publicados pela
+    Plataforma EPLM (Prompt 162 — Fase XII do Projeto Aura).
+
+    Gestão do Ciclo de Vida, Sustentabilidade Arquitetural e Evolução Tecnológica
+    da Plataforma Aura — Instituto Ser Melhor.
+    Padrão de canal: aura.<domain>.<entity>.<action>.v<version>.
+  contact:
+    name: Chief Technology Officer (CTO) — Instituto Ser Melhor
+    email: cto@sermelhorcoop.com.br
+  license:
+    name: Proprietary
+
+defaultContentType: application/cloudevents+json; charset=UTF-8
+
+servers:
+  production-kafka:
+    url: kafka.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Produção — Plataforma Aura
+    security:
+      - saslScram512: []
+
+channels:
+
+  aura.lifecycle.version.released.v1:
+    description: Publicado quando um novo componente é registrado ou uma nova versão é lançada.
+    publish:
+      operationId: onPlatformVersionReleased
+      summary: Versão/componente registrado no ciclo de vida
+      tags:
+        - name: platform-lifecycle
+        - name: version-management
+      message:
+        $ref: '#/components/messages/PlatformVersionReleased'
+
+  aura.lifecycle.technical.debt.detected.v1:
+    description: Publicado quando um novo item de dívida técnica é identificado e registrado.
+    publish:
+      operationId: onTechnicalDebtDetected
+      summary: Dívida técnica detectada e priorizada
+      tags:
+        - name: technical-debt
+      message:
+        $ref: '#/components/messages/TechnicalDebtDetected'
+
+  aura.lifecycle.dependency.updated.v1:
+    description: Publicado após avaliação de dependência (versão, licença, risco).
+    publish:
+      operationId: onDependencyUpdated
+      summary: Dependência avaliada e atualizada
+      tags:
+        - name: dependency-governance
+      message:
+        $ref: '#/components/messages/DependencyUpdated'
+
+  aura.lifecycle.architecture.assessment.completed.v1:
+    description: Publicado após avaliação de sustentabilidade arquitetural.
+    publish:
+      operationId: onArchitectureAssessmentCompleted
+      summary: Avaliação de sustentabilidade arquitetural concluída
+      tags:
+        - name: architecture-sustainability
+      message:
+        $ref: '#/components/messages/ArchitectureAssessmentCompleted'
+
+  aura.lifecycle.technology.roadmap.generated.v1:
+    description: Publicado quando o roadmap tecnológico estratégico é gerado.
+    publish:
+      operationId: onTechnologyRoadmapGenerated
+      summary: Roadmap tecnológico estratégico gerado
+      tags:
+        - name: technology-evolution
+      message:
+        $ref: '#/components/messages/TechnologyRoadmapGenerated'
+
+  aura.lifecycle.modernization.plan.created.v1:
+    description: Publicado quando um plano de modernização é criado.
+    publish:
+      operationId: onModernizationPlanCreated
+      summary: Plano de modernização criado
+      tags:
+        - name: modernization-planning
+      message:
+        $ref: '#/components/messages/ModernizationPlanCreated'
+
+  aura.lifecycle.platform.health.calculated.v1:
+    description: Publicado após cálculo do Índice Corporativo de Saúde da Plataforma (PHI).
+    publish:
+      operationId: onPlatformHealthCalculated
+      summary: Índice de saúde da plataforma calculado
+      tags:
+        - name: platform-health
+      message:
+        $ref: '#/components/messages/PlatformHealthCalculated'
+
+  aura.lifecycle.audit.completed.v1:
+    description: Publicado após registro SHA-256 de cada ação no ciclo de vida.
+    publish:
+      operationId: onLifecycleAuditCompleted
+      summary: Auditoria do ciclo de vida concluída (SHA-256)
+      tags:
+        - name: lifecycle-audit
+      message:
+        $ref: '#/components/messages/LifecycleAuditCompleted'
+
+  aura.lifecycle.component.deprecated.v1:
+    description: Publicado quando um componente é marcado como deprecated.
+    publish:
+      operationId: onComponentDeprecated
+      summary: Componente depreciado no ciclo de vida
+      tags:
+        - name: platform-lifecycle
+      message:
+        $ref: '#/components/messages/ComponentDeprecated'
+
+  aura.lifecycle.architecture.compliance.completed.v1:
+    description: Publicado após verificação de conformidade arquitetural.
+    publish:
+      operationId: onArchitectureComplianceCompleted
+      summary: Verificação de conformidade arquitetural concluída
+      tags:
+        - name: architecture-compliance
+      message:
+        $ref: '#/components/messages/ArchitectureComplianceCompleted'
+
+components:
+  securitySchemes:
+    saslScram512:
+      type: scramSha512
+      description: SASL/SCRAM-SHA-512 para autenticação no Kafka
+
+  messages:
+    PlatformVersionReleased:
+      name: PlatformVersionReleased
+      title: Versão/Componente Registrado no Ciclo de Vida
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.version.released.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              componentId: { type: string }
+              name: { type: string }
+              version: { type: string }
+              phase:
+                type: string
+                enum: [PLANNING, DEVELOPMENT, PRODUCTION, MAINTENANCE, DEPRECATED, EOL]
+
+    TechnicalDebtDetected:
+      name: TechnicalDebtDetected
+      title: Dívida Técnica Detectada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.technical.debt.detected.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              debtId: { type: string }
+              severity:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, CRITICAL]
+              category:
+                type: string
+                enum: [LEGACY_CODE, DUPLICATION, OBSOLETE_DEPENDENCY, ANTI_PATTERN, VULNERABILITY, INCOMPLETE_DOCUMENTATION, INSUFFICIENT_TESTS]
+              priorityScore: { type: number, minimum: 0, maximum: 100 }
+
+    DependencyUpdated:
+      name: DependencyUpdated
+      title: Dependência Avaliada e Atualizada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.dependency.updated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              dependencyId: { type: string }
+              packageName: { type: string }
+              riskLevel:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    ArchitectureAssessmentCompleted:
+      name: ArchitectureAssessmentCompleted
+      title: Avaliação de Sustentabilidade Arquitetural Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.architecture.assessment.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              assessmentId: { type: string }
+              overallSustainabilityIndex: { type: number, minimum: 0, maximum: 100 }
+
+    TechnologyRoadmapGenerated:
+      name: TechnologyRoadmapGenerated
+      title: Roadmap Tecnológico Gerado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.technology.roadmap.generated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              roadmapId: { type: string }
+              entriesCount: { type: integer, minimum: 1 }
+
+    ModernizationPlanCreated:
+      name: ModernizationPlanCreated
+      title: Plano de Modernização Criado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.modernization.plan.created.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              planId: { type: string }
+              title: { type: string }
+              strategy:
+                type: string
+                enum: [REFACTOR, REPLACE, REPLATFORM, RETIRE, RETAIN, MIGRATE]
+
+    PlatformHealthCalculated:
+      name: PlatformHealthCalculated
+      title: Índice de Saúde da Plataforma Calculado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.platform.health.calculated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              healthId: { type: string }
+              overallPlatformHealthIndex: { type: number, minimum: 0, maximum: 100 }
+
+    LifecycleAuditCompleted:
+      name: LifecycleAuditCompleted
+      title: Auditoria do Ciclo de Vida Concluída (SHA-256)
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.audit.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              auditId: { type: string }
+              action: { type: string }
+              component: { type: string }
+              sha256Signature: { type: string, minLength: 64, maxLength: 64 }
+
+    ComponentDeprecated:
+      name: ComponentDeprecated
+      title: Componente Depreciado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.component.deprecated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              componentId: { type: string }
+              name: { type: string }
+              reason: { type: string }
+
+    ArchitectureComplianceCompleted:
+      name: ArchitectureComplianceCompleted
+      title: Verificação de Conformidade Arquitetural Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.lifecycle.architecture.compliance.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              complianceId: { type: string }
+              complianceScorePercent: { type: number, minimum: 0, maximum: 100 }
