@@ -1,0 +1,275 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Decision Intelligence Platform — Event Catalog (ADIP)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pela Plataforma de Apoio à Decisão
+    Baseada em Evidências (ADIP) da Plataforma Aura — Prompt 159, Fase X.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.decision.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Chief Strategy Office
+    email: decisao@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/decision/recommendation/generated:
+    description: Publicado quando uma nova recomendação prescriptiva de decisão é gerada com XAI
+    publish:
+      operationId: onDecisionRecommendationGenerated
+      summary: Recomendação de Decisão Gerada
+      message:
+        $ref: '#/components/messages/DecisionRecommendationGenerated'
+
+  aura/decision/evidence/collected:
+    description: Publicado quando uma nova evidência de suporte à decisão é vinculada
+    publish:
+      operationId: onDecisionEvidenceCollected
+      summary: Evidência de Decisão Registrada
+      message:
+        $ref: '#/components/messages/DecisionEvidenceCollected'
+
+  aura/decision/predictive/completed:
+    description: Publicado quando uma análise preditiva é concluída
+    publish:
+      operationId: onPredictiveAnalysisCompleted
+      summary: Análise Preditiva Concluída
+      message:
+        $ref: '#/components/messages/PredictiveAnalysisCompleted'
+
+  aura/decision/prescriptive/completed:
+    description: Publicado quando uma análise prescritiva com matriz de trade-offs é concluída
+    publish:
+      operationId: onPrescriptiveAnalysisCompleted
+      summary: Análise Prescritiva Concluída
+      message:
+        $ref: '#/components/messages/PrescriptiveAnalysisCompleted'
+
+  aura/decision/executive/dashboard/updated:
+    description: Publicado quando o painel executivo de decision intelligence é atualizado
+    publish:
+      operationId: onExecutiveDashboardUpdated
+      summary: Painel Executivo Atualizado
+      message:
+        $ref: '#/components/messages/ExecutiveDashboardUpdated'
+
+  aura/decision/explainable/generated:
+    description: Publicado quando um relatório de IA Explicável (XAI) é gerado
+    publish:
+      operationId: onExplainableDecisionGenerated
+      summary: Relatório XAI Gerado
+      message:
+        $ref: '#/components/messages/ExplainableDecisionGenerated'
+
+  aura/decision/kpi/alert/detected:
+    description: Publicado quando um desvio crítico em KPI estratégico é detectado
+    publish:
+      operationId: onStrategicAlertDetected
+      summary: Alerta Estratégico de KPI Detectado
+      message:
+        $ref: '#/components/messages/StrategicAlertDetected'
+
+  aura/decision/approved:
+    description: Publicado quando uma recomendação é aprovada por gestor humano
+    publish:
+      operationId: onDecisionApproved
+      summary: Decisão Aprovada (Human-in-the-Loop)
+      message:
+        $ref: '#/components/messages/DecisionApproved'
+
+  aura/decision/rejected:
+    description: Publicado quando uma recomendação é rejeitada por gestor humano
+    publish:
+      operationId: onDecisionRejected
+      summary: Decisão Rejeitada
+      message:
+        $ref: '#/components/messages/DecisionRejected'
+
+  aura/decision/audit/completed:
+    description: Publicado quando uma entrada de auditoria decisória é registrada (SHA-256)
+    publish:
+      operationId: onDecisionAuditCompleted
+      summary: Auditoria Decisória Registrada
+      message:
+        $ref: '#/components/messages/DecisionAuditCompleted'
+
+components:
+  messages:
+
+    DecisionRecommendationGenerated:
+      name: aura.decision.recommendation.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [recommendationId, title, domain, urgency]
+            properties:
+              recommendationId:
+                type: string
+              title:
+                type: string
+              domain:
+                type: string
+              urgency:
+                type: string
+
+    DecisionEvidenceCollected:
+      name: aura.decision.evidence.collected.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              evidenceId:
+                type: string
+              title:
+                type: string
+              evidenceType:
+                type: string
+
+    PredictiveAnalysisCompleted:
+      name: aura.decision.predictive.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              analysisId:
+                type: string
+              domain:
+                type: string
+              horizonMonths:
+                type: integer
+
+    PrescriptiveAnalysisCompleted:
+      name: aura.decision.prescriptive.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              analysisId:
+                type: string
+              recommendedOptionId:
+                type: string
+
+    ExecutiveDashboardUpdated:
+      name: aura.decision.executive.dashboard.updated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              dashboardId:
+                type: string
+              totalRecommendationsProposed:
+                type: integer
+              totalApprovedDecisions:
+                type: integer
+
+    ExplainableDecisionGenerated:
+      name: aura.decision.explainable.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              confidenceScorePercent:
+                type: number
+              confidenceLevel:
+                type: string
+
+    StrategicAlertDetected:
+      name: aura.decision.kpi.alert.detected.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              kpiId:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+              deviationPercent:
+                type: number
+
+    DecisionApproved:
+      name: aura.decision.approved.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              approvedBy:
+                type: string
+
+    DecisionRejected:
+      name: aura.decision.rejected.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              rejectedBy:
+                type: string
+
+    DecisionAuditCompleted:
+      name: aura.decision.audit.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              operation:
+                type: string
+              recommendationId:
+                type: string
+              sha256Signature:
+                type: string

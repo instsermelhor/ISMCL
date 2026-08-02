@@ -44,6 +44,7 @@ import { EnterpriseInteroperabilityModule } from './domain/enterprise-interopera
 import { UnifiedOperationsModule } from './domain/unified-operations/unified-operations.module';
 import { DigitalTwinModule } from './domain/digital-twin/digital-twin.module';
 import { EnterpriseKnowledgeModule } from './domain/enterprise-knowledge/enterprise-knowledge.module';
+import { DecisionIntelligenceModule } from './domain/decision-intelligence/decision-intelligence.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -202,6 +203,7 @@ import { EnterpriseKnowledgeModule } from './domain/enterprise-knowledge/enterpr
     UnifiedOperationsModule,
     DigitalTwinModule,
     EnterpriseKnowledgeModule,
+    DecisionIntelligenceModule,
   ],
 })
 export class AppModule {}
