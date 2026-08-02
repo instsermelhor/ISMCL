@@ -1,0 +1,279 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Enterprise Knowledge Intelligence Platform — Event Catalog (AEKIP)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pela Plataforma Corporativa de
+    Inteligência do Conhecimento (AEKIP) da Plataforma Aura — Prompt 158, Fase IX.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.knowledge.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Chief Knowledge Office
+    email: conhecimento@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/knowledge/item/created:
+    description: Publicado quando um novo item de conhecimento é criado
+    publish:
+      operationId: onKnowledgeItemCreated
+      summary: Item de Conhecimento Criado
+      message:
+        $ref: '#/components/messages/KnowledgeItemCreated'
+
+  aura/knowledge/item/updated:
+    description: Publicado quando um item de conhecimento é atualizado (nova versão)
+    publish:
+      operationId: onKnowledgeItemUpdated
+      summary: Item de Conhecimento Atualizado
+      message:
+        $ref: '#/components/messages/KnowledgeItemUpdated'
+
+  aura/knowledge/item/approved:
+    description: Publicado quando um item de conhecimento é aprovado formalmente
+    publish:
+      operationId: onKnowledgeItemApproved
+      summary: Item de Conhecimento Aprovado
+      message:
+        $ref: '#/components/messages/KnowledgeItemApproved'
+
+  aura/knowledge/item/published:
+    description: Publicado quando um item de conhecimento é publicado no catálogo
+    publish:
+      operationId: onKnowledgeItemPublished
+      summary: Item de Conhecimento Publicado
+      message:
+        $ref: '#/components/messages/KnowledgeItemPublished'
+
+  aura/knowledge/item/archived:
+    description: Publicado quando um item de conhecimento é arquivado
+    publish:
+      operationId: onKnowledgeItemArchived
+      summary: Item de Conhecimento Arquivado
+      message:
+        $ref: '#/components/messages/KnowledgeItemArchived'
+
+  aura/knowledge/search/executed:
+    description: Publicado quando uma pesquisa semântica é realizada
+    publish:
+      operationId: onSemanticSearchExecuted
+      summary: Pesquisa Semântica Executada
+      message:
+        $ref: '#/components/messages/SemanticSearchExecuted'
+
+  aura/knowledge/recommendation/generated:
+    description: Publicado quando recomendações contextuais são geradas para um usuário
+    publish:
+      operationId: onKnowledgeRecommendationGenerated
+      summary: Recomendações de Conhecimento Geradas
+      message:
+        $ref: '#/components/messages/KnowledgeRecommendationGenerated'
+
+  aura/knowledge/memory/updated:
+    description: Publicado quando um novo evento de memória organizacional é registrado
+    publish:
+      operationId: onOrganizationalMemoryUpdated
+      summary: Memória Organizacional Atualizada
+      message:
+        $ref: '#/components/messages/OrganizationalMemoryUpdated'
+
+  aura/knowledge/graph/updated:
+    description: Publicado quando um nó ou aresta é adicionado ao Grafo de Conhecimento
+    publish:
+      operationId: onKnowledgeGraphUpdated
+      summary: Grafo de Conhecimento Atualizado
+      message:
+        $ref: '#/components/messages/KnowledgeGraphUpdated'
+
+  aura/knowledge/audit/completed:
+    description: Publicado quando uma entrada de auditoria do conhecimento é registrada (SHA-256)
+    publish:
+      operationId: onKnowledgeAuditCompleted
+      summary: Auditoria do Conhecimento Registrada
+      message:
+        $ref: '#/components/messages/KnowledgeAuditCompleted'
+
+components:
+  messages:
+
+    KnowledgeItemCreated:
+      name: aura.knowledge.item.created.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [knowledgeId, title, type, domain]
+            properties:
+              knowledgeId:
+                type: string
+              title:
+                type: string
+              type:
+                type: string
+              domain:
+                type: string
+
+    KnowledgeItemUpdated:
+      name: aura.knowledge.item.updated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              knowledgeId:
+                type: string
+              newVersion:
+                type: integer
+              title:
+                type: string
+
+    KnowledgeItemApproved:
+      name: aura.knowledge.item.approved.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              knowledgeId:
+                type: string
+              approvedBy:
+                type: string
+              version:
+                type: integer
+
+    KnowledgeItemPublished:
+      name: aura.knowledge.item.published.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              knowledgeId:
+                type: string
+              title:
+                type: string
+              domain:
+                type: string
+
+    KnowledgeItemArchived:
+      name: aura.knowledge.item.archived.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              knowledgeId:
+                type: string
+              archivedBy:
+                type: string
+              version:
+                type: integer
+
+    SemanticSearchExecuted:
+      name: aura.knowledge.search.executed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              searchId:
+                type: string
+              query:
+                type: string
+              totalHits:
+                type: integer
+
+    KnowledgeRecommendationGenerated:
+      name: aura.knowledge.recommendation.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              userId:
+                type: string
+              count:
+                type: integer
+
+    OrganizationalMemoryUpdated:
+      name: aura.knowledge.memory.updated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              memoryId:
+                type: string
+              eventType:
+                type: string
+              title:
+                type: string
+
+    KnowledgeGraphUpdated:
+      name: aura.knowledge.graph.updated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              action:
+                type: string
+              nodeId:
+                type: string
+              edgeId:
+                type: string
+
+    KnowledgeAuditCompleted:
+      name: aura.knowledge.audit.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              operation:
+                type: string
+              entityId:
+                type: string
+              sha256Signature:
+                type: string

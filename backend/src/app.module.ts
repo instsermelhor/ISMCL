@@ -43,6 +43,7 @@ import { AutonomousEvolutionModule } from './domain/autonomous-evolution/autonom
 import { EnterpriseInteroperabilityModule } from './domain/enterprise-interoperability/enterprise-interoperability.module';
 import { UnifiedOperationsModule } from './domain/unified-operations/unified-operations.module';
 import { DigitalTwinModule } from './domain/digital-twin/digital-twin.module';
+import { EnterpriseKnowledgeModule } from './domain/enterprise-knowledge/enterprise-knowledge.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -200,6 +201,7 @@ import { DigitalTwinModule } from './domain/digital-twin/digital-twin.module';
     EnterpriseInteroperabilityModule,
     UnifiedOperationsModule,
     DigitalTwinModule,
+    EnterpriseKnowledgeModule,
   ],
 })
 export class AppModule {}
