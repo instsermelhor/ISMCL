@@ -1,0 +1,295 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Social Impact Intelligence, Outcome Measurement & Accountability (SIIP) — Event Bus
+  version: 1.0.0
+  description: |
+    Especificação AsyncAPI 2.6.0 para os eventos CloudEvents v1.0.3 publicados pela
+    Plataforma SIIP (Prompt 165 — Fase XV do Projeto Aura).
+
+    Mensuração de Impacto Social, Avaliação de Efetividade e Prestação de Contas — Instituto Ser Melhor.
+    Padrão de canal: aura.impact.<entity>.<action>.v<version>.
+  contact:
+    name: Chief Social Impact Officer (CSIO) — Instituto Ser Melhor
+    email: csio@sermelhorcoop.com.br
+  license:
+    name: Proprietary
+
+defaultContentType: application/cloudevents+json; charset=UTF-8
+
+servers:
+  production-kafka:
+    url: kafka.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Produção — Plataforma Aura
+    security:
+      - saslScram512: []
+
+channels:
+
+  aura.impact.social.impact.calculated.v1:
+    description: Publicado quando o impacto social em uma dimensão parametrizável é calculado.
+    publish:
+      operationId: onSocialImpactCalculated
+      summary: Impacto social calculado
+      tags:
+        - name: social-impact
+      message:
+        $ref: '#/components/messages/SocialImpactCalculated'
+
+  aura.impact.outcome.measured.v1:
+    description: Publicado quando os resultados de um programa social são medidos.
+    publish:
+      operationId: onOutcomeMeasured
+      summary: Resultados de programa medidos
+      tags:
+        - name: outcome-measurement
+      message:
+        $ref: '#/components/messages/OutcomeMeasured'
+
+  aura.impact.program.evaluated.v1:
+    description: Publicado quando a avaliação de efetividade e SROI de um programa é concluída.
+    publish:
+      operationId: onProgramEvaluated
+      summary: Programa social avaliado (SROI)
+      tags:
+        - name: program-evaluation
+      message:
+        $ref: '#/components/messages/ProgramEvaluated'
+
+  aura.impact.esg.indicators.updated.v1:
+    description: Publicado quando o scorecard de indicadores ESG é atualizado.
+    publish:
+      operationId: onESGIndicatorsUpdated
+      summary: Indicadores ESG atualizados
+      tags:
+        - name: esg-metrics
+      message:
+        $ref: '#/components/messages/ESGIndicatorsUpdated'
+
+  aura.impact.beneficiary.evolution.updated.v1:
+    description: Publicado quando o registro de evolução longitudinal de beneficiário é atualizado.
+    publish:
+      operationId: onBeneficiaryEvolutionUpdated
+      summary: Evolução de beneficiário atualizada
+      tags:
+        - name: beneficiary-evolution
+      message:
+        $ref: '#/components/messages/BeneficiaryEvolutionUpdated'
+
+  aura.impact.evidence.consolidated.v1:
+    description: Publicado após a consolidação de um pacote de evidências auditáveis.
+    publish:
+      operationId: onEvidenceConsolidated
+      summary: Evidências auditáveis consolidadas
+      tags:
+        - name: evidence-consolidation
+      message:
+        $ref: '#/components/messages/EvidenceConsolidated'
+
+  aura.impact.accountability.report.generated.v1:
+    description: Publicado quando um relatório de prestação de contas com assinatura SHA-256 é gerado.
+    publish:
+      operationId: onAccountabilityReportGenerated
+      summary: Relatório de prestação de contas gerado
+      tags:
+        - name: accountability
+      message:
+        $ref: '#/components/messages/AccountabilityReportGenerated'
+
+  aura.impact.dashboard.updated.v1:
+    description: Publicado quando o painel executivo de impacto social é atualizado.
+    publish:
+      operationId: onImpactDashboardUpdated
+      summary: Painel de impacto atualizado
+      tags:
+        - name: impact-dashboard
+      message:
+        $ref: '#/components/messages/ImpactDashboardUpdated'
+
+  aura.impact.social.impact.audit.completed.v1:
+    description: Publicado após registro SHA-256 de auditoria de impacto social.
+    publish:
+      operationId: onSocialImpactAuditCompleted
+      summary: Auditoria de impacto social concluída
+      tags:
+        - name: social-impact-audit
+      message:
+        $ref: '#/components/messages/SocialImpactAuditCompleted'
+
+components:
+  securitySchemes:
+    saslScram512:
+      type: scramSha512
+      description: SASL/SCRAM-SHA-512 para autenticação no Kafka
+
+  messages:
+    SocialImpactCalculated:
+      name: SocialImpactCalculated
+      title: Impacto Social Calculado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.social.impact.calculated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              calculationId: { type: string }
+              dimension: { type: string }
+              impactScorePercent: { type: number }
+              beneficiariesImpactedCount: { type: integer }
+
+    OutcomeMeasured:
+      name: OutcomeMeasured
+      title: Resultados Medidos
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.outcome.measured.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              measurementId: { type: string }
+              programName: { type: string }
+              improvementPercent: { type: number }
+
+    ProgramEvaluated:
+      name: ProgramEvaluated
+      title: Programa Avaliado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.program.evaluated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              evaluationId: { type: string }
+              programId: { type: string }
+              effectivenessScorePercent: { type: number }
+              SROI: { type: number }
+
+    ESGIndicatorsUpdated:
+      name: ESGIndicatorsUpdated
+      title: Indicadores ESG Atualizados
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.esg.indicators.updated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              scorecardId: { type: string }
+              overallESGIndexPercent: { type: number }
+
+    BeneficiaryEvolutionUpdated:
+      name: BeneficiaryEvolutionUpdated
+      title: Evolução de Beneficiário Atualizada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.beneficiary.evolution.updated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              recordId: { type: string }
+              pseudonymizedBeneficiaryId: { type: string }
+              deltaImprovementPercent: { type: number }
+
+    EvidenceConsolidated:
+      name: EvidenceConsolidated
+      title: Evidências Consolidadas
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.evidence.consolidated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              packageId: { type: string }
+              totalEvidencesCount: { type: integer }
+
+    AccountabilityReportGenerated:
+      name: AccountabilityReportGenerated
+      title: Relatório de Prestação de Contas Gerado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.accountability.report.generated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              reportId: { type: string }
+              reportType: { type: string }
+              auditSignatureSha256: { type: string }
+
+    ImpactDashboardUpdated:
+      name: ImpactDashboardUpdated
+      title: Painel de Impacto Atualizado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.dashboard.updated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              dashboardId: { type: string }
+              overallSocialImpactIndexPercent: { type: number }
+
+    SocialImpactAuditCompleted:
+      name: SocialImpactAuditCompleted
+      title: Auditoria de Impacto Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.impact.social.impact.audit.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              auditId: { type: string }
+              action: { type: string }
+              subject: { type: string }
+              sha256Signature: { type: string }

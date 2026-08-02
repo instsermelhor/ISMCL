@@ -50,6 +50,7 @@ import { GovernanceComplianceModule } from './domain/governance-compliance/gover
 import { PlatformLifecycleModule } from './domain/platform-lifecycle/platform-lifecycle.module';
 import { EnterpriseReadinessModule } from './domain/enterprise-readiness/enterprise-readiness.module';
 import { AutonomousOperationsModule } from './domain/autonomous-operations/autonomous-operations.module';
+import { SocialImpactModule } from './domain/social-impact/social-impact.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -214,6 +215,7 @@ import { AutonomousOperationsModule } from './domain/autonomous-operations/auton
     PlatformLifecycleModule,
     EnterpriseReadinessModule,
     AutonomousOperationsModule,
+    SocialImpactModule,
   ],
 })
 export class AppModule {}
