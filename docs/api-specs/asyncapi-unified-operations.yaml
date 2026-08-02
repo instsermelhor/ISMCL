@@ -1,0 +1,309 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Unified Operations Center — Event Catalog (AUOC)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pelo Centro Unificado de Operações
+    (AUOC) da Plataforma Aura — Prompt 156, Fase VII.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.operations.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Plataforma Aura SRE
+    email: sre@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/operations/health/updated:
+    description: Publicado quando a saúde de um microsserviço é atualizada ou verificada
+    publish:
+      operationId: onServiceHealthUpdated
+      summary: Saúde do Serviço Atualizada
+      message:
+        $ref: '#/components/messages/ServiceHealthUpdated'
+
+  aura/operations/incident/detected:
+    description: Publicado quando um incidente corporativo é aberto
+    publish:
+      operationId: onIncidentDetected
+      summary: Incidente Detectado
+      message:
+        $ref: '#/components/messages/IncidentDetected'
+
+  aura/operations/incident/resolved:
+    description: Publicado quando um incidente corporativo é resolvido com pós-mortem
+    publish:
+      operationId: onIncidentResolved
+      summary: Incidente Resolvido
+      message:
+        $ref: '#/components/messages/IncidentResolved'
+
+  aura/operations/anomaly/detected:
+    description: Publicado pelo AIOps quando uma anomalia é detectada em um microsserviço
+    publish:
+      operationId: onAnomalyDetected
+      summary: Anomalia AIOps Detectada
+      message:
+        $ref: '#/components/messages/AnomalyDetected'
+
+  aura/operations/predictive_failure/generated:
+    description: Publicado quando o serviço preditivo gera uma previsão de falha
+    publish:
+      operationId: onPredictiveFailureGenerated
+      summary: Previsão de Falha Gerada
+      message:
+        $ref: '#/components/messages/PredictiveFailureGenerated'
+
+  aura/operations/remediation/executed:
+    description: Publicado quando uma ação de autorremediação é executada com sucesso
+    publish:
+      operationId: onAutoRemediationExecuted
+      summary: Autorremediação Executada
+      message:
+        $ref: '#/components/messages/AutoRemediationExecuted'
+
+  aura/operations/business_impact/calculated:
+    description: Publicado quando o impacto de negócio de um incidente é calculado
+    publish:
+      operationId: onBusinessImpactCalculated
+      summary: Impacto de Negócio Calculado
+      message:
+        $ref: '#/components/messages/BusinessImpactCalculated'
+
+  aura/operations/resilience_test/completed:
+    description: Publicado quando um teste de resiliência/Chaos Engineering é concluído
+    publish:
+      operationId: onResilienceTestCompleted
+      summary: Teste de Resiliência Concluído
+      message:
+        $ref: '#/components/messages/ResilienceTestCompleted'
+
+  aura/operations/slo/breached:
+    description: Publicado quando um SLO de microsserviço é violado
+    publish:
+      operationId: onSloBreached
+      summary: SLO Violado
+      message:
+        $ref: '#/components/messages/SloBreached'
+
+  aura/operations/audit/completed:
+    description: Publicado quando uma entrada de auditoria operacional SHA-256 é registrada
+    publish:
+      operationId: onOperationalAuditCompleted
+      summary: Auditoria Operacional Registrada
+      message:
+        $ref: '#/components/messages/OperationalAuditCompleted'
+
+components:
+  messages:
+
+    ServiceHealthUpdated:
+      name: aura.operations.health.updated.v1
+      title: Saúde do Serviço Atualizada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [serviceName, status]
+            properties:
+              serviceName:
+                type: string
+              status:
+                type: string
+                enum: [HEALTHY, DEGRADED, UNHEALTHY, MAINTENANCE, UNKNOWN]
+              latencyMs:
+                type: integer
+              uptimePercentage:
+                type: number
+
+    IncidentDetected:
+      name: aura.operations.incident.detected.v1
+      title: Incidente Detectado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [incidentId, title, severity, affectedService]
+            properties:
+              incidentId:
+                type: string
+              title:
+                type: string
+              severity:
+                type: string
+                enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+              affectedService:
+                type: string
+
+    IncidentResolved:
+      name: aura.operations.incident.resolved.v1
+      title: Incidente Resolvido
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              incidentId:
+                type: string
+              resolvedBy:
+                type: string
+              affectedService:
+                type: string
+
+    AnomalyDetected:
+      name: aura.operations.anomaly.detected.v1
+      title: Anomalia AIOps Detectada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              anomalyId:
+                type: string
+              targetService:
+                type: string
+              anomalyScore:
+                type: number
+              severity:
+                type: string
+
+    PredictiveFailureGenerated:
+      name: aura.operations.predictive_failure.generated.v1
+      title: Previsão de Falha Gerada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              predictionId:
+                type: string
+              targetComponent:
+                type: string
+              failureType:
+                type: string
+              probabilityScore:
+                type: number
+
+    AutoRemediationExecuted:
+      name: aura.operations.remediation.executed.v1
+      title: Autorremediação Executada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              remediationId:
+                type: string
+              action:
+                type: string
+              targetService:
+                type: string
+              operatorId:
+                type: string
+
+    BusinessImpactCalculated:
+      name: aura.operations.business_impact.calculated.v1
+      title: Impacto de Negócio Calculado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              impactId:
+                type: string
+              incidentId:
+                type: string
+              affectedBeneficiariesCount:
+                type: integer
+              socialImpactSeverity:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    ResilienceTestCompleted:
+      name: aura.operations.resilience_test.completed.v1
+      title: Teste de Resiliência Concluído
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              testId:
+                type: string
+              testType:
+                type: string
+              targetComponent:
+                type: string
+              resilienceScorePercentage:
+                type: number
+
+    SloBreached:
+      name: aura.operations.slo.breached.v1
+      title: SLO Violado
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              evaluationId:
+                type: string
+              serviceName:
+                type: string
+              breachType:
+                type: string
+              remainingErrorBudgetPercentage:
+                type: integer
+
+    OperationalAuditCompleted:
+      name: aura.operations.audit.completed.v1
+      title: Auditoria Operacional Registrada
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              logId:
+                type: string
+              componentName:
+                type: string
+              actionName:
+                type: string
+              sha256Signature:
+                type: string
