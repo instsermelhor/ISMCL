@@ -1,112 +1,106 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KnowledgeStatus } from '../dto/enterprise-knowledge.dto';
-import { EnterpriseKnowledgeService } from './enterprise-knowledge.service';
+import { EnterpriseKnowledgeService, KnowledgeDocument } from './enterprise-knowledge.service';
 import { KnowledgeAuditService } from './knowledge-audit.service';
 import { EventBusService } from '../../../events/event-bus.service';
 
-export interface WorkflowTransitionResult {
-  knowledgeId: string;
-  previousStatus: KnowledgeStatus;
-  newStatus: KnowledgeStatus;
+export interface LifecycleTransition {
+  documentId: string;
+  fromStatus: KnowledgeStatus;
+  toStatus: KnowledgeStatus;
   transitionedBy: string;
-  transitionedAt: string;
-  version: number;
+  timestamp: string;
+  notes: string;
 }
 
 /**
- * KnowledgeLifecycleService — Ciclo de Vida do Conhecimento (P158 AEKIP)
+ * KnowledgeLifecycleService — P170 EKG
  *
- * Gerencia as transições formais de estado:
- * DRAFT → UNDER_REVIEW → APPROVED → PUBLISHED → ARCHIVED / DEPRECATED.
- * Garante que alterações passem por aprovação formal e versionamento auditável.
+ * Gerencia o ciclo de vida documental:
+ * DRAFT → IN_REVIEW → APPROVED → PUBLISHED → ARCHIVED → DEPRECATED.
+ * Garante que nenhum conteúdo seja publicado sem fluxo formal de aprovação.
  */
 @Injectable()
 export class KnowledgeLifecycleService {
   private readonly logger = new Logger(KnowledgeLifecycleService.name);
-  private readonly SYSTEM_TENANT = 'SYSTEM';
+  private readonly transitions: LifecycleTransition[] = [];
 
   constructor(
-    private readonly knowledgeService: EnterpriseKnowledgeService,
-    private readonly audit: KnowledgeAuditService,
+    private readonly knowledgeSvc: EnterpriseKnowledgeService,
+    private readonly auditSvc: KnowledgeAuditService,
     private readonly eventBus: EventBusService,
   ) {}
 
-  async submitForReview(knowledgeId: string, requestedBy: string): Promise<WorkflowTransitionResult> {
-    const item = this.knowledgeService.getKnowledgeItem(knowledgeId);
-    if (!item) throw new Error(`Item não encontrado: ${knowledgeId}`);
-
-    const updated = await this.knowledgeService.updateKnowledgeItem(knowledgeId, {
-      status: KnowledgeStatus.UNDER_REVIEW,
-      changeReason: 'Enviado para revisão formal',
-    });
-
-    await this.audit.recordAudit('SUBMIT_REVIEW', knowledgeId, item.type, requestedBy, {
-      previousStatus: item.status,
-    });
-
-    return {
-      knowledgeId,
-      previousStatus: item.status,
-      newStatus: KnowledgeStatus.UNDER_REVIEW,
-      transitionedBy: requestedBy,
-      transitionedAt: new Date().toISOString(),
-      version: updated.version,
-    };
+  async submitForReview(documentId: string, submittedBy: string, notes = ''): Promise<KnowledgeDocument> {
+    return this.transitionStatus(documentId, KnowledgeStatus.IN_REVIEW, submittedBy, notes);
   }
 
-  async approveKnowledgeItem(knowledgeId: string, approvedBy: string): Promise<WorkflowTransitionResult> {
-    const item = this.knowledgeService.getKnowledgeItem(knowledgeId);
-    if (!item) throw new Error(`Item não encontrado: ${knowledgeId}`);
-
-    const updated = await this.knowledgeService.updateKnowledgeItem(knowledgeId, {
-      status: KnowledgeStatus.APPROVED,
-      changeReason: `Aprovado formalmente por ${approvedBy}`,
-    });
-
-    await this.audit.recordAudit('APPROVE', knowledgeId, item.type, approvedBy, {});
+  async approveDocument(documentId: string, approvedBy: string, notes = ''): Promise<KnowledgeDocument> {
+    const doc = await this.transitionStatus(documentId, KnowledgeStatus.APPROVED, approvedBy, notes);
+    doc.approvedBy = approvedBy;
+    doc.approvedAt = new Date().toISOString();
 
     await this.eventBus.publish(
-      'aura.knowledge.item.approved.v1',
-      { knowledgeId, approvedBy, version: updated.version },
-      this.SYSTEM_TENANT,
-      { subject: knowledgeId },
+      'aura.ekg.knowledge.approved.v1',
+      { documentId, approvedBy, approvedAt: doc.approvedAt },
+      'EKG',
+      { subject: documentId },
     );
 
-    return {
-      knowledgeId,
-      previousStatus: item.status,
-      newStatus: KnowledgeStatus.APPROVED,
-      transitionedBy: approvedBy,
-      transitionedAt: new Date().toISOString(),
-      version: updated.version,
-    };
+    return doc;
   }
 
-  async archiveKnowledgeItem(knowledgeId: string, archivedBy: string): Promise<WorkflowTransitionResult> {
-    const item = this.knowledgeService.getKnowledgeItem(knowledgeId);
-    if (!item) throw new Error(`Item não encontrado: ${knowledgeId}`);
+  async publishDocument(documentId: string, publishedBy: string, notes = ''): Promise<KnowledgeDocument> {
+    const doc = this.knowledgeSvc.getDocument(documentId);
+    if (!doc) throw new Error(`Documento "${documentId}" não encontrado.`);
+    if (doc.status !== KnowledgeStatus.APPROVED) {
+      throw new Error(`Publicação negada: Documento "${documentId}" deve estar no status APPROVED (atual: ${doc.status}).`);
+    }
 
-    const updated = await this.knowledgeService.updateKnowledgeItem(knowledgeId, {
-      status: KnowledgeStatus.ARCHIVED,
-      changeReason: `Arquivado por ${archivedBy}`,
+    const updated = await this.transitionStatus(documentId, KnowledgeStatus.PUBLISHED, publishedBy, notes);
+    updated.publishedAt = new Date().toISOString();
+    return updated;
+  }
+
+  async deprecateDocument(documentId: string, deprecatedBy: string, reason: string): Promise<KnowledgeDocument> {
+    return this.transitionStatus(documentId, KnowledgeStatus.DEPRECATED, deprecatedBy, reason);
+  }
+
+  getTransitionHistory(documentId: string): LifecycleTransition[] {
+    return this.transitions.filter((t) => t.documentId === documentId);
+  }
+
+  private async transitionStatus(
+    documentId: string,
+    targetStatus: KnowledgeStatus,
+    performedBy: string,
+    notes: string,
+  ): Promise<KnowledgeDocument> {
+    const doc = this.knowledgeSvc.getDocument(documentId);
+    if (!doc) throw new Error(`Documento "${documentId}" não encontrado.`);
+
+    const fromStatus = doc.status;
+    doc.status = targetStatus;
+    doc.updatedAt = new Date().toISOString();
+
+    const transition: LifecycleTransition = {
+      documentId,
+      fromStatus,
+      toStatus: targetStatus,
+      transitionedBy: performedBy,
+      timestamp: doc.updatedAt,
+      notes,
+    };
+
+    this.transitions.push(transition);
+
+    await this.auditSvc.recordAudit('LIFECYCLE_TRANSITION', documentId, performedBy, {
+      fromStatus,
+      toStatus: targetStatus,
+      notes,
     });
 
-    await this.audit.recordAudit('ARCHIVE', knowledgeId, item.type, archivedBy, {});
-
-    await this.eventBus.publish(
-      'aura.knowledge.item.archived.v1',
-      { knowledgeId, archivedBy, version: updated.version },
-      this.SYSTEM_TENANT,
-      { subject: knowledgeId },
-    );
-
-    return {
-      knowledgeId,
-      previousStatus: item.status,
-      newStatus: KnowledgeStatus.ARCHIVED,
-      transitionedBy: archivedBy,
-      transitionedAt: new Date().toISOString(),
-      version: updated.version,
-    };
+    this.logger.log(`[KnowledgeLifecycle] Documento "${documentId}": ${fromStatus} → ${targetStatus}`);
+    return doc;
   }
 }

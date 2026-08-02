@@ -3,118 +3,162 @@ import { IsString, IsEnum, IsOptional, IsArray, IsNumber, IsObject, IsBoolean } 
 
 // ── ENUMS ─────────────────────────────────────────────────────────────────────
 
-export enum IntegrationProtocol {
-  REST = 'REST',
-  GRAPHQL = 'GRAPHQL',
-  GRPC = 'GRPC',
-  WEBHOOK = 'WEBHOOK',
-  EVENT_DRIVEN_KAFKA = 'EVENT_DRIVEN_KAFKA',
-  SAML2 = 'SAML2',
-  OAUTH2_1 = 'OAUTH2_1',
+export enum APILifecycleStage {
+  DRAFT = 'DRAFT',
+  REVIEW = 'REVIEW',
+  PUBLISHED = 'PUBLISHED',
+  DEPRECATED = 'DEPRECATED',
+  ARCHIVED = 'ARCHIVED',
 }
 
-export enum PartnerType {
-  GOVERNMENTAL = 'GOVERNMENTAL',
-  HEALTHCARE_PROVIDER = 'HEALTHCARE_PROVIDER',
-  SOCIAL_ASSISTANCE = 'SOCIAL_ASSISTANCE',
-  EDUCATIONAL = 'EDUCATIONAL',
-  FINANCIAL_INSTITUTION = 'FINANCIAL_INSTITUTION',
-  IDENTITY_PROVIDER = 'IDENTITY_PROVIDER',
-  AUDIT_FIRM = 'AUDIT_FIRM',
-  NGO_PARTNER = 'NGO_PARTNER',
+export enum ConnectorType {
+  GOVERNMENT = 'GOVERNMENT',
+  ERP = 'ERP',
+  CRM = 'CRM',
+  HEALTH_PLATFORM = 'HEALTH_PLATFORM',
+  EDUCATION_PLATFORM = 'EDUCATION_PLATFORM',
+  FINANCIAL = 'FINANCIAL',
+  AUTH_PROVIDER = 'AUTH_PROVIDER',
+  COMMUNICATION = 'COMMUNICATION',
+  AI_PROVIDER = 'AI_PROVIDER',
+  CUSTOM = 'CUSTOM',
 }
 
-export enum IntegrationStatus {
-  PROPOSED = 'PROPOSED',
-  UNDER_REVIEW = 'UNDER_REVIEW',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
+export enum WebhookStatus {
   ACTIVE = 'ACTIVE',
   PAUSED = 'PAUSED',
-  DEPRECATED = 'DEPRECATED',
+  FAILED = 'FAILED',
+  RETIRED = 'RETIRED',
 }
 
-export enum SecurityLevel {
-  STANDARD_TLS = 'STANDARD_TLS',
-  MTLS_STRICT = 'MTLS_STRICT',
-  ZERO_TRUST_SIGNED = 'ZERO_TRUST_SIGNED',
-  END_TO_END_ENCRYPTED = 'END_TO_END_ENCRYPTED',
+export enum PartnerStatus {
+  PENDING = 'PENDING',
+  SANDBOX = 'SANDBOX',
+  HOMOLOGATED = 'HOMOLOGATED',
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+}
+
+export enum EventMeshRoutingPolicy {
+  BROADCAST = 'BROADCAST',
+  TOPIC_FILTER = 'TOPIC_FILTER',
+  CONTENT_FILTER = 'CONTENT_FILTER',
+  PRIORITY = 'PRIORITY',
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────────
 
-export class RegisterPartnerDto {
-  @ApiProperty({ example: 'Ministério do Desenvolvimento Social' })
+export class RegisterAPIDto {
+  @ApiProperty({ example: 'API-SOCIAL-BENEFITS-V2' })
   @IsString()
-  partnerName: string;
+  apiId: string;
 
-  @ApiProperty({ enum: PartnerType, example: PartnerType.GOVERNMENTAL })
-  @IsEnum(PartnerType)
-  partnerType: PartnerType;
-
-  @ApiProperty({ example: 'suporte@mds.gov.br' })
+  @ApiProperty({ example: 'API de Gestão de Benefícios Sociais' })
   @IsString()
-  contactEmail: string;
+  name: string;
 
-  @ApiPropertyOptional({ example: { targetSlaPercent: 99.9, maxRequestsPerMinute: 1000 } })
+  @ApiProperty({ example: '2.0.0' })
+  @IsString()
+  version: string;
+
+  @ApiProperty({ example: '/api/v2/benefits' })
+  @IsString()
+  basePath: string;
+
+  @ApiProperty({ example: 'Equipe ISM — Plataforma Digital' })
+  @IsString()
+  owner: string;
+
+  @ApiPropertyOptional({ example: 'Gerencia benefícios sociais para beneficiários do Instituto Ser Melhor.' })
   @IsOptional()
-  @IsObject()
-  slaPolicy?: Record<string, any>;
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ example: 100, description: 'Rate limit em req/min' })
+  @IsOptional()
+  @IsNumber()
+  rateLimitRpm?: number;
 }
 
-export class CreateIntegrationDto {
-  @ApiProperty({ example: 'Integração Cadastro Único SUAS' })
+export class RegisterConnectorDto {
+  @ApiProperty({ example: 'CONN-GOVBR-CPFVALIDATION' })
   @IsString()
-  integrationName: string;
+  connectorId: string;
 
-  @ApiProperty({ example: 'PARTNER-GOV-01' })
+  @ApiProperty({ example: 'Validação de CPF via Gov.br' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ enum: ConnectorType, example: ConnectorType.GOVERNMENT })
+  @IsEnum(ConnectorType)
+  type: ConnectorType;
+
+  @ApiProperty({ example: 'https://api.gov.br/cpf/validate' })
+  @IsString()
+  endpointUrl: string;
+
+  @ApiProperty({ example: 'OAuth2' })
+  @IsString()
+  authMethod: string;
+}
+
+export class RegisterWebhookDto {
+  @ApiProperty({ example: 'WH-BENEFIT-APPROVED' })
+  @IsString()
+  webhookId: string;
+
+  @ApiProperty({ example: 'https://partner.org.br/hooks/benefit-notification' })
+  @IsString()
+  targetUrl: string;
+
+  @ApiProperty({ example: ['BENEFIT_APPROVED', 'BENEFIT_REJECTED'] })
+  @IsArray()
+  @IsString({ each: true })
+  events: string[];
+
+  @ApiProperty({ example: 'ISM-PARTNER-NGO-SAUDE' })
+  @IsString()
+  subscriberId: string;
+}
+
+export class RegisterPartnerDto {
+  @ApiProperty({ example: 'PARTNER-NGO-SAUDE-SP' })
   @IsString()
   partnerId: string;
 
-  @ApiProperty({ enum: IntegrationProtocol, example: IntegrationProtocol.REST })
-  @IsEnum(IntegrationProtocol)
-  protocol: IntegrationProtocol;
-
-  @ApiProperty({ enum: SecurityLevel, example: SecurityLevel.MTLS_STRICT })
-  @IsEnum(SecurityLevel)
-  securityLevel: SecurityLevel;
-
-  @ApiPropertyOptional({ example: 'https://api.cadunico.gov.br/v1/beneficiarios' })
-  @IsOptional()
+  @ApiProperty({ example: 'ONG Saúde para Todos — SP' })
   @IsString()
-  targetEndpointUrl?: string;
+  partnerName: string;
 
-  @ApiPropertyOptional({ example: ['read:beneficiary_status', 'write:attendance_log'] })
+  @ApiProperty({ example: 'ONG' })
+  @IsString()
+  partnerType: string;
+
+  @ApiProperty({ example: 'integracao@saudesp.org.br' })
+  @IsString()
+  technicalContact: string;
+
+  @ApiPropertyOptional({ example: ['READ_BENEFITS', 'READ_VOLUNTEERS'] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  allowedScopes?: string[];
+  requestedScopes?: string[];
 }
 
-export class ReviewIntegrationDto {
-  @ApiProperty({ example: 'INT-89123' })
-  @IsString()
-  integrationId: string;
-
-  @ApiProperty({ enum: IntegrationStatus, example: IntegrationStatus.APPROVED })
-  @IsEnum(IntegrationStatus)
-  decision: IntegrationStatus.APPROVED | IntegrationStatus.REJECTED;
-
-  @ApiProperty({ example: 'Homologado após auditoria CISO e mTLS verificado' })
-  @IsString()
-  reviewNotes: string;
-
-  @ApiProperty({ example: 'CInO' })
-  @IsString()
-  reviewedBy: string;
-}
-
-export class PublishEventToExchangeDto {
-  @ApiProperty({ example: 'aura.external.partner.data.synced.v1' })
+export class PublishEventMeshEventDto {
+  @ApiProperty({ example: 'aura.benefits.approved.v1' })
   @IsString()
   topic: string;
 
-  @ApiProperty({ example: { partnerId: 'PARTNER-GOV-01', recordsSynced: 150 } })
+  @ApiProperty({ example: { beneficiaryId: 'B-001', benefitId: 'BEN-0042' } })
   @IsObject()
   payload: Record<string, any>;
+
+  @ApiProperty({ example: 'EnterpriseIntegrationService' })
+  @IsString()
+  source: string;
+
+  @ApiProperty({ enum: EventMeshRoutingPolicy, example: EventMeshRoutingPolicy.TOPIC_FILTER })
+  @IsEnum(EventMeshRoutingPolicy)
+  routingPolicy: EventMeshRoutingPolicy;
 }

@@ -1,0 +1,188 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Federated Multi-Institution Platform (FMIP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P167 FMIP.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Platform Team
+    email: ti@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.tenant.audit.completed.v1:
+    description: Evento emitido após cada registro de auditoria FMIP.
+    subscribe:
+      operationId: onTenantAuditCompleted
+      summary: Auditoria FMIP registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId:
+              type: string
+              example: FMIP-AUD-1700000000000-ABC123
+            action:
+              type: string
+              example: TENANT_REGISTERED
+            tenantId:
+              type: string
+            sha256Signature:
+              type: string
+              description: Hash SHA-256 imutável do evento
+
+  aura.tenant.provisioning.started.v1:
+    description: Novo tenant iniciou provisionamento.
+    subscribe:
+      operationId: onTenantProvisioningStarted
+      summary: Tenant em provisionamento
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            organizationName:
+              type: string
+            tier:
+              type: string
+              enum: [COMMUNITY_OSC, ENTERPRISE_FOUNDATION, GOVERNMENTAL_PUBLIC, MAINTAINER_INSTITUTION]
+
+  aura.tenant.activated.v1:
+    description: Tenant foi ativado na plataforma.
+    subscribe:
+      operationId: onTenantActivated
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+
+  aura.tenant.suspended.v1:
+    description: Tenant foi suspenso.
+    subscribe:
+      operationId: onTenantSuspended
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            reason:
+              type: string
+
+  aura.tenant.decommissioned.v1:
+    description: Tenant foi descomissionado permanentemente.
+    subscribe:
+      operationId: onTenantDecommissioned
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            reason:
+              type: string
+
+  aura.tenant.whitelabel.configured.v1:
+    description: Configuração white-label aplicada a tenant.
+    subscribe:
+      operationId: onWhiteLabelConfigured
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            customDomain:
+              type: string
+
+  aura.federation.established.pending.v1:
+    description: Novo vínculo de federação criado, aguardando aprovação.
+    subscribe:
+      operationId: onFederationEstablishedPending
+      message:
+        payload:
+          type: object
+          properties:
+            federationId:
+              type: string
+            sourceTenantId:
+              type: string
+            targetTenantId:
+              type: string
+
+  aura.federation.approved.v1:
+    description: Federação entre tenants aprovada e ativa.
+    subscribe:
+      operationId: onFederationApproved
+      message:
+        payload:
+          type: object
+          properties:
+            federationId:
+              type: string
+
+  aura.federation.revoked.v1:
+    description: Federação revogada pelo mantenedor.
+    subscribe:
+      operationId: onFederationRevoked
+      message:
+        payload:
+          type: object
+          properties:
+            federationId:
+              type: string
+            reason:
+              type: string
+
+  aura.tenant.isolation.audited.v1:
+    description: Auditoria de isolamento executada em tenant.
+    subscribe:
+      operationId: onTenantIsolationAudited
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            isolationScore:
+              type: number
+              minimum: 0
+              maximum: 100
+            lgpdCompliant:
+              type: boolean
+
+  aura.tenant.license.granted.v1:
+    description: Licença concedida a tenant federado.
+    subscribe:
+      operationId: onTenantLicenseGranted
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            licenseId:
+              type: string
+            licenseType:
+              type: string
+
+  aura.tenant.license.revoked.v1:
+    description: Licença de tenant revogada pelo mantenedor.
+    subscribe:
+      operationId: onTenantLicenseRevoked
+      message:
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            reason:
+              type: string

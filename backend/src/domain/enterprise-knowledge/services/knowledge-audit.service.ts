@@ -3,61 +3,61 @@ import { EventBusService } from '../../../events/event-bus.service';
 
 export interface KnowledgeAuditEntry {
   auditId: string;
-  timestamp: string;
-  operation: string;
-  entityId: string;
-  entityType: string;
+  action: string;
+  subject: string;
   performedBy: string;
-  details: Record<string, any>;
+  timestamp: string;
   sha256Signature: string;
+  metadata: Record<string, any>;
 }
 
 /**
- * KnowledgeAuditService — Auditoria Imutável do Conhecimento (P158 AEKIP)
+ * KnowledgeAuditService — P170 EKG
  *
- * Registra e assina criptograficamente (SHA-256) todas as operações sobre o
- * patrimônio de conhecimento: criação, leitura, atualização, aprovação,
- * publicação, arquivamento e descarte.
+ * Registra imutavelmente (SHA-256) todo evento de conhecimento,
+ * alteração documental, aprovação, arquivamento e consulta semântica.
  */
 @Injectable()
 export class KnowledgeAuditService {
   private readonly logger = new Logger(KnowledgeAuditService.name);
-  private auditTrail: KnowledgeAuditEntry[] = [];
-  private readonly SYSTEM_TENANT = 'SYSTEM';
+  private readonly auditStore: KnowledgeAuditEntry[] = [];
 
   constructor(private readonly eventBus: EventBusService) {}
 
   async recordAudit(
-    operation: string,
-    entityId: string,
-    entityType: string,
+    action: string,
+    subject: string,
     performedBy: string,
-    details: Record<string, any> = {},
+    metadata: Record<string, any> = {},
   ): Promise<KnowledgeAuditEntry> {
+    const auditId = `EKG-AUD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const timestamp = new Date().toISOString();
-    const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const auditId = `KAD-${Date.now()}-${seq}`;
-
-    const payload = JSON.stringify({ auditId, timestamp, operation, entityId, entityType, performedBy, details });
+    const payload = JSON.stringify({ auditId, action, subject, performedBy, timestamp, metadata });
     const sha256Signature = require('crypto').createHash('sha256').update(payload).digest('hex');
 
     const entry: KnowledgeAuditEntry = {
-      auditId, timestamp, operation, entityId, entityType, performedBy, details, sha256Signature,
+      auditId, action, subject, performedBy, timestamp, sha256Signature, metadata,
     };
-
-    this.auditTrail.push(entry);
+    this.auditStore.push(entry);
 
     await this.eventBus.publish(
-      'aura.knowledge.audit.completed.v1',
-      { auditId, operation, entityId, entityType, sha256Signature },
-      this.SYSTEM_TENANT,
+      'aura.ekg.audit.completed.v1',
+      { auditId, action, subject, sha256Signature },
+      'EKG',
       { subject: auditId },
     );
 
+    this.logger.log(`[KnowledgeAudit] ${action} → "${subject}" — ${auditId}`);
     return entry;
   }
 
-  getAuditTrail(entityId?: string): KnowledgeAuditEntry[] {
-    return entityId ? this.auditTrail.filter((e) => e.entityId === entityId) : [...this.auditTrail];
+  getAuditTrail(subject?: string): KnowledgeAuditEntry[] {
+    return subject
+      ? this.auditStore.filter((e) => e.subject === subject)
+      : [...this.auditStore];
+  }
+
+  getAuditCount(): number {
+    return this.auditStore.length;
   }
 }

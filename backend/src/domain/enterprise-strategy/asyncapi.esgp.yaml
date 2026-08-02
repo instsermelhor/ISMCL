@@ -1,0 +1,174 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Strategy, Governance & Performance (ESGP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P168 ESGP — Fase XVIII.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Strategy & Governance Team
+    email: estrategia@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.strategy.audit.completed.v1:
+    description: Evento de auditoria estratégica registrado (SHA-256).
+    subscribe:
+      operationId: onStrategyAuditCompleted
+      summary: Auditoria ESGP registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: ESGP-AUD-1700000000-ABC }
+            action: { type: string, example: STRATEGIC_PLAN_CREATED }
+            subject: { type: string }
+            sha256Signature: { type: string, description: Hash SHA-256 imutável }
+
+  aura.strategy.objective.created.v1:
+    description: Novo objetivo estratégico ou OKR criado.
+    subscribe:
+      operationId: onStrategicObjectiveCreated
+      summary: Objetivo estratégico criado
+      message:
+        payload:
+          type: object
+          properties:
+            planId: { type: string }
+            okrId: { type: string }
+            name: { type: string }
+            objective: { type: string }
+            level:
+              type: string
+              enum: [INSTITUTIONAL, BOARD, COORDINATION, TEAM]
+            cycle: { type: string }
+            status: { type: string }
+
+  aura.strategy.plan.activated.v1:
+    description: Plano estratégico ativado oficialmente.
+    subscribe:
+      operationId: onStrategicPlanActivated
+      message:
+        payload:
+          type: object
+          properties:
+            planId: { type: string }
+
+  aura.strategy.okr.updated.v1:
+    description: Progresso de OKR atualizado (Key Result registrado).
+    subscribe:
+      operationId: onOKRUpdated
+      summary: OKR atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            okrId: { type: string }
+            overallProgress: { type: number, minimum: 0, maximum: 1 }
+            status:
+              type: string
+              enum: [DRAFT, ACTIVE, AT_RISK, COMPLETED, CANCELLED]
+
+  aura.strategy.kpi.calculated.v1:
+    description: Novo valor de KPI registrado e calculado.
+    subscribe:
+      operationId: onKPICalculated
+      summary: KPI calculado
+      message:
+        payload:
+          type: object
+          properties:
+            kpiId: { type: string }
+            value: { type: number }
+            period: { type: string }
+            trend:
+              type: string
+              enum: [UP, DOWN, STABLE, UNKNOWN]
+
+  aura.strategy.bsc.updated.v1:
+    description: Balanced Scorecard atualizado (novo objetivo ou score).
+    subscribe:
+      operationId: onBSCUpdated
+      summary: BSC atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            bscObjId: { type: string }
+            perspective:
+              type: string
+              enum: [INSTITUTIONAL_SOCIAL, BENEFICIARIES, INTERNAL_PROCESSES, LEARNING_INNOVATION, FINANCIAL_SUSTAINABILITY, GOVERNANCE]
+            strategicPlanId: { type: string }
+            score: { type: number }
+
+  aura.strategy.portfolio.prioritized.v1:
+    description: Portfólio estratégico priorizado ou novo item adicionado.
+    subscribe:
+      operationId: onPortfolioPrioritized
+      summary: Portfólio priorizado
+      message:
+        payload:
+          type: object
+          properties:
+            itemId: { type: string }
+            name: { type: string }
+            type:
+              type: string
+              enum: [PROGRAM, PROJECT, INITIATIVE]
+            priorityScore: { type: number }
+            reprioritizedAt: { type: string }
+            count: { type: number }
+
+  aura.strategy.budget.aligned.v1:
+    description: Orçamento alinhado a item do portfólio estratégico.
+    subscribe:
+      operationId: onBudgetAligned
+      summary: Orçamento alinhado
+      message:
+        payload:
+          type: object
+          properties:
+            allocationId: { type: string }
+            portfolioItemId: { type: string }
+            allocatedAmount: { type: number }
+
+  aura.strategy.risk.identified.v1:
+    description: Risco estratégico identificado e pontuado pela matriz 4×4.
+    subscribe:
+      operationId: onStrategicRiskIdentified
+      summary: Risco estratégico identificado
+      message:
+        payload:
+          type: object
+          properties:
+            riskId: { type: string }
+            description: { type: string }
+            riskLevel:
+              type: string
+              enum: [LOW, MEDIUM, HIGH, CRITICAL]
+            riskScore:
+              type: number
+              minimum: 1
+              maximum: 16
+
+  aura.strategy.performance.evaluated.v1:
+    description: Avaliação de desempenho estratégico concluída com OPI calculado.
+    subscribe:
+      operationId: onPerformanceEvaluated
+      summary: Desempenho estratégico avaliado
+      message:
+        payload:
+          type: object
+          properties:
+            snapshotId: { type: string }
+            overallPerformanceIndex:
+              type: number
+              minimum: 0
+              maximum: 100
+            recommendations:
+              type: number
+              description: Quantidade de recomendações de IA geradas

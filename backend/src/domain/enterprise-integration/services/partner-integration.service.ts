@@ -1,84 +1,68 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PartnerType, RegisterPartnerDto } from '../dto/enterprise-integration.dto';
+import { RegisterPartnerDto, PartnerStatus } from '../dto/enterprise-integration.dto';
 import { IntegrationAuditService } from './integration-audit.service';
 import { EventBusService } from '../../../events/event-bus.service';
 
 export interface PartnerRecord {
   partnerId: string;
   partnerName: string;
-  partnerType: PartnerType;
-  contactEmail: string;
-  isCredentialed: boolean;
-  slaTargetPercent: number;
-  maxRequestsPerMinute: number;
+  partnerType: string;
+  technicalContact: string;
+  requestedScopes: string[];
+  grantedScopes: string[];
+  status: PartnerStatus;
+  apiKey?: string;
+  sandboxUrl?: string;
   registeredAt: string;
 }
 
-/**
- * PartnerIntegrationService — Gestão de Parceiros Institucionais (P166 EIIP)
- *
- * Gerencia o cadastro, credenciamento, contratos, escopos, SLAs e isolamento
- * lógico de parceiros governamentais, saúde, bancários e ONGs.
- */
 @Injectable()
 export class PartnerIntegrationService {
   private readonly logger = new Logger(PartnerIntegrationService.name);
-  private partnerStore: Map<string, PartnerRecord> = new Map();
-  private readonly SYSTEM_TENANT = 'SYSTEM';
+  private readonly partners: Map<string, PartnerRecord> = new Map();
 
   constructor(
-    private readonly auditService: IntegrationAuditService,
+    private readonly auditSvc: IntegrationAuditService,
     private readonly eventBus: EventBusService,
-  ) {
-    this.seedPartners();
-  }
+  ) {}
 
-  private seedPartners(): void {
-    const seed: PartnerRecord = {
-      partnerId: 'PARTNER-MDS-01',
-      partnerName: 'Ministério do Desenvolvimento Social (MDS)',
-      partnerType: PartnerType.GOVERNMENTAL,
-      contactEmail: 'suporte@mds.gov.br',
-      isCredentialed: true,
-      slaTargetPercent: 99.9,
-      maxRequestsPerMinute: 1000,
-      registeredAt: new Date().toISOString(),
-    };
-    this.partnerStore.set(seed.partnerId, seed);
-  }
-
-  async registerPartner(dto: RegisterPartnerDto): Promise<PartnerRecord> {
-    const partnerId = `PARTNER-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-    const record: PartnerRecord = {
-      partnerId,
-      partnerName: dto.partnerName,
-      partnerType: dto.partnerType,
-      contactEmail: dto.contactEmail,
-      isCredentialed: true,
-      slaTargetPercent: dto.slaPolicy?.targetSlaPercent ?? 99.5,
-      maxRequestsPerMinute: dto.slaPolicy?.maxRequestsPerMinute ?? 500,
-      registeredAt: new Date().toISOString(),
-    };
-
-    this.partnerStore.set(partnerId, record);
-
-    await this.auditService.recordAudit('REGISTER_PARTNER', dto.partnerName, 'CInO', {
-      partnerId, partnerType: dto.partnerType,
-    });
-
-    await this.eventBus.publish(
-      'aura.integration.external.partner.registered.v1',
-      { partnerId, partnerName: dto.partnerName, partnerType: dto.partnerType },
-      this.SYSTEM_TENANT,
-      { subject: partnerId },
-    );
-
-    this.logger.log(`[PartnerIntegration] Registered partner ${partnerId} ("${dto.partnerName}")`);
+  async registerPartner(dto: RegisterPartnerDto, registeredBy: string): Promise<PartnerRecord> {
+    const record: PartnerRecord = { partnerId: dto.partnerId, partnerName: dto.partnerName, partnerType: dto.partnerType, technicalContact: dto.technicalContact, requestedScopes: dto.requestedScopes ?? [], grantedScopes: [], status: PartnerStatus.PENDING, registeredAt: new Date().toISOString() };
+    this.partners.set(dto.partnerId, record);
+    await this.auditSvc.recordAudit('PARTNER_REGISTERED', dto.partnerId, registeredBy, { partnerType: dto.partnerType });
+    this.logger.log(`[PartnerIntegration] Parceiro registrado: "${dto.partnerName}" (${dto.partnerId})`);
     return record;
   }
 
-  listPartners(): PartnerRecord[] {
-    return Array.from(this.partnerStore.values());
+  async promoteToSandbox(partnerId: string, approvedBy: string): Promise<PartnerRecord> {
+    const p = this.getOrThrow(partnerId);
+    p.status = PartnerStatus.SANDBOX;
+    p.sandboxUrl = `https://sandbox.aura.sermelhor.org.br/partners/${partnerId}`;
+    p.apiKey = require('crypto').randomBytes(24).toString('hex');
+    await this.auditSvc.recordAudit('PARTNER_SANDBOX_GRANTED', partnerId, approvedBy, { sandboxUrl: p.sandboxUrl });
+    return p;
+  }
+
+  async activatePartner(partnerId: string, grantedScopes: string[], approvedBy: string): Promise<PartnerRecord> {
+    const p = this.getOrThrow(partnerId);
+    if (p.status !== PartnerStatus.SANDBOX) throw new Error(`Parceiro "${partnerId}" deve estar em SANDBOX para ativacao.`);
+    p.status = PartnerStatus.ACTIVE;
+    p.grantedScopes = grantedScopes;
+    await this.auditSvc.recordAudit('PARTNER_ACTIVATED', partnerId, approvedBy, { grantedScopes });
+    await this.eventBus.publish('aura.eiemp.partner.integrated.v1', { partnerId, partnerName: p.partnerName, grantedScopes }, 'EIEMP', { subject: partnerId });
+    this.logger.log(`[PartnerIntegration] Parceiro ativado: "${p.partnerName}" com escopos [${grantedScopes.join(', ')}]`);
+    return p;
+  }
+
+  getPartner(partnerId: string): PartnerRecord | undefined { return this.partners.get(partnerId); }
+  listPartners(status?: PartnerStatus): PartnerRecord[] {
+    const all = Array.from(this.partners.values());
+    return status ? all.filter((p) => p.status === status) : all;
+  }
+
+  private getOrThrow(partnerId: string): PartnerRecord {
+    const p = this.partners.get(partnerId);
+    if (!p) throw new Error(`Parceiro "${partnerId}" nao encontrado.`);
+    return p;
   }
 }

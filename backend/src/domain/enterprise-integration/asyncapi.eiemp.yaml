@@ -1,0 +1,152 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Integration, API Economy & Event Mesh Platform (EIEMP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P176 EIEMP — Fase XXVI.
+    Todos os eventos são compatíveis com CloudEvents 1.0 e publicados no Event Bus da Plataforma Aura,
+    auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Integration & API Economy Team
+    email: integracao@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.eiemp.audit.completed.v1:
+    description: Evento de auditoria de integração registrado (SHA-256).
+    subscribe:
+      operationId: onIntegrationAuditCompleted
+      summary: Auditoria EIEMP registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string }
+            action: { type: string }
+            subject: { type: string }
+            sha256Signature: { type: string }
+
+  aura.eiemp.api.registered.v1:
+    description: Nova API registrada no catálogo corporativo.
+    subscribe:
+      operationId: onAPIRegistered
+      summary: API registrada
+      message:
+        payload:
+          type: object
+          properties:
+            apiId: { type: string }
+            name: { type: string }
+            version: { type: string }
+
+  aura.eiemp.api.published.v1:
+    description: API publicada no catálogo corporativo.
+    subscribe:
+      operationId: onAPIPublished
+      summary: API publicada
+      message:
+        payload:
+          type: object
+          properties:
+            apiId: { type: string }
+            version: { type: string }
+
+  aura.eiemp.api.version.deprecated.v1:
+    description: Versão de API depreciada.
+    subscribe:
+      operationId: onAPIVersionDeprecated
+      summary: Versão de API depreciada
+      message:
+        payload:
+          type: object
+          properties:
+            apiId: { type: string }
+            version: { type: string }
+            reason: { type: string }
+
+  aura.eiemp.event.published.v1:
+    description: Evento publicado no Event Mesh e entregue a assinantes.
+    subscribe:
+      operationId: onEventPublished
+      summary: Evento publicado no Event Mesh
+      message:
+        payload:
+          type: object
+          properties:
+            messageId: { type: string }
+            topic: { type: string }
+            source: { type: string }
+            deliveredTo: { type: number }
+
+  aura.eiemp.service.discovered.v1:
+    description: Novo serviço registrado no Service Mesh.
+    subscribe:
+      operationId: onServiceDiscovered
+      summary: Serviço descoberto no Service Mesh
+      message:
+        payload:
+          type: object
+          properties:
+            serviceId: { type: string }
+            serviceName: { type: string }
+            version: { type: string }
+            endpoint: { type: string }
+
+  aura.eiemp.connector.installed.v1:
+    description: Conector externo instalado na plataforma.
+    subscribe:
+      operationId: onConnectorInstalled
+      summary: Conector externo instalado
+      message:
+        payload:
+          type: object
+          properties:
+            connectorId: { type: string }
+            name: { type: string }
+            type:
+              type: string
+              enum: [GOVERNMENT, ERP, CRM, HEALTH_PLATFORM, EDUCATION_PLATFORM, FINANCIAL, AUTH_PROVIDER, COMMUNICATION, AI_PROVIDER, CUSTOM]
+
+  aura.eiemp.webhook.triggered.v1:
+    description: Webhook disparado para evento específico.
+    subscribe:
+      operationId: onWebhookTriggered
+      summary: Webhook disparado
+      message:
+        payload:
+          type: object
+          properties:
+            webhookId: { type: string }
+            event: { type: string }
+            deliveryId: { type: string }
+            success: { type: boolean }
+
+  aura.eiemp.partner.integrated.v1:
+    description: Parceiro ativado e integrado ao ecossistema Aura.
+    subscribe:
+      operationId: onPartnerIntegrated
+      summary: Parceiro integrado ao ecossistema
+      message:
+        payload:
+          type: object
+          properties:
+            partnerId: { type: string }
+            partnerName: { type: string }
+            grantedScopes:
+              type: array
+              items: { type: string }
+
+  aura.eiemp.integration.policy.updated.v1:
+    description: Relatório de saúde da plataforma de integração gerado.
+    subscribe:
+      operationId: onIntegrationPolicyUpdated
+      summary: Política de integração atualizada / relatório gerado
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            publishedAPIs: { type: number }

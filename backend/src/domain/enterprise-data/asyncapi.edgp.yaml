@@ -1,0 +1,157 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Data Governance, Data Fabric & Master Data (EDGP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P172 EDGP — Fase XXII.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Data Governance Team
+    email: dados@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.edgp.audit.completed.v1:
+    description: Evento de auditoria de dados registrado (SHA-256).
+    subscribe:
+      operationId: onDataGovernanceAuditCompleted
+      summary: Auditoria EDGP registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: EDGP-AUD-1700000000-ABC }
+            action: { type: string, example: MASTER_DATA_CREATED }
+            subject: { type: string }
+            sha256Signature: { type: string, description: Hash SHA-256 imutável }
+
+  aura.edgp.master.data.created.v1:
+    description: Novo registro mestre (Golden Record) criado no MDM.
+    subscribe:
+      operationId: onMasterDataCreated
+      summary: Master Data criado
+      message:
+        payload:
+          type: object
+          properties:
+            goldenId: { type: string, example: GOLDEN-BENEFICIARY-1700000000 }
+            category:
+              type: string
+              enum: [BENEFICIARY, PROFESSIONAL, VOLUNTEER, EMPLOYEE, PARTNER, PROGRAM, PROJECT, ORGANIZATION, ASSET]
+            primaryNaturalKey: { type: string }
+
+  aura.edgp.master.data.updated.v1:
+    description: Registro mestre atualizado no MDM.
+    subscribe:
+      operationId: onMasterDataUpdated
+      summary: Master Data atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            goldenId: { type: string }
+            version: { type: number }
+
+  aura.edgp.data.quality.calculated.v1:
+    description: Indicadores de qualidade de dados calculados para um domínio.
+    subscribe:
+      operationId: onDataQualityCalculated
+      summary: Qualidade de dados calculada
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            domain:
+              type: string
+              enum: [BENEFICIARIES, HEALTH_CARE, SOCIAL_ASSISTANCE, VOLUNTEERS, HUMAN_RESOURCES, FINANCIAL, GOVERNANCE, TECHNOLOGY]
+            overallScore: { type: number, minimum: 0, maximum: 100 }
+            qualityRating:
+              type: string
+              enum: [EXCELLENT, GOOD, FAIR, POOR]
+
+  aura.edgp.data.contract.published.v1:
+    description: Novo Contrato de Dados (Data Contract) publicado.
+    subscribe:
+      operationId: onDataContractPublished
+      summary: Contrato de dados publicado
+      message:
+        payload:
+          type: object
+          properties:
+            contractId: { type: string }
+            contractName: { type: string }
+            version: { type: string }
+            producerService: { type: string }
+
+  aura.edgp.metadata.catalog.updated.v1:
+    description: Novo metadado cadastrado ou atualizado no catálogo.
+    subscribe:
+      operationId: onMetadataCatalogUpdated
+      summary: Catálogo de metadados atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            entityId: { type: string }
+            name: { type: string }
+            type: { type: string }
+            domain: { type: string }
+
+  aura.edgp.data.lineage.generated.v1:
+    description: Grafo de linhagem de dados (Data Lineage) gerado.
+    subscribe:
+      operationId: onDataLineageGenerated
+      summary: Linhagem de dados gerada
+      message:
+        payload:
+          type: object
+          properties:
+            lineageId: { type: string }
+            datasetName: { type: string }
+            originSystem: { type: string }
+            hopsCount: { type: number }
+
+  aura.edgp.data.governance.policy.applied.v1:
+    description: Política de governança de dados aplicada a um domínio.
+    subscribe:
+      operationId: onDataGovernancePolicyApplied
+      summary: Política de governança aplicada
+      message:
+        payload:
+          type: object
+          properties:
+            domain: { type: string }
+            owner: { type: string }
+            sensitivity: { type: string }
+
+  aura.edgp.data.steward.action.performed.v1:
+    description: Ação operacional executada por um Data Steward.
+    subscribe:
+      operationId: onDataStewardActionPerformed
+      summary: Ação de Data Steward executada
+      message:
+        payload:
+          type: object
+          properties:
+            actionId: { type: string }
+            recordId: { type: string }
+            stewardName: { type: string }
+            justification: { type: string }
+
+  aura.edgp.data.fabric.synchronized.v1:
+    description: Consulta unificada ou sincronização concluída no Data Fabric.
+    subscribe:
+      operationId: onDataFabricSynchronized
+      summary: Data Fabric sincronizado
+      message:
+        payload:
+          type: object
+          properties:
+            queryId: { type: string }
+            domain: { type: string }
+            sourcesCount: { type: number }

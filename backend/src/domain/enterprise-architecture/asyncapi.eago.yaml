@@ -1,0 +1,158 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Architecture Governance, Compliance & Evolution (EAGO) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P171 EAGO — Fase XXI.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Enterprise Architecture Team
+    email: arquitetura@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.eago.audit.completed.v1:
+    description: Evento de auditoria de arquitetura registrado (SHA-256).
+    subscribe:
+      operationId: onArchitectureAuditCompleted
+      summary: Auditoria EAGO registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: EAGO-AUD-1700000000-ABC }
+            action: { type: string, example: ADR_CREATED }
+            subject: { type: string }
+            sha256Signature: { type: string, description: Hash SHA-256 imutável }
+
+  aura.eago.architecture.proposal.submitted.v1:
+    description: Proposta de alteração arquitetural submetida para avaliação.
+    subscribe:
+      operationId: onArchitectureProposalSubmitted
+      summary: Proposta arquitetural submetida
+      message:
+        payload:
+          type: object
+          properties:
+            proposalId: { type: string, example: PROP-1700000000 }
+            title: { type: string }
+            domain:
+              type: string
+              enum: [BUSINESS, APPLICATION, DATA, TECHNOLOGY, SECURITY, ARTIFICIAL_INTELLIGENCE, INTEGRATION, INFRASTRUCTURE]
+            proposedBy: { type: string }
+
+  aura.eago.architecture.approved.v1:
+    description: Proposta de arquitetura aprovada pelo comitê.
+    subscribe:
+      operationId: onArchitectureApproved
+      summary: Proposta aprovada
+      message:
+        payload:
+          type: object
+          properties:
+            proposalId: { type: string }
+            approvedBy: { type: string }
+
+  aura.eago.architecture.rejected.v1:
+    description: Proposta de arquitetura rejeitada pelo comitê.
+    subscribe:
+      operationId: onArchitectureRejected
+      summary: Proposta rejeitada
+      message:
+        payload:
+          type: object
+          properties:
+            proposalId: { type: string }
+            rejectedBy: { type: string }
+            reason: { type: string }
+
+  aura.eago.adr.created.v1:
+    description: Novo Architecture Decision Record (ADR) registrado.
+    subscribe:
+      operationId: onADRCreated
+      summary: ADR criado
+      message:
+        payload:
+          type: object
+          properties:
+            adrId: { type: string, example: ADR-1700000000 }
+            title: { type: string }
+            status:
+              type: string
+              enum: [PROPOSED, ACCEPTED, REJECTED, SUPERSEDED, DEPRECATED]
+            author: { type: string }
+
+  aura.eago.adr.updated.v1:
+    description: Status de ADR atualizado (ex: aceito ou substituído).
+    subscribe:
+      operationId: onADRUpdated
+      summary: ADR atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            adrId: { type: string }
+            status: { type: string }
+
+  aura.eago.architecture.drift.detected.v1:
+    description: Alerta de desvio arquitetural (Architecture Drift) identificado.
+    subscribe:
+      operationId: onArchitectureDriftDetected
+      summary: Drift arquitetural detectado
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            totalViolations: { type: number }
+            criticalViolations: { type: number }
+
+  aura.eago.compliance.score.calculated.v1:
+    description: Score de conformidade arquitetural calculado para um módulo.
+    subscribe:
+      operationId: onComplianceScoreCalculated
+      summary: Score de conformidade calculado
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            moduleName: { type: string }
+            overallScore: { type: number, minimum: 0, maximum: 100 }
+            rating:
+              type: string
+              enum: [EXCELLENT, GOOD, NEEDS_IMPROVEMENT, NON_COMPLIANT]
+
+  aura.eago.architecture.evolution.planned.v1:
+    description: Marco do roadmap de evolução arquitetural planejado.
+    subscribe:
+      operationId: onArchitectureEvolutionPlanned
+      summary: Evolução arquitetural planejada
+      message:
+        payload:
+          type: object
+          properties:
+            milestoneId: { type: string }
+            title: { type: string }
+            targetQuarter: { type: string }
+            owner: { type: string }
+
+  aura.eago.solution.reviewed.v1:
+    description: Solução técnica avaliada pelo Conselho ARB.
+    subscribe:
+      operationId: onSolutionReviewed
+      summary: Solução avaliada pelo ARB
+      message:
+        payload:
+          type: object
+          properties:
+            reviewId: { type: string }
+            solutionName: { type: string }
+            finalStatus:
+              type: string
+              enum: [SUBMITTED, IN_REVIEW, APPROVED, APPROVED_WITH_CONDITIONS, REJECTED, NEEDS_REVISION]
+            decidedBy: { type: string }

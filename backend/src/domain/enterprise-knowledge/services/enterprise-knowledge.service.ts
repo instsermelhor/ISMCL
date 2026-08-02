@@ -1,202 +1,163 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  CreateKnowledgeItemDto,
-  UpdateKnowledgeItemDto,
+  CreateKnowledgeDocumentDto,
+  UpdateKnowledgeDocumentDto,
+  DocumentCategory,
   KnowledgeStatus,
-  KnowledgeDomain,
-  KnowledgeType,
   ConfidentialityLevel,
+  PreservationPolicyType,
 } from '../dto/enterprise-knowledge.dto';
 import { KnowledgeAuditService } from './knowledge-audit.service';
 import { EventBusService } from '../../../events/event-bus.service';
 
-export interface KnowledgeItem {
-  knowledgeId: string;
+export interface DocumentVersion {
+  versionNumber: number;
+  content: string;
+  updatedBy: string;
+  changeSummary: string;
+  timestamp: string;
+  sha256Hash: string;
+}
+
+export interface KnowledgeDocument {
+  documentId: string;
   title: string;
-  description: string;
-  type: KnowledgeType;
-  domain: KnowledgeDomain;
-  confidentialityLevel: ConfidentialityLevel;
+  category: DocumentCategory;
+  content: string;
+  author: string;
   status: KnowledgeStatus;
-  version: number;
-  owner: string;
+  confidentiality: ConfidentialityLevel;
   tags: string[];
-  parentId?: string;
-  content?: Record<string, any>;
+  relevantDomains: string[];
+  preservationPolicy: PreservationPolicyType;
+  version: number;
+  versionHistory: DocumentVersion[];
+  approvedBy?: string;
+  approvedAt?: string;
+  publishedAt?: string;
+  archivedAt?: string;
   createdAt: string;
   updatedAt: string;
-  publishedAt?: string;
 }
 
 /**
- * EnterpriseKnowledgeService — Hub Central de Conhecimento (P158 AEKIP)
+ * EnterpriseKnowledgeService — P170 EKG
  *
- * Gerencia o ciclo CRUD completo de todos os ativos de conhecimento:
- * documentos, políticas, normas, POPs, protocolos, artigos, pesquisas,
- * treinamentos, decisões, ADRs e FAQs com metadados completos e
- * versionamento automático a cada atualização.
+ * Repositório corporativo unificado do patrimônio intelectual do Instituto Ser Melhor.
+ * Armazena documentos, POPs, políticas, normas, manuais, processos, decisões, atas,
+ * pesquisas, protocolos e conteúdos educacionais com metadados estruturados e versionamento.
  */
 @Injectable()
 export class EnterpriseKnowledgeService {
   private readonly logger = new Logger(EnterpriseKnowledgeService.name);
-  private knowledgeRegistry: Map<string, KnowledgeItem> = new Map();
-  private readonly SYSTEM_TENANT = 'SYSTEM';
+  private readonly documents: Map<string, KnowledgeDocument> = new Map();
 
   constructor(
-    private readonly audit: KnowledgeAuditService,
+    private readonly auditSvc: KnowledgeAuditService,
     private readonly eventBus: EventBusService,
-  ) {
-    this.seedKnowledgeBase();
-  }
+  ) {}
 
-  private seedKnowledgeBase(): void {
-    const seeds: CreateKnowledgeItemDto[] = [
-      {
-        title: 'Protocolo de Atendimento Psicossocial',
-        description: 'Diretrizes para atendimento de beneficiários em situação de vulnerabilidade',
-        type: KnowledgeType.PROTOCOL,
-        domain: KnowledgeDomain.ASSISTENTIAL,
-        confidentialityLevel: ConfidentialityLevel.INTERNAL,
-        owner: 'Equipe Psicologia',
-        tags: ['psicossocial', 'protocolo', 'atendimento'],
-      },
-      {
-        title: 'POP — Cadastro de Novo Beneficiário',
-        description: 'Procedimento Operacional Padrão para registro de beneficiários no sistema',
-        type: KnowledgeType.POP,
-        domain: KnowledgeDomain.OPERATIONAL,
-        confidentialityLevel: ConfidentialityLevel.INTERNAL,
-        owner: 'Serviço Social',
-        tags: ['pop', 'beneficiário', 'cadastro'],
-      },
-      {
-        title: 'Política de Proteção de Dados (LGPD)',
-        description: 'Política institucional de privacidade e proteção de dados pessoais',
-        type: KnowledgeType.POLICY,
-        domain: KnowledgeDomain.COMPLIANCE,
-        confidentialityLevel: ConfidentialityLevel.PUBLIC,
-        owner: 'DPO — Encarregado de Dados',
-        tags: ['lgpd', 'privacidade', 'dados', 'política'],
-      },
-    ];
-
-    for (const dto of seeds) {
-      const id = `KNOWLEDGE-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const now = new Date().toISOString();
-      this.knowledgeRegistry.set(id, {
-        knowledgeId: id,
-        ...dto,
-        tags: dto.tags ?? [],
-        status: KnowledgeStatus.PUBLISHED,
-        version: 1,
-        owner: dto.owner ?? 'SYSTEM',
-        createdAt: now,
-        updatedAt: now,
-        publishedAt: now,
-      });
-    }
-  }
-
-  async createKnowledgeItem(dto: CreateKnowledgeItemDto): Promise<KnowledgeItem> {
-    const year = new Date().getFullYear();
-    const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const knowledgeId = `KNOWLEDGE-${year}-${seq}`;
+  async createDocument(dto: CreateKnowledgeDocumentDto, author = 'SYSTEM'): Promise<KnowledgeDocument> {
+    const documentId = `DOC-${dto.category}-${Date.now().toString(36).toUpperCase()}`;
     const now = new Date().toISOString();
+    const sha256Hash = require('crypto').createHash('sha256').update(dto.content).digest('hex');
 
-    const item: KnowledgeItem = {
-      knowledgeId,
-      title: dto.title,
-      description: dto.description,
-      type: dto.type,
-      domain: dto.domain,
-      confidentialityLevel: dto.confidentialityLevel,
-      status: KnowledgeStatus.DRAFT,
-      version: 1,
-      owner: dto.owner ?? 'UNKNOWN',
-      tags: dto.tags ?? [],
-      parentId: dto.parentId,
+    const initialVersion: DocumentVersion = {
+      versionNumber: 1,
       content: dto.content,
+      updatedBy: dto.author ?? author,
+      changeSummary: 'Criação inicial do documento',
+      timestamp: now,
+      sha256Hash,
+    };
+
+    const doc: KnowledgeDocument = {
+      documentId,
+      title: dto.title,
+      category: dto.category,
+      content: dto.content,
+      author: dto.author ?? author,
+      status: KnowledgeStatus.DRAFT,
+      confidentiality: dto.confidentiality ?? ConfidentialityLevel.INTERNAL,
+      tags: dto.tags ?? [],
+      relevantDomains: dto.relevantDomains ?? [],
+      preservationPolicy: dto.preservationPolicy ?? PreservationPolicyType.PERMANENT_HISTORICAL,
+      version: 1,
+      versionHistory: [initialVersion],
       createdAt: now,
       updatedAt: now,
     };
 
-    this.knowledgeRegistry.set(knowledgeId, item);
+    this.documents.set(documentId, doc);
 
-    await this.audit.recordAudit('CREATE', knowledgeId, dto.type, dto.owner ?? 'SYSTEM', { title: dto.title });
-
-    await this.eventBus.publish(
-      'aura.knowledge.item.created.v1',
-      { knowledgeId, title: dto.title, type: dto.type, domain: dto.domain },
-      this.SYSTEM_TENANT,
-      { subject: knowledgeId },
-    );
-
-    this.logger.log(`[EnterpriseKnowledge] Created: ${knowledgeId} — ${dto.type}/${dto.domain}`);
-    return item;
-  }
-
-  async updateKnowledgeItem(knowledgeId: string, dto: UpdateKnowledgeItemDto): Promise<KnowledgeItem> {
-    const item = this.knowledgeRegistry.get(knowledgeId);
-    if (!item) throw new NotFoundException(`Item de conhecimento não encontrado: ${knowledgeId}`);
-
-    const updated: KnowledgeItem = {
-      ...item,
-      title: dto.title ?? item.title,
-      status: dto.status ?? item.status,
-      content: dto.content ?? item.content,
-      tags: dto.tags ?? item.tags,
-      version: item.version + 1,
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.knowledgeRegistry.set(knowledgeId, updated);
-
-    await this.audit.recordAudit('UPDATE', knowledgeId, item.type, 'SYSTEM', {
-      newVersion: updated.version, changeReason: dto.changeReason,
+    await this.auditSvc.recordAudit('KNOWLEDGE_CREATED', documentId, author, {
+      title: dto.title,
+      category: dto.category,
+      confidentiality: doc.confidentiality,
     });
 
     await this.eventBus.publish(
-      'aura.knowledge.item.updated.v1',
-      { knowledgeId, newVersion: updated.version, title: updated.title },
-      this.SYSTEM_TENANT,
-      { subject: knowledgeId },
+      'aura.ekg.knowledge.created.v1',
+      { documentId, title: dto.title, category: dto.category, author: doc.author },
+      'EKG',
+      { subject: documentId },
     );
 
-    return updated;
+    this.logger.log(`[EnterpriseKnowledge] Documento "${documentId}" criado: "${dto.title}" (${dto.category})`);
+    return doc;
   }
 
-  async publishKnowledgeItem(knowledgeId: string): Promise<KnowledgeItem> {
-    const item = this.knowledgeRegistry.get(knowledgeId);
-    if (!item) throw new NotFoundException(`Item não encontrado: ${knowledgeId}`);
+  async updateDocument(documentId: string, dto: UpdateKnowledgeDocumentDto): Promise<KnowledgeDocument> {
+    const doc = this.getOrThrow(documentId);
+    const now = new Date().toISOString();
 
-    const published: KnowledgeItem = {
-      ...item,
-      status: KnowledgeStatus.PUBLISHED,
-      publishedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (dto.content) doc.content = dto.content;
+    if (dto.tags) doc.tags = Array.from(new Set([...doc.tags, ...dto.tags]));
 
-    this.knowledgeRegistry.set(knowledgeId, published);
+    doc.version += 1;
+    doc.updatedAt = now;
+
+    const sha256Hash = require('crypto').createHash('sha256').update(doc.content).digest('hex');
+    doc.versionHistory.push({
+      versionNumber: doc.version,
+      content: doc.content,
+      updatedBy: dto.updatedBy,
+      changeSummary: dto.changeSummary ?? 'Atualização documental',
+      timestamp: now,
+      sha256Hash,
+    });
+
+    await this.auditSvc.recordAudit('KNOWLEDGE_UPDATED', documentId, dto.updatedBy, {
+      newVersion: doc.version,
+      changeSummary: dto.changeSummary,
+    });
 
     await this.eventBus.publish(
-      'aura.knowledge.item.published.v1',
-      { knowledgeId, title: item.title, domain: item.domain },
-      this.SYSTEM_TENANT,
-      { subject: knowledgeId },
+      'aura.ekg.knowledge.updated.v1',
+      { documentId, version: doc.version, updatedBy: dto.updatedBy },
+      'EKG',
+      { subject: documentId },
     );
 
-    return published;
+    this.logger.log(`[EnterpriseKnowledge] Documento "${documentId}" atualizado para v${doc.version}.`);
+    return doc;
   }
 
-  getKnowledgeItem(knowledgeId: string): KnowledgeItem | undefined {
-    return this.knowledgeRegistry.get(knowledgeId);
+  getDocument(documentId: string): KnowledgeDocument | undefined {
+    return this.documents.get(documentId);
   }
 
-  listKnowledgeItems(domain?: KnowledgeDomain, type?: KnowledgeType): KnowledgeItem[] {
-    return Array.from(this.knowledgeRegistry.values()).filter(
-      (item) =>
-        (!domain || item.domain === domain) &&
-        (!type || item.type === type),
-    );
+  listDocuments(category?: DocumentCategory, status?: KnowledgeStatus, tag?: string): KnowledgeDocument[] {
+    let docs = Array.from(this.documents.values());
+    if (category) docs = docs.filter((d) => d.category === category);
+    if (status) docs = docs.filter((d) => d.status === status);
+    if (tag) docs = docs.filter((d) => d.tags.includes(tag));
+    return docs.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  private getOrThrow(documentId: string): KnowledgeDocument {
+    const doc = this.documents.get(documentId);
+    if (!doc) throw new Error(`Documento "${documentId}" não encontrado.`);
+    return doc;
   }
 }

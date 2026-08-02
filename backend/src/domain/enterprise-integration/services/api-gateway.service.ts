@@ -2,88 +2,60 @@ import { Injectable, Logger } from '@nestjs/common';
 import { IntegrationAuditService } from './integration-audit.service';
 import { EventBusService } from '../../../events/event-bus.service';
 
-export interface APIRouteConfig {
+export interface GatewayRoute {
   routeId: string;
+  apiId: string;
   path: string;
   targetService: string;
-  rateLimitPerMinute: number;
-  quotaPerDay: number;
-  requiresMtls: boolean;
-  activeVersion: string;
-  status: 'ACTIVE' | 'DEPRECATED';
+  rateLimitRpm: number;
+  authRequired: boolean;
+  cacheTtlSeconds: number;
+  active: boolean;
+  createdAt: string;
 }
 
-/**
- * APIGatewayService — API Gateway Corporativo (P166 EIIP)
- *
- * Gerencia rotas corporativas, versionamento, autenticação OAuth 2.1,
- * mTLS, rate limiting, quotas diárias e ciclo de vida de APIs públicas e privadas.
- */
+export interface GatewayRequest {
+  requestId: string;
+  routeId: string;
+  method: string;
+  path: string;
+  clientId: string;
+  latencyMs: number;
+  statusCode: number;
+  timestamp: string;
+}
+
 @Injectable()
 export class APIGatewayService {
   private readonly logger = new Logger(APIGatewayService.name);
-  private routeRegistry: Map<string, APIRouteConfig> = new Map();
-  private readonly SYSTEM_TENANT = 'SYSTEM';
+  private readonly routes: Map<string, GatewayRoute> = new Map();
+  private readonly requestLog: GatewayRequest[] = [];
 
   constructor(
-    private readonly auditService: IntegrationAuditService,
+    private readonly auditSvc: IntegrationAuditService,
     private readonly eventBus: EventBusService,
-  ) {
-    this.seedRoutes();
-  }
+  ) {}
 
-  private seedRoutes(): void {
-    const seeds: APIRouteConfig[] = [
-      {
-        routeId: 'ROUTE-BENEFICIARIES-V1',
-        path: '/api/v1/external/beneficiaries',
-        targetService: 'social-assistance',
-        rateLimitPerMinute: 600,
-        quotaPerDay: 100000,
-        requiresMtls: true,
-        activeVersion: '1.0.0',
-        status: 'ACTIVE',
-      },
-      {
-        routeId: 'ROUTE-HEALTH-IMPACT-V1',
-        path: '/api/v1/external/impact',
-        targetService: 'social-impact',
-        rateLimitPerMinute: 300,
-        quotaPerDay: 50000,
-        requiresMtls: false,
-        activeVersion: '1.0.0',
-        status: 'ACTIVE',
-      },
-    ];
-
-    for (const r of seeds) {
-      this.routeRegistry.set(r.routeId, r);
-    }
-  }
-
-  async releaseAPIVersion(routeId: string, newVersion: string): Promise<APIRouteConfig | null> {
-    const route = this.routeRegistry.get(routeId);
-    if (!route) return null;
-
-    route.activeVersion = newVersion;
-    this.routeRegistry.set(routeId, route);
-
-    await this.auditService.recordAudit('RELEASE_API_VERSION', route.path, 'CInO', {
-      routeId, newVersion,
-    });
-
-    await this.eventBus.publish(
-      'aura.integration.api.version.released.v1',
-      { routeId, path: route.path, version: newVersion },
-      this.SYSTEM_TENANT,
-      { subject: routeId },
-    );
-
-    this.logger.log(`[APIGateway] Released version ${newVersion} for route ${route.path}`);
+  async registerRoute(apiId: string, path: string, targetService: string, rateLimitRpm: number, authRequired: boolean, cacheTtlSeconds: number, registeredBy: string): Promise<GatewayRoute> {
+    const routeId = `ROUTE-${apiId}-${Date.now().toString(36).toUpperCase()}`;
+    const route: GatewayRoute = { routeId, apiId, path, targetService, rateLimitRpm, authRequired, cacheTtlSeconds, active: true, createdAt: new Date().toISOString() };
+    this.routes.set(routeId, route);
+    await this.auditSvc.recordAudit('GATEWAY_ROUTE_REGISTERED', routeId, registeredBy, { apiId, path, targetService });
+    this.logger.log(`[APIGateway] Rota registrada: ${path} -> ${targetService} (${routeId})`);
     return route;
   }
 
-  listRoutes(): APIRouteConfig[] {
-    return Array.from(this.routeRegistry.values());
+  async processRequest(routeId: string, method: string, clientId: string): Promise<GatewayRequest> {
+    const route = this.routes.get(routeId);
+    if (!route || !route.active) throw new Error(`Rota "${routeId}" inativa ou não encontrada.`);
+    const requestId = `REQ-${Date.now().toString(36).toUpperCase()}`;
+    const req: GatewayRequest = { requestId, routeId, method, path: route.path, clientId, latencyMs: Math.floor(Math.random() * 80) + 5, statusCode: 200, timestamp: new Date().toISOString() };
+    this.requestLog.push(req);
+    await this.auditSvc.recordAudit('GATEWAY_REQUEST_PROCESSED', requestId, clientId, { routeId, method, statusCode: req.statusCode });
+    return req;
   }
+
+  getRoute(routeId: string): GatewayRoute | undefined { return this.routes.get(routeId); }
+  listRoutes(): GatewayRoute[] { return Array.from(this.routes.values()); }
+  getRequestLog(): GatewayRequest[] { return [...this.requestLog]; }
 }

@@ -1,0 +1,164 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Observability, SRE & Autonomous Operations (EORP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P173 EORP — Fase XXIII.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Site Reliability Engineering Team
+    email: sre@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.eorp.audit.completed.v1:
+    description: Evento de auditoria de observabilidade registrado (SHA-256).
+    subscribe:
+      operationId: onObservabilityAuditCompleted
+      summary: Auditoria EORP registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: EORP-AUD-1700000000-ABC }
+            action: { type: string, example: CHAOS_EXPERIMENT_EXECUTED }
+            subject: { type: string }
+            sha256Signature: { type: string, description: Hash SHA-256 imutável }
+
+  aura.eorp.telemetry.collected.v1:
+    description: Telemetria OpenTelemetry coletada.
+    subscribe:
+      operationId: onTelemetryCollected
+      summary: Telemetria coletada
+      message:
+        payload:
+          type: object
+          properties:
+            telemetryId: { type: string }
+            type:
+              type: string
+              enum: [METRIC, LOG, TRACE, EVENT, EXCEPTION]
+            name: { type: string }
+            serviceName: { type: string }
+            value: { type: number }
+
+  aura.eorp.trace.completed.v1:
+    description: Rastreamento distribuído (Distributed Trace) concluído.
+    subscribe:
+      operationId: onTraceCompleted
+      summary: Rastreamento distribuído concluído
+      message:
+        payload:
+          type: object
+          properties:
+            traceId: { type: string }
+            spansCount: { type: number }
+            totalDurationMs: { type: number }
+            hasErrors: { type: boolean }
+
+  aura.eorp.slo.calculated.v1:
+    description: Status de SLO calculado.
+    subscribe:
+      operationId: onSLOCalculated
+      summary: SLO calculado
+      message:
+        payload:
+          type: object
+          properties:
+            sloId: { type: string }
+            currentPercentage: { type: number }
+            errorBudgetRemainingPercentage: { type: number }
+            status:
+              type: string
+              enum: [HEALTHY, WARNING, EXHAUSTED]
+
+  aura.eorp.error.budget.updated.v1:
+    description: Error Budget atualizado após consumo de falhas.
+    subscribe:
+      operationId: onErrorBudgetUpdated
+      summary: Error Budget atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            sloId: { type: string }
+            remainingPercentage: { type: number }
+
+  aura.eorp.reliability.score.calculated.v1:
+    description: Score SRE de confiabilidade oficial calculado.
+    subscribe:
+      operationId: onReliabilityScoreCalculated
+      summary: Score SRE calculado
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            reliabilityScore: { type: number, minimum: 0, maximum: 100 }
+            availabilityPercentage: { type: number }
+            rating:
+              type: string
+              enum: [EXCELLENT, STABLE, DEGRADED, CRITICAL]
+
+  aura.eorp.chaos.experiment.executed.v1:
+    description: Experimento de Chaos Engineering executado.
+    subscribe:
+      operationId: onChaosExperimentExecuted
+      summary: Experimento de Chaos executado
+      message:
+        payload:
+          type: object
+          properties:
+            experimentId: { type: string }
+            experimentType:
+              type: string
+              enum: [SERVICE_UNAVAILABILITY, NETWORK_LATENCY, DATABASE_OUTAGE, API_DEGRADATION, EVENT_QUEUE_FAILURE]
+            targetComponent: { type: string }
+            status:
+              type: string
+              enum: [PLANNED, RUNNING, COMPLETED_SUCCESS, ABORTED_SAFETY_TRIGGER, FAILED]
+
+  aura.eorp.anomaly.detected.v1:
+    description: Anomalia preditiva detectada pelo AIOps.
+    subscribe:
+      operationId: onAnomalyDetected
+      summary: Anomalia detectada
+      message:
+        payload:
+          type: object
+          properties:
+            anomalyId: { type: string }
+            metricOrService: { type: string }
+            severity:
+              type: string
+              enum: [LOW, MEDIUM, HIGH, CRITICAL]
+            description: { type: string }
+
+  aura.eorp.autonomous.action.suggested.v1:
+    description: Ação autônoma preventiva sugerida pelo AIOps.
+    subscribe:
+      operationId: onAutonomousActionSuggested
+      summary: Ação autônoma sugerida
+      message:
+        payload:
+          type: object
+          properties:
+            anomalyId: { type: string }
+            suggestedAction: { type: string }
+
+  aura.eorp.autonomous.action.executed.v1:
+    description: Ação autônoma executada automaticamente pelo AIOps.
+    subscribe:
+      operationId: onAutonomousActionExecuted
+      summary: Ação autônoma executada
+      message:
+        payload:
+          type: object
+          properties:
+            actionId: { type: string }
+            anomalyId: { type: string }
+            actionName: { type: string }

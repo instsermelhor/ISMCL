@@ -1,28 +1,26 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, IsArray, IsObject, IsNumber } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsArray, IsNumber, IsObject } from 'class-validator';
 
 // ── ENUMS ─────────────────────────────────────────────────────────────────────
 
-export enum KnowledgeType {
-  DOCUMENT = 'DOCUMENT',
+export enum DocumentCategory {
   POLICY = 'POLICY',
-  NORM = 'NORM',
-  POP = 'POP',
-  PROTOCOL = 'PROTOCOL',
-  ARTICLE = 'ARTICLE',
+  STANDARD_OPERATING_PROCEDURE = 'STANDARD_OPERATING_PROCEDURE', // POP
+  STANDARD = 'STANDARD',
+  MANUAL = 'MANUAL',
+  PROCESS = 'PROCESS',
+  STRATEGIC_DECISION = 'STRATEGIC_DECISION',
+  MEETING_MINUTES = 'MEETING_MINUTES',
+  PROJECT = 'PROJECT',
   RESEARCH = 'RESEARCH',
-  TRAINING = 'TRAINING',
-  DECISION = 'DECISION',
-  ADR = 'ADR',
-  FAQ = 'FAQ',
-  LESSON_LEARNED = 'LESSON_LEARNED',
-  TEMPLATE = 'TEMPLATE',
-  MULTIMEDIA = 'MULTIMEDIA',
+  ARTICLE = 'ARTICLE',
+  PROTOCOL = 'PROTOCOL',
+  EDUCATIONAL_CONTENT = 'EDUCATIONAL_CONTENT',
 }
 
 export enum KnowledgeStatus {
   DRAFT = 'DRAFT',
-  UNDER_REVIEW = 'UNDER_REVIEW',
+  IN_REVIEW = 'IN_REVIEW',
   APPROVED = 'APPROVED',
   PUBLISHED = 'PUBLISHED',
   ARCHIVED = 'ARCHIVED',
@@ -37,222 +35,163 @@ export enum ConfidentialityLevel {
   SECRET = 'SECRET',
 }
 
-export enum KnowledgeDomain {
-  OPERATIONAL = 'OPERATIONAL',
-  ASSISTENTIAL = 'ASSISTENTIAL',
-  TECHNICAL = 'TECHNICAL',
-  GOVERNANCE = 'GOVERNANCE',
-  LEGAL = 'LEGAL',
-  FINANCIAL = 'FINANCIAL',
-  STRATEGIC = 'STRATEGIC',
-  TRAINING = 'TRAINING',
-  INNOVATION = 'INNOVATION',
-  COMPLIANCE = 'COMPLIANCE',
+export enum PreservationPolicyType {
+  PERMANENT_HISTORICAL = 'PERMANENT_HISTORICAL',
+  LEGAL_RETENTION_5Y = 'LEGAL_RETENTION_5Y',
+  LEGAL_RETENTION_10Y = 'LEGAL_RETENTION_10Y',
+  OPERATIONAL_3Y = 'OPERATIONAL_3Y',
+  TEMPORARY_1Y = 'TEMPORARY_1Y',
 }
 
-export enum MemoryEventType {
-  INSTITUTIONAL_DECISION = 'INSTITUTIONAL_DECISION',
-  PROCESS_IMPROVEMENT = 'PROCESS_IMPROVEMENT',
-  PROJECT_COMPLETED = 'PROJECT_COMPLETED',
-  AUDIT_FINDING = 'AUDIT_FINDING',
-  LESSON_LEARNED = 'LESSON_LEARNED',
-  INCIDENT_RESOLVED = 'INCIDENT_RESOLVED',
-  RECOMMENDATION = 'RECOMMENDATION',
-  OPERATIONAL_REVIEW = 'OPERATIONAL_REVIEW',
-  ARCHITECTURAL_CHANGE = 'ARCHITECTURAL_CHANGE',
-}
-
-export enum GraphEntityType {
+export enum KnowledgeNodeType {
   PERSON = 'PERSON',
+  PROJECT = 'PROJECT',
+  PROGRAM = 'PROGRAM',
   PROCESS = 'PROCESS',
   DOCUMENT = 'DOCUMENT',
-  PROJECT = 'PROJECT',
   INDICATOR = 'INDICATOR',
-  MODULE = 'MODULE',
-  TRAINING = 'TRAINING',
+  RISK = 'RISK',
   POLICY = 'POLICY',
-  AI_AGENT = 'AI_AGENT',
-  DEPARTMENT = 'DEPARTMENT',
+  SYSTEM = 'SYSTEM',
+  DECISION = 'DECISION',
+  EVIDENCE = 'EVIDENCE',
 }
 
-// ── DTOs ──────────────────────────────────────────────────────────────────────
+// ── ENTERPRISE KNOWLEDGE DTOs ─────────────────────────────────────────────────
 
-export class CreateKnowledgeItemDto {
-  @ApiProperty({ example: 'Protocolo de Atendimento em Saúde Mental' })
+export class CreateKnowledgeDocumentDto {
+  @ApiProperty({ example: 'Política Corporativa de Proteção à Criança e Adolescente' })
   @IsString()
   title: string;
 
-  @ApiProperty({ example: 'Diretrizes para atendimento psicossocial de beneficiários em crise' })
+  @ApiProperty({ enum: DocumentCategory, example: DocumentCategory.POLICY })
+  @IsEnum(DocumentCategory)
+  category: DocumentCategory;
+
+  @ApiProperty({ example: 'Diretrizes obrigatórias de proteção integral nos atendimentos do ISM.' })
   @IsString()
-  description: string;
+  content: string;
 
-  @ApiProperty({ enum: KnowledgeType, example: KnowledgeType.PROTOCOL })
-  @IsEnum(KnowledgeType)
-  type: KnowledgeType;
+  @ApiProperty({ example: 'Dra. Maria Silva (Diretoria Social)' })
+  @IsString()
+  author: string;
 
-  @ApiProperty({ enum: KnowledgeDomain, example: KnowledgeDomain.ASSISTENTIAL })
-  @IsEnum(KnowledgeDomain)
-  domain: KnowledgeDomain;
-
-  @ApiProperty({ enum: ConfidentialityLevel, example: ConfidentialityLevel.INTERNAL })
+  @ApiPropertyOptional({ enum: ConfidentialityLevel, example: ConfidentialityLevel.INTERNAL })
+  @IsOptional()
   @IsEnum(ConfidentialityLevel)
-  confidentialityLevel: ConfidentialityLevel;
+  confidentiality?: ConfidentialityLevel;
 
-  @ApiPropertyOptional({ example: 'Equipe de Psicologia' })
-  @IsOptional()
-  @IsString()
-  owner?: string;
-
-  @ApiPropertyOptional({ example: ['psicologia', 'saúde mental', 'protocolo', 'atendimento'] })
+  @ApiPropertyOptional({ example: ['proteção infantil', 'direitos humanos', 'compliance'] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
 
-  @ApiPropertyOptional({ example: 'KNOWLEDGE-2026-XXXX' })
+  @ApiPropertyOptional({ example: ['Assistência Social', 'Atendimento Psicossocial'] })
   @IsOptional()
-  @IsString()
-  parentId?: string;
+  @IsArray()
+  @IsString({ each: true })
+  relevantDomains?: string[];
 
-  @ApiPropertyOptional({ example: { content: 'Texto completo do protocolo...', attachments: [] } })
+  @ApiPropertyOptional({ enum: PreservationPolicyType, example: PreservationPolicyType.PERMANENT_HISTORICAL })
   @IsOptional()
-  @IsObject()
-  content?: Record<string, any>;
+  @IsEnum(PreservationPolicyType)
+  preservationPolicy?: PreservationPolicyType;
 }
 
-export class UpdateKnowledgeItemDto {
-  @ApiPropertyOptional({ example: 'Protocolo de Atendimento em Saúde Mental — v2' })
+export class UpdateKnowledgeDocumentDto {
+  @ApiPropertyOptional({ example: 'Conteúdo atualizado com novos parâmetros legais' })
   @IsOptional()
   @IsString()
-  title?: string;
+  content?: string;
 
-  @ApiPropertyOptional({ example: 'Atualização da seção de triagem' })
-  @IsOptional()
-  @IsString()
-  changeReason?: string;
-
-  @ApiPropertyOptional({ enum: KnowledgeStatus })
-  @IsOptional()
-  @IsEnum(KnowledgeStatus)
-  status?: KnowledgeStatus;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsObject()
-  content?: Record<string, any>;
-
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: ['novas diretrizes LGPD'] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
-}
 
-export class SearchKnowledgeDto {
-  @ApiProperty({ example: 'Como realizar triagem de saúde mental?' })
+  @ApiProperty({ example: 'Dra. Maria Silva' })
   @IsString()
-  query: string;
+  updatedBy: string;
 
-  @ApiPropertyOptional({ enum: KnowledgeDomain })
+  @ApiPropertyOptional({ example: 'Revisão anual obrigatória de compliance' })
   @IsOptional()
-  @IsEnum(KnowledgeDomain)
-  domain?: KnowledgeDomain;
-
-  @ApiPropertyOptional({ enum: KnowledgeType })
-  @IsOptional()
-  @IsEnum(KnowledgeType)
-  type?: KnowledgeType;
-
-  @ApiPropertyOptional({ example: 10 })
-  @IsOptional()
-  @IsNumber()
-  topK?: number;
-
-  @ApiPropertyOptional({ description: 'Usar RAG para gerar resposta contextual', example: true })
-  @IsOptional()
-  useRag?: boolean;
+  @IsString()
+  changeSummary?: string;
 }
 
-export class RecordOrganizationalMemoryDto {
-  @ApiProperty({ enum: MemoryEventType, example: MemoryEventType.LESSON_LEARNED })
-  @IsEnum(MemoryEventType)
-  eventType: MemoryEventType;
+// ── LESSONS LEARNED DTOs ──────────────────────────────────────────────────────
 
-  @ApiProperty({ example: 'Implementação do Módulo AUOC — P156' })
+export class RegisterLessonLearnedDto {
+  @ApiProperty({ example: 'Migração de banco de dados em janela de pico causou degradação' })
   @IsString()
   title: string;
 
-  @ApiProperty({ example: 'A integração com Kafka exigiu configuração de consumer groups por domínio' })
+  @ApiProperty({ example: 'Infraestrutura / TI' })
   @IsString()
-  description: string;
+  context: string;
 
-  @ApiPropertyOptional({ example: 'SRE-LEAD-01' })
-  @IsOptional()
+  @ApiProperty({ example: 'Execução de DDLs pesados durante horário comercial sem réplica de leitura isolada.' })
   @IsString()
-  recordedBy?: string;
+  rootCause: string;
 
-  @ApiPropertyOptional({ example: { relatedModule: 'unified-operations', phase: 'VII' } })
-  @IsOptional()
-  @IsObject()
-  metadata?: Record<string, any>;
+  @ApiProperty({ example: 'Agendar migrações estritamente entre 00h e 04h com failover pré-validado.' })
+  @IsString()
+  preventiveAction: string;
+
+  @ApiProperty({ example: 'Engenharia de Software / DevOps' })
+  @IsString()
+  targetProcess: string;
+
+  @ApiProperty({ example: 'Eng. Carlos Souza' })
+  @IsString()
+  author: string;
 }
 
-export class AddGraphNodeDto {
-  @ApiProperty({ example: 'Protocolo de Saúde Mental' })
-  @IsString()
-  label: string;
+// ── KNOWLEDGE GRAPH DTOs ──────────────────────────────────────────────────────
 
-  @ApiProperty({ enum: GraphEntityType, example: GraphEntityType.DOCUMENT })
-  @IsEnum(GraphEntityType)
-  entityType: GraphEntityType;
-
-  @ApiPropertyOptional({ example: 'KNOWLEDGE-2026-XXXX' })
-  @IsOptional()
-  @IsString()
-  externalId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsObject()
-  properties?: Record<string, any>;
-}
-
-export class AddGraphEdgeDto {
-  @ApiProperty({ example: 'NODE-2026-XXXX' })
+export class CreateKnowledgeRelationDto {
+  @ApiProperty({ example: 'DOC-POLICY-001' })
   @IsString()
   sourceNodeId: string;
 
-  @ApiProperty({ example: 'NODE-2026-YYYY' })
+  @ApiProperty({ enum: KnowledgeNodeType, example: KnowledgeNodeType.DOCUMENT })
+  @IsEnum(KnowledgeNodeType)
+  sourceType: KnowledgeNodeType;
+
+  @ApiProperty({ example: 'PROJ-SAUDE-MENTAL' })
   @IsString()
   targetNodeId: string;
 
-  @ApiProperty({ example: 'REFERENCES', description: 'Tipo de relação semântica' })
-  @IsString()
-  relationshipType: string;
+  @ApiProperty({ enum: KnowledgeNodeType, example: KnowledgeNodeType.PROJECT })
+  @IsEnum(KnowledgeNodeType)
+  targetType: KnowledgeNodeType;
 
-  @ApiPropertyOptional({ example: { strength: 0.85 } })
-  @IsOptional()
-  @IsObject()
-  properties?: Record<string, any>;
+  @ApiProperty({ example: 'GOVERNS' })
+  @IsString()
+  relationType: string; // e.g. GOVERNS, IMPLEMENTS, MITIGATES, MEASURES, DEPENDS_ON
 }
 
-export class GenerateRecommendationDto {
-  @ApiProperty({ example: 'PROF-001' })
-  @IsString()
-  userId: string;
+// ── SEMANTIC SEARCH DTOs ──────────────────────────────────────────────────────
 
-  @ApiPropertyOptional({ example: 'psicologia' })
-  @IsOptional()
+export class SemanticSearchQueryDto {
+  @ApiProperty({ example: 'Como proceder em caso de denúncia de violação de direitos infantis?' })
   @IsString()
-  userRole?: string;
+  query: string;
 
-  @ApiPropertyOptional({ example: KnowledgeDomain.ASSISTENTIAL })
+  @ApiPropertyOptional({ enum: DocumentCategory })
   @IsOptional()
-  @IsEnum(KnowledgeDomain)
-  contextDomain?: KnowledgeDomain;
+  @IsEnum(DocumentCategory)
+  category?: DocumentCategory;
+
+  @ApiPropertyOptional({ enum: ConfidentialityLevel })
+  @IsOptional()
+  @IsEnum(ConfidentialityLevel)
+  maxConfidentiality?: ConfidentialityLevel;
 
   @ApiPropertyOptional({ example: 5 })
   @IsOptional()
   @IsNumber()
-  maxRecommendations?: number;
+  topK?: number;
 }

@@ -1,0 +1,159 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Hyperautomation, Cognitive Orchestration & Autonomous Agents (EHCOP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P174 EHCOP — Fase XXIV.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Automation & Intelligence Team
+    email: automacao@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.ehcop.audit.completed.v1:
+    description: Evento de auditoria de automação registrado (SHA-256).
+    subscribe:
+      operationId: onAutomationAuditCompleted
+      summary: Auditoria EHCOP registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: EHCOP-AUD-1700000000-ABC }
+            action: { type: string, example: AUTOMATION_EXECUTED }
+            subject: { type: string }
+            sha256Signature: { type: string }
+
+  aura.ehcop.automation.created.v1:
+    description: Nova automação institucional criada.
+    subscribe:
+      operationId: onAutomationCreated
+      summary: Automação criada
+      message:
+        payload:
+          type: object
+          properties:
+            automationId: { type: string }
+            name: { type: string }
+            domain:
+              type: string
+              enum: [ADMINISTRATIVE, SOCIAL_ASSISTANCE, FINANCIAL, DOCUMENTS, HUMAN_RESOURCES, VOLUNTEERING, COMPLIANCE, AUDIT]
+
+  aura.ehcop.automation.executed.v1:
+    description: Automação institucional executada com sucesso.
+    subscribe:
+      operationId: onAutomationExecuted
+      summary: Automação executada
+      message:
+        payload:
+          type: object
+          properties:
+            executionId: { type: string }
+            automationId: { type: string }
+            status: { type: string, enum: [SUCCESS, FAILED, PARTIAL] }
+
+  aura.ehcop.rpa.task.completed.v1:
+    description: Tarefa RPA concluída pelo robô.
+    subscribe:
+      operationId: onRPATaskCompleted
+      summary: Tarefa RPA concluída
+      message:
+        payload:
+          type: object
+          properties:
+            taskId: { type: string }
+            taskName: { type: string }
+            robotName: { type: string }
+            durationMs: { type: number }
+
+  aura.ehcop.agent.activated.v1:
+    description: Agente autônomo especializado ativado.
+    subscribe:
+      operationId: onAutonomousAgentActivated
+      summary: Agente autônomo ativado
+      message:
+        payload:
+          type: object
+          properties:
+            agentId: { type: string }
+            agentType:
+              type: string
+              enum: [ADMINISTRATIVE, FINANCIAL, DOCUMENT, COMPLIANCE, ATTENDANCE, AUDIT, COMMUNICATION, CASE_MANAGEMENT, ANALYTICAL]
+            mission: { type: string }
+
+  aura.ehcop.decision.automated.v1:
+    description: Decisão automatizada (XAI) realizada.
+    subscribe:
+      operationId: onDecisionAutomated
+      summary: Decisão automatizada
+      message:
+        payload:
+          type: object
+          properties:
+            decisionId: { type: string }
+            decisionName: { type: string }
+            outcome:
+              type: string
+              enum: [APPROVED, REJECTED, ESCALATED_HUMAN, CONDITIONAL, DEFERRED]
+            confidenceScore: { type: number, minimum: 0, maximum: 100 }
+
+  aura.ehcop.human.approval.requested.v1:
+    description: Aprovação humana solicitada para processo crítico.
+    subscribe:
+      operationId: onHumanApprovalRequested
+      summary: Aprovação humana solicitada
+      message:
+        payload:
+          type: object
+          properties:
+            loopId: { type: string }
+            processName: { type: string }
+            autonomyLevel:
+              type: string
+              enum: [FULL_AUTO, SUPERVISED, HUMAN_REQUIRED]
+
+  aura.ehcop.process.mining.completed.v1:
+    description: Mineração de processo institucional concluída.
+    subscribe:
+      operationId: onProcessMiningCompleted
+      summary: Process Mining concluído
+      message:
+        payload:
+          type: object
+          properties:
+            miningId: { type: string }
+            processName: { type: string }
+            domain: { type: string }
+            automationOpportunities: { type: number }
+
+  aura.ehcop.automation.optimized.v1:
+    description: Relatório de analytics de automação gerado (ROA calculado).
+    subscribe:
+      operationId: onAutomationOptimized
+      summary: Analytics de automação gerado
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            returnOnAutomation: { type: number, minimum: 0, maximum: 100 }
+            productivityGain: { type: number }
+
+  aura.ehcop.governance.approved.v1:
+    description: Política de governança de automação aprovada formalmente.
+    subscribe:
+      operationId: onAutomationGovernanceApproved
+      summary: Governança de automação aprovada
+      message:
+        payload:
+          type: object
+          properties:
+            policyId: { type: string }
+            automationId: { type: string }
+            version: { type: string }
+            approvedBy: { type: string }

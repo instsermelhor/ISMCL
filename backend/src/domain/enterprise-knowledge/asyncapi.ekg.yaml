@@ -1,0 +1,154 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise Knowledge Governance, Institutional Memory & Digital Preservation (EKG) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P170 EKG — Fase XX.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — Knowledge Governance Team
+    email: conhecimento@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.ekg.audit.completed.v1:
+    description: Evento de auditoria documental registrado (SHA-256).
+    subscribe:
+      operationId: onKnowledgeAuditCompleted
+      summary: Auditoria EKG registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: EKG-AUD-1700000000-ABC }
+            action: { type: string, example: KNOWLEDGE_CREATED }
+            subject: { type: string }
+            sha256Signature: { type: string, description: Hash SHA-256 imutável }
+
+  aura.ekg.knowledge.created.v1:
+    description: Novo documento criado no repositório corporativo.
+    subscribe:
+      operationId: onKnowledgeCreated
+      summary: Documento criado
+      message:
+        payload:
+          type: object
+          properties:
+            documentId: { type: string, example: DOC-POLICY-1700000000 }
+            title: { type: string }
+            category:
+              type: string
+              enum: [POLICY, STANDARD_OPERATING_PROCEDURE, STANDARD, MANUAL, PROCESS, STRATEGIC_DECISION, MEETING_MINUTES, PROJECT, RESEARCH, ARTICLE, PROTOCOL, EDUCATIONAL_CONTENT]
+            author: { type: string }
+
+  aura.ekg.knowledge.updated.v1:
+    description: Documento atualizado (nova versão criada).
+    subscribe:
+      operationId: onKnowledgeUpdated
+      summary: Documento atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            documentId: { type: string }
+            version: { type: number }
+            updatedBy: { type: string }
+
+  aura.ekg.knowledge.approved.v1:
+    description: Documento aprovado formalmente no fluxo de governança.
+    subscribe:
+      operationId: onKnowledgeApproved
+      summary: Documento aprovado
+      message:
+        payload:
+          type: object
+          properties:
+            documentId: { type: string }
+            approvedBy: { type: string }
+            approvedAt: { type: string }
+
+  aura.ekg.knowledge.archived.v1:
+    description: Documento arquivado em armazenamento frio de longo prazo.
+    subscribe:
+      operationId: onKnowledgeArchived
+      summary: Documento arquivado
+      message:
+        payload:
+          type: object
+          properties:
+            preservationId: { type: string }
+            documentId: { type: string }
+
+  aura.ekg.knowledge.graph.updated.v1:
+    description: Novo nó ou relacionamento adicionado ao Grafo de Conhecimento.
+    subscribe:
+      operationId: onKnowledgeGraphUpdated
+      summary: Grafo de conhecimento atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            edgeId: { type: string }
+            sourceNodeId: { type: string }
+            relationType: { type: string }
+            targetNodeId: { type: string }
+
+  aura.ekg.lesson.learned.registered.v1:
+    description: Nova lição aprendida registrada.
+    subscribe:
+      operationId: onLessonLearnedRegistered
+      summary: Lição aprendida registrada
+      message:
+        payload:
+          type: object
+          properties:
+            lessonId: { type: string }
+            title: { type: string }
+            targetProcess: { type: string }
+            author: { type: string }
+
+  aura.ekg.organizational.learning.updated.v1:
+    description: Métricas de aprendizado organizacional atualizadas.
+    subscribe:
+      operationId: onOrganizationalLearningUpdated
+      summary: Aprendizado organizacional atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            reportId: { type: string }
+            learningIndex: { type: number, minimum: 0, maximum: 100 }
+            applicationRate: { type: number, minimum: 0, maximum: 100 }
+
+  aura.ekg.semantic.search.executed.v1:
+    description: Pesquisa semântica por linguagem natural executada.
+    subscribe:
+      operationId: onSemanticSearchExecuted
+      summary: Pesquisa semântica executada
+      message:
+        payload:
+          type: object
+          properties:
+            query: { type: string }
+            hits: { type: number }
+            topScore: { type: number }
+
+  aura.ekg.preservation.policy.applied.v1:
+    description: Política de preservação digital de longo prazo aplicada.
+    subscribe:
+      operationId: onPreservationPolicyApplied
+      summary: Política de preservação aplicada
+      message:
+        payload:
+          type: object
+          properties:
+            preservationId: { type: string }
+            documentId: { type: string }
+            policyType:
+              type: string
+              enum: [PERMANENT_HISTORICAL, LEGAL_RETENTION_5Y, LEGAL_RETENTION_10Y, OPERATIONAL_3Y, TEMPORARY_1Y]
+            retentionUntil: { type: string }

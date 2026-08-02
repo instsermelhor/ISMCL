@@ -1,0 +1,157 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Enterprise AI Governance, ModelOps, LLMOps & Cognitive Agent Management (EAIGP) — Event Bus
+  version: 1.0.0
+  description: |
+    Contrato de eventos AsyncAPI do módulo P175 EAIGP — Fase XXV.
+    Todos os eventos são publicados no Event Bus da Plataforma Aura
+    e auditados imutavelmente com assinatura SHA-256.
+  contact:
+    name: Instituto Ser Melhor — AI Governance & ModelOps Team
+    email: aigovernance@sermelhor.org.br
+  license:
+    name: Proprietary — Instituto Ser Melhor
+
+defaultContentType: application/json
+
+channels:
+  aura.eaigp.audit.completed.v1:
+    description: Evento de auditoria de IA registrado (SHA-256).
+    subscribe:
+      operationId: onAIAuditCompleted
+      summary: Auditoria de IA registrada
+      message:
+        payload:
+          type: object
+          properties:
+            auditId: { type: string, example: EAIGP-AUD-1700000000-ABC }
+            action: { type: string, example: AI_ASSET_PUBLISHED }
+            subject: { type: string }
+            sha256Signature: { type: string }
+
+  aura.eaigp.model.registered.v1:
+    description: Novo ativo de IA registrado no catálogo corporativo.
+    subscribe:
+      operationId: onAIModelRegistered
+      summary: Ativo de IA registrado
+      message:
+        payload:
+          type: object
+          properties:
+            assetId: { type: string }
+            name: { type: string }
+            type:
+              type: string
+              enum: [MODEL, LLM, AGENT, EMBEDDING, RAG_PIPELINE, PROMPT, TOOL, PIPELINE]
+            version: { type: string }
+
+  aura.eaigp.model.approved.v1:
+    description: Ativo de IA homologado para produção.
+    subscribe:
+      operationId: onAIModelApproved
+      summary: Ativo de IA homologado
+      message:
+        payload:
+          type: object
+          properties:
+            assetId: { type: string }
+            lifecycle: { type: string, enum: [HOMOLOGATED] }
+
+  aura.eaigp.model.published.v1:
+    description: Ativo de IA publicado em produção.
+    subscribe:
+      operationId: onAIModelPublished
+      summary: Ativo de IA publicado
+      message:
+        payload:
+          type: object
+          properties:
+            assetId: { type: string }
+            version: { type: string }
+
+  aura.eaigp.prompt.approved.v1:
+    description: Prompt oficial aprovado pela governança.
+    subscribe:
+      operationId: onPromptApproved
+      summary: Prompt oficial aprovado
+      message:
+        payload:
+          type: object
+          properties:
+            promptId: { type: string }
+            version: { type: string }
+
+  aura.eaigp.prompt.updated.v1:
+    description: Conteúdo ou versão de prompt oficial atualizado.
+    subscribe:
+      operationId: onPromptUpdated
+      summary: Prompt oficial atualizado
+      message:
+        payload:
+          type: object
+          properties:
+            promptId: { type: string }
+            version: { type: string }
+
+  aura.eaigp.risk.detected.v1:
+    description: Risco de IA identificado e classificado.
+    subscribe:
+      operationId: onAIRiskDetected
+      summary: Risco de IA detectado
+      message:
+        payload:
+          type: object
+          properties:
+            riskId: { type: string }
+            assetId: { type: string }
+            category:
+              type: string
+              enum: [ASSISTENTIAL, LEGAL, REGULATORY, OPERATIONAL, ETHICAL, TECHNOLOGICAL, REPUTATIONAL]
+            level:
+              type: string
+              enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+  aura.eaigp.explanation.generated.v1:
+    description: Explicação de IA (XAI) gerada para decisão automatizada.
+    subscribe:
+      operationId: onAIExplanationGenerated
+      summary: Explicação de IA gerada
+      message:
+        payload:
+          type: object
+          properties:
+            explanationId: { type: string }
+            decisionId: { type: string }
+            confidenceScore: { type: number, minimum: 0, maximum: 1 }
+
+  aura.eaigp.model.evaluated.v1:
+    description: Avaliação de desempenho de modelo realizada.
+    subscribe:
+      operationId: onModelPerformanceEvaluated
+      summary: Desempenho de modelo avaliado
+      message:
+        payload:
+          type: object
+          properties:
+            evaluationId: { type: string }
+            assetId: { type: string }
+            accuracy: { type: number }
+            rating:
+              type: string
+              enum: [EXCELLENT, GOOD, ACCEPTABLE, DEGRADED, CRITICAL]
+            hallucinationRate: { type: number }
+
+  aura.eaigp.agent.governed.v1:
+    description: Agente cognitivo submetido à avaliação de conformidade.
+    subscribe:
+      operationId: onCognitiveAgentGoverned
+      summary: Agente cognitivo avaliado
+      message:
+        payload:
+          type: object
+          properties:
+            recordId: { type: string }
+            agentId: { type: string }
+            governanceStatus:
+              type: string
+              enum: [COMPLIANT, NON_COMPLIANT, UNDER_REVIEW]
