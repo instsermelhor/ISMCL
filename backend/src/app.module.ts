@@ -42,6 +42,7 @@ import { CognitiveOrchestrationModule } from './domain/cognitive-orchestration/c
 import { AutonomousEvolutionModule } from './domain/autonomous-evolution/autonomous-evolution.module';
 import { EnterpriseInteroperabilityModule } from './domain/enterprise-interoperability/enterprise-interoperability.module';
 import { UnifiedOperationsModule } from './domain/unified-operations/unified-operations.module';
+import { DigitalTwinModule } from './domain/digital-twin/digital-twin.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -198,6 +199,7 @@ import { UnifiedOperationsModule } from './domain/unified-operations/unified-ope
     AutonomousEvolutionModule,
     EnterpriseInteroperabilityModule,
     UnifiedOperationsModule,
+    DigitalTwinModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,284 @@
+asyncapi: '2.6.0'
+info:
+  title: Aura Digital Twin Platform — Event Catalog (ADT)
+  version: '1.0.0'
+  description: |
+    Especificação AsyncAPI dos eventos publicados pela Plataforma de Digital Twin
+    Organizacional (ADT) da Plataforma Aura — Prompt 157, Fase VIII.
+
+    Todos os eventos seguem o padrão CloudEvents v1.0.3 e são publicados via
+    Apache Kafka 3.7 (produção) / EventEmitter2 (desenvolvimento).
+
+    Convenção de nomeação: `aura.digitaltwin.<entity>.<action>.v<version>`
+  contact:
+    name: Instituto Ser Melhor — Plataforma Aura Strategy Office
+    email: estrategia@sermelhor.org.br
+  license:
+    name: PRIVATE — Uso Interno do Instituto Ser Melhor
+
+defaultContentType: application/json
+
+servers:
+  kafka-production:
+    url: kafka.aura.sermelhor.org.br:9092
+    protocol: kafka
+    description: Cluster Kafka 3.7 — Produção
+  eventbus-dev:
+    url: localhost:3001
+    protocol: http
+    description: EventEmitter2 in-process — Desenvolvimento
+
+channels:
+
+  aura/digitaltwin/twin/updated:
+    description: Publicado quando o estado do Digital Twin é atualizado ou sincronizado
+    publish:
+      operationId: onDigitalTwinUpdated
+      summary: Estado do Digital Twin Atualizado
+      message:
+        $ref: '#/components/messages/DigitalTwinUpdated'
+
+  aura/digitaltwin/scenario/created:
+    description: Publicado quando um novo cenário estratégico é criado
+    publish:
+      operationId: onScenarioCreated
+      summary: Cenário Estratégico Criado
+      message:
+        $ref: '#/components/messages/ScenarioCreated'
+
+  aura/digitaltwin/simulation/executed:
+    description: Publicado quando uma simulação organizacional é executada com sucesso
+    publish:
+      operationId: onSimulationExecuted
+      summary: Simulação Organizacional Executada
+      message:
+        $ref: '#/components/messages/SimulationExecuted'
+
+  aura/digitaltwin/forecast/generated:
+    description: Publicado quando uma previsão institucional é gerada
+    publish:
+      operationId: onForecastGenerated
+      summary: Previsão Institucional Gerada
+      message:
+        $ref: '#/components/messages/ForecastGenerated'
+
+  aura/digitaltwin/impact/analysis/completed:
+    description: Publicado quando uma análise multidimensional de impacto é concluída
+    publish:
+      operationId: onImpactAnalysisCompleted
+      summary: Análise de Impacto Concluída
+      message:
+        $ref: '#/components/messages/ImpactAnalysisCompleted'
+
+  aura/digitaltwin/resource/optimization/calculated:
+    description: Publicado quando um cálculo de otimização de recursos é concluído
+    publish:
+      operationId: onResourceOptimizationCalculated
+      summary: Otimização de Recursos Calculada
+      message:
+        $ref: '#/components/messages/ResourceOptimizationCalculated'
+
+  aura/digitaltwin/scenario/compared:
+    description: Publicado quando dois ou mais cenários estratégicos são comparados
+    publish:
+      operationId: onStrategicScenarioCompared
+      summary: Cenários Comparados
+      message:
+        $ref: '#/components/messages/StrategicScenarioCompared'
+
+  aura/digitaltwin/sync/completed:
+    description: Publicado quando a sincronização do Digital Twin com módulos é concluída
+    publish:
+      operationId: onTwinSyncCompleted
+      summary: Sincronização do Digital Twin Concluída
+      message:
+        $ref: '#/components/messages/TwinSyncCompleted'
+
+  aura/digitaltwin/executive/simulation/generated:
+    description: Publicado quando o painel executivo do Digital Twin é gerado
+    publish:
+      operationId: onExecutiveSimulationGenerated
+      summary: Painel Executivo do Digital Twin Gerado
+      message:
+        $ref: '#/components/messages/ExecutiveSimulationGenerated'
+
+  aura/digitaltwin/audit/completed:
+    description: Publicado quando uma entrada de auditoria do Digital Twin é registrada (SHA-256)
+    publish:
+      operationId: onDigitalTwinAuditCompleted
+      summary: Auditoria do Digital Twin Registrada
+      message:
+        $ref: '#/components/messages/DigitalTwinAuditCompleted'
+
+components:
+  messages:
+
+    DigitalTwinUpdated:
+      name: aura.digitaltwin.twin.updated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            required: [twinId, snapshotAt]
+            properties:
+              twinId:
+                type: string
+              snapshotAt:
+                type: string
+                format: date-time
+
+    ScenarioCreated:
+      name: aura.digitaltwin.scenario.created.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              scenarioId:
+                type: string
+              name:
+                type: string
+              type:
+                type: string
+                enum: [OPTIMISTIC, EXPECTED, CONSERVATIVE, CRITICAL, CUSTOM]
+
+    SimulationExecuted:
+      name: aura.digitaltwin.simulation.executed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              simulationId:
+                type: string
+              simulationType:
+                type: string
+              status:
+                type: string
+                enum: [PENDING, RUNNING, COMPLETED, FAILED, CANCELLED]
+
+    ForecastGenerated:
+      name: aura.digitaltwin.forecast.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              forecastId:
+                type: string
+              horizon:
+                type: string
+              sustainabilityScore:
+                type: number
+
+    ImpactAnalysisCompleted:
+      name: aura.digitaltwin.impact.analysis.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              analysisId:
+                type: string
+              simulationId:
+                type: string
+              overallImpactScore:
+                type: number
+
+    ResourceOptimizationCalculated:
+      name: aura.digitaltwin.resource.optimization.calculated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              optimizationId:
+                type: string
+              recommendedAlternativeId:
+                type: string
+              targetCapacityPercent:
+                type: number
+
+    StrategicScenarioCompared:
+      name: aura.digitaltwin.scenario.compared.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              scenarioIds:
+                type: array
+                items:
+                  type: string
+              recommendedScenarioId:
+                type: string
+
+    TwinSyncCompleted:
+      name: aura.digitaltwin.sync.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              syncId:
+                type: string
+              status:
+                type: string
+              syncedModules:
+                type: array
+                items:
+                  type: string
+              deltaFieldsUpdated:
+                type: integer
+
+    ExecutiveSimulationGenerated:
+      name: aura.digitaltwin.executive.simulation.generated.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              dashboardId:
+                type: string
+              activeScenarios:
+                type: integer
+              forecastSustainabilityScore:
+                type: number
+
+    DigitalTwinAuditCompleted:
+      name: aura.digitaltwin.audit.completed.v1
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            properties:
+              auditId:
+                type: string
+              componentName:
+                type: string
+              actionName:
+                type: string
+              sha256Signature:
+                type: string
+              version:
+                type: integer
