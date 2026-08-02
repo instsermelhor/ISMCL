@@ -1,0 +1,293 @@
+asyncapi: 2.6.0
+info:
+  title: Aura Autonomous Operations, AI Orchestration & Continuous Improvement (AOCP) — Event Bus
+  version: 1.0.0
+  description: |
+    Especificação AsyncAPI 2.6.0 para os eventos CloudEvents v1.0.3 publicados pela
+    Plataforma AOCP (Prompt 164 — Fase XIV do Projeto Aura).
+
+    Operação Assistida por Inteligência Artificial, Orquestração Autônoma e Melhoria Contínua — Instituto Ser Melhor.
+    Padrão de canal: aura.operations.<entity>.<action>.v<version>.
+  contact:
+    name: Chief Artificial Intelligence Officer (CAIO) — Instituto Ser Melhor
+    email: caio@sermelhorcoop.com.br
+  license:
+    name: Proprietary
+
+defaultContentType: application/cloudevents+json; charset=UTF-8
+
+servers:
+  production-kafka:
+    url: kafka.aura.sermelhorcoop.com.br:9092
+    protocol: kafka
+    description: Cluster Kafka de Produção — Plataforma Aura
+    security:
+      - saslScram512: []
+
+channels:
+
+  aura.operations.recommendation.generated.v1:
+    description: Publicado quando uma recomendação operacional explicável é gerada pela IA.
+    publish:
+      operationId: onAIRecommendationGenerated
+      summary: Recomendação operacional gerada
+      tags:
+        - name: operational-recommendations
+      message:
+        $ref: '#/components/messages/AIRecommendationGenerated'
+
+  aura.operations.improvement.opportunity.detected.v1:
+    description: Publicado quando oportunidades de melhoria contínua são identificadas.
+    publish:
+      operationId: onImprovementOpportunityDetected
+      summary: Oportunidade de melhoria identificada
+      tags:
+        - name: continuous-improvement
+      message:
+        $ref: '#/components/messages/ImprovementOpportunityDetected'
+
+  aura.operations.optimization.plan.created.v1:
+    description: Publicado quando um plano de otimização operacional é criado.
+    publish:
+      operationId: onOptimizationPlanCreated
+      summary: Plano de otimização operacional criado
+      tags:
+        - name: operational-optimization
+      message:
+        $ref: '#/components/messages/OptimizationPlanCreated'
+
+  aura.operations.task.delegated.v1:
+    description: Publicado quando uma tarefa operacional é delegada para agente de IA ou humano.
+    publish:
+      operationId: onTaskDelegated
+      summary: Tarefa operacional delegada
+      tags:
+        - name: task-delegation
+      message:
+        $ref: '#/components/messages/TaskDelegated'
+
+  aura.operations.operational.learning.updated.v1:
+    description: Publicado quando o histórico de aprendizagem operacional e lições aprendidas é atualizado.
+    publish:
+      operationId: onOperationalLearningUpdated
+      summary: Aprendizagem operacional atualizada
+      tags:
+        - name: operational-learning
+      message:
+        $ref: '#/components/messages/OperationalLearningUpdated'
+
+  aura.operations.agent.coordination.completed.v1:
+    description: Publicado quando a coordenação entre os agentes de IA especialistas é concluída.
+    publish:
+      operationId: onAgentCoordinationCompleted
+      summary: Coordenação multiagente concluída
+      tags:
+        - name: multi-agent-coordination
+      message:
+        $ref: '#/components/messages/AgentCoordinationCompleted'
+
+  aura.operations.governance.approval.granted.v1:
+    description: Publicado quando uma recomendação operacional é aprovada sob governança formal.
+    publish:
+      operationId: onGovernanceApprovalGranted
+      summary: Recomendação aprovada sob governança
+      tags:
+        - name: improvement-governance
+      message:
+        $ref: '#/components/messages/GovernanceApprovalGranted'
+
+  aura.operations.governance.approval.rejected.v1:
+    description: Publicado quando uma recomendação operacional é rejeitada.
+    publish:
+      operationId: onGovernanceApprovalRejected
+      summary: Recomendação rejeitada sob governança
+      tags:
+        - name: improvement-governance
+      message:
+        $ref: '#/components/messages/GovernanceApprovalRejected'
+
+  aura.operations.audit.completed.v1:
+    description: Publicado após registro SHA-256 de qualquer evento de governança operacional.
+    publish:
+      operationId: onContinuousImprovementAuditCompleted
+      summary: Auditoria de operações de IA concluída
+      tags:
+        - name: improvement-governance
+      message:
+        $ref: '#/components/messages/ContinuousImprovementAuditCompleted'
+
+components:
+  securitySchemes:
+    saslScram512:
+      type: scramSha512
+      description: SASL/SCRAM-SHA-512 para autenticação no Kafka
+
+  messages:
+    AIRecommendationGenerated:
+      name: AIRecommendationGenerated
+      title: Recomendação Operacional Gerada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.recommendation.generated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              recommendationId: { type: string }
+              title: { type: string }
+              category: { type: string }
+              priority: { type: string }
+
+    ImprovementOpportunityDetected:
+      name: ImprovementOpportunityDetected
+      title: Oportunidade de Melhoria Identificada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.improvement.opportunity.detected.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              opportunitiesCount: { type: integer }
+
+    OptimizationPlanCreated:
+      name: OptimizationPlanCreated
+      title: Plano de Otimização Criado
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.optimization.plan.created.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              planId: { type: string }
+              targetDomain: { type: string }
+              throughputGainPercent: { type: number }
+
+    TaskDelegated:
+      name: TaskDelegated
+      title: Tarefa Delegada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.task.delegated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              taskId: { type: string }
+              title: { type: string }
+              assigneeId: { type: string }
+              priority: { type: string }
+
+    OperationalLearningUpdated:
+      name: OperationalLearningUpdated
+      title: Aprendizagem Operacional Atualizada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.operational.learning.updated.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              learningId: { type: string }
+              title: { type: string }
+
+    AgentCoordinationCompleted:
+      name: AgentCoordinationCompleted
+      title: Coordenação Multiagente Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.agent.coordination.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              coordinationId: { type: string }
+              taskDescription: { type: string }
+              agentCount: { type: integer }
+
+    GovernanceApprovalGranted:
+      name: GovernanceApprovalGranted
+      title: Aprovação de Recomendação Concedida
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.governance.approval.granted.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              recommendationId: { type: string }
+              reviewedBy: { type: string }
+
+    GovernanceApprovalRejected:
+      name: GovernanceApprovalRejected
+      title: Aprovação de Recomendação Rejeitada
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.governance.approval.rejected.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              recommendationId: { type: string }
+              reviewedBy: { type: string }
+
+    ContinuousImprovementAuditCompleted:
+      name: ContinuousImprovementAuditCompleted
+      title: Auditoria de Operações de IA Concluída
+      contentType: application/cloudevents+json
+      payload:
+        type: object
+        properties:
+          specversion: { type: string, const: "1.0" }
+          type: { type: string, const: aura.operations.audit.completed.v1 }
+          source: { type: string }
+          id: { type: string, format: uuid }
+          time: { type: string, format: date-time }
+          data:
+            type: object
+            properties:
+              auditId: { type: string }
+              action: { type: string }
+              subject: { type: string }
+              sha256Signature: { type: string }
