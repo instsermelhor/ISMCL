@@ -338,6 +338,22 @@ export const INSTITUTIONAL_PIX = {
   shortName: 'ORG ASSOC CIVIL ISM',
 };
 
+export interface BankIntegration {
+  id: string;
+  bankId: string;
+  bankName: string;
+  bankLogo: string;
+  countryCode: string;
+  type: string;
+  pixKey?: string;
+  accountNumber?: string;
+  agency?: string;
+  balance?: number;
+  currency: string;
+  status: 'CONNECTED' | 'DISCONNECTED';
+  environment: 'production' | 'sandbox';
+}
+
 export const bankIntegrations: BankIntegration[] = [
   { id: 'bank1', bankId: 'cora', bankName: 'Banco Cora SCD', bankLogo: '🟣', countryCode: 'BR', type: 'PIX', pixKey: INSTITUTIONAL_PIX.cnpj, accountNumber: '0001234-5', agency: '0001', balance: 0, currency: 'BRL', status: 'CONNECTED', environment: 'production' },
   { id: 'bank2', bankId: 'sicredi', bankName: 'Sicredi', bankLogo: '🟢', countryCode: 'BR', type: 'PIX', pixKey: INSTITUTIONAL_PIX.cnpj, accountNumber: '12345-6', agency: '0101', balance: 0, currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
