@@ -100,8 +100,12 @@ export function AppLayout() {
   const hasMultipleRoles = iamRoles.length > 1;
 
   const handleLogout = () => {
+    // Segregação de redirecionamento pós-logout (Prompt 178)
+    // Externos → /login | Internos → /admin-login
+    const externalRoles = ['beneficiary', 'legal_guardian'];
+    const isExternal = iamRoles.some(r => externalRoles.includes(r));
     logout();
-    navigate('/admin-login', { replace: true });
+    navigate(isExternal ? '/login' : '/admin-login', { replace: true });
   };
 
   // Logout por inatividade (Prompt 177 ETAPA 6)
