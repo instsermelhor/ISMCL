@@ -75,7 +75,20 @@ function generateAuditLog(
 function loadUserFromStorage(): IAMUser | null {
   try {
     const raw = localStorage.getItem('iam_user');
-    if (raw) return JSON.parse(raw) as IAMUser;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        const primaryRole = parsed.primaryRole ?? parsed.roles?.[0] ?? 'beneficiary';
+        const roles = Array.isArray(parsed.roles) && parsed.roles.length > 0 ? parsed.roles : [primaryRole];
+        const permissions = Array.isArray(parsed.permissions) ? parsed.permissions : [];
+        return {
+          ...parsed,
+          primaryRole,
+          roles,
+          permissions,
+        } as IAMUser;
+      }
+    }
   } catch {
     // ignora
   }
@@ -112,8 +125,9 @@ function getRoleSubtitle(user: IAMUser): string {
     super_admin: 'Super Administrador',
     auditor: 'Auditoria',
   };
-  const additionalRoles = user.roles.filter(r => r !== user.primaryRole);
-  const base = labels[user.primaryRole] ?? user.primaryRole;
+  const roles = Array.isArray(user?.roles) ? user.roles : [user?.primaryRole ?? 'beneficiary'];
+  const additionalRoles = roles.filter(r => r !== user?.primaryRole);
+  const base = labels[user?.primaryRole ?? 'beneficiary'] ?? 'Acesso Geral';
   return additionalRoles.length > 0
     ? `${base} + ${additionalRoles.length} papel(éis) adicional(ais)`
     : base;
@@ -321,8 +335,9 @@ export function IAMProvider({ children }: { children: ReactNode }) {
   const hasPermission = useCallback(
     (module: PlatformModule, action: PermissionAction): boolean => {
       if (!currentUser) return false;
-      return currentUser.permissions.some(
-        p => p.module === module && p.action === action
+      const perms = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
+      return perms.some(
+        p => p && p.module === module && p.action === action
       );
     },
     [currentUser]
@@ -331,25 +346,27 @@ export function IAMProvider({ children }: { children: ReactNode }) {
   const hasRole = useCallback(
     (role: InstitutionalRole): boolean => {
       if (!currentUser) return false;
-      return currentUser.roles.includes(role);
+      const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.primaryRole];
+      return roles.includes(role);
     },
     [currentUser]
   );
 
   function getRedirectPathForUser(user: IAMUser): string {
+    const roles = Array.isArray(user?.roles) ? user.roles : (user?.primaryRole ? [user.primaryRole] : []);
     // Super admin vai para o Painel Supremo Administrativo (Prompt 177 ETAPA 5)
-    if (user.roles.includes('super_admin')) return '/painel-supremo';
-    if (user.roles.includes('auditor')) return ROLE_REDIRECT_MAP.auditor;
-    if (user.roles.includes('director') || user.roles.includes('president'))
+    if (roles.includes('super_admin')) return '/painel-supremo';
+    if (roles.includes('auditor')) return ROLE_REDIRECT_MAP.auditor;
+    if (roles.includes('director') || roles.includes('president'))
       return ROLE_REDIRECT_MAP.director;
-    if (user.roles.includes('manager')) return ROLE_REDIRECT_MAP.manager;
-    if (user.roles.includes('coordinator')) return ROLE_REDIRECT_MAP.coordinator;
-    if (user.roles.includes('volunteer_professional') || user.roles.includes('professional'))
+    if (roles.includes('manager')) return ROLE_REDIRECT_MAP.manager;
+    if (roles.includes('coordinator')) return ROLE_REDIRECT_MAP.coordinator;
+    if (roles.includes('volunteer_professional') || roles.includes('professional'))
       return ROLE_REDIRECT_MAP.professional;
-    if (user.roles.includes('admin_collaborator')) return ROLE_REDIRECT_MAP.admin_collaborator;
-    if (user.roles.includes('admin_volunteer')) return ROLE_REDIRECT_MAP.admin_volunteer;
-    if (user.roles.includes('legal_guardian')) return ROLE_REDIRECT_MAP.legal_guardian;
-    if (user.roles.includes('beneficiary')) return ROLE_REDIRECT_MAP.beneficiary;
+    if (roles.includes('admin_collaborator')) return ROLE_REDIRECT_MAP.admin_collaborator;
+    if (roles.includes('admin_volunteer')) return ROLE_REDIRECT_MAP.admin_volunteer;
+    if (roles.includes('legal_guardian')) return ROLE_REDIRECT_MAP.legal_guardian;
+    if (roles.includes('beneficiary')) return ROLE_REDIRECT_MAP.beneficiary;
     return '/dashboard';
   }
 
