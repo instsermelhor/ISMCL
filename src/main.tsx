@@ -22,8 +22,10 @@ import { AMACProvider } from './contexts/AMACContext.tsx';
 import { AIICProvider } from './contexts/AIICContext.tsx';
 import { ACOPProvider } from './contexts/ACOPContext.tsx';
 import { KnowledgeProvider } from './contexts/KnowledgeContext.tsx';
+import { installGlobalErrorListeners } from './utils/forensicLogger';
 import './index.css';
 
+// ----------------------------------------------------------------
 // Hierarquia de providers corrigida (Prompt 180 — Hotfix White Screen):
 // GlobalErrorBoundary (proteção de exceções React) →
 //   IAMProvider (camada base de identidade) →
@@ -31,6 +33,13 @@ import './index.css';
 //       AuthProvider (ponte de compatibilidade retroativa) →
 //         SecurityProvider (MCSI) →
 //           ... → App
+//
+// Prompt 181 — Auditoria Forense:
+// - installGlobalErrorListeners() captura promise rejections e erros nativos JS
+// ----------------------------------------------------------------
+
+// Instala listeners ANTES do createRoot para capturar erros de bootstrap
+installGlobalErrorListeners();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
