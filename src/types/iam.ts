@@ -382,19 +382,24 @@ export interface LoginResult {
 
 // ------ MAPA DE REDIRECIONAMENTO -----------------------------
 
+// Mapa de redirecionamento pós-autenticação por perfil (RBAC)
+// Área Restrita (equipe interna): /painel-supremo, /painel-auditoria, /dashboard-*, etc.
+// Autenticação Institucional (externos): /portal-beneficiario, /area-familia
 export const ROLE_REDIRECT_MAP: Record<InstitutionalRole, string> = {
-  beneficiary: '/portal-beneficiario',
-  legal_guardian: '/area-familia',
-  professional: '/portal-profissional',
+  // ── Externos (Autenticação Institucional) ─────────────────────
+  beneficiary:            '/portal-beneficiario',
+  legal_guardian:         '/area-familia',
+  // ── Internos (Área Restrita) ──────────────────────────────────
+  professional:           '/portal-profissional',
   volunteer_professional: '/portal-profissional',
-  admin_volunteer: '/portal-voluntario',
-  admin_collaborator: '/erp-social',
-  coordinator: '/dashboard',
-  manager: '/dashboard-gerencial',
-  director: '/dashboard-executivo',
-  president: '/dashboard-executivo',
-  super_admin: '/central-admin',
-  auditor: '/painel-auditoria',
+  admin_volunteer:        '/portal-voluntario',
+  admin_collaborator:     '/erp-social',
+  coordinator:            '/dashboard',
+  manager:                '/dashboard-gerencial',
+  director:               '/dashboard-executivo',
+  president:              '/dashboard-executivo',
+  super_admin:            '/painel-supremo',
+  auditor:                '/painel-auditoria',
 };
 
 export const ROLE_LABELS: Record<InstitutionalRole, string> = {
