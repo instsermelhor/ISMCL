@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { platformProjects, INSTITUTIONAL_PIX, type PlatformProject, type PixDonation } from '../data/financial-mock';
-import { generatePixPayload, generateQRDataUrl } from '../services/pixService';
+import { generatePixPayload, generateQRDataUrl, requestCentralizedPixCharge } from '../services/pixService';
 
 // ─── Helpers ───────────────────────────────────────────────
 function formatBRL(v: number) {
@@ -63,63 +63,64 @@ function QRModal({ project, onClose }: QRModalProps) {
   async function handleGenerate() {
     if (effectiveAmount <= 0) return;
     setGenerating(true);
-    const txId = `ISM${Date.now()}`.slice(0, 25);
-    const desc = `Doacao ${project.shortName}`;
-    const pixPayload = generatePixPayload({
-      pixKey: project.pixKey,
-      merchantName: INSTITUTIONAL_PIX.shortName,
-      merchantCity: 'SAO PAULO',
-      amount: effectiveAmount,
-      txId,
-      description: desc,
-    });
 
-    const qrUrl = await generateQRDataUrl(pixPayload, 260);
-    setPayload(pixPayload);
-    setQrDataUrl(qrUrl);
+    try {
+      const charge = await requestCentralizedPixCharge({
+        amount: effectiveAmount,
+        donorName: donorName || undefined,
+        donorEmail: donorEmail || undefined,
+        projectId: project.id,
+        projectName: project.name,
+      });
 
-    // Persist donation intent
-    const donation: PixDonation = {
-      id: `pix-${Date.now()}`,
-      projectId: project.id,
-      projectName: project.name,
-      donorName: donorName || undefined,
-      donorEmail: donorEmail || undefined,
-      amount: effectiveAmount,
-      pixPayload,
-      txId,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-    };
-    saveDonation(donation);
+      setPayload(charge.pixCopiaECola);
+      setQrDataUrl(charge.qrDataUrl);
 
-    // Also add to donors if email provided
-    if (donorName && donorEmail) {
-      try {
-        const raw = localStorage.getItem('financial_donors');
-        const donors = raw ? JSON.parse(raw) : [];
-        const exists = donors.find((d: any) => d.email === donorEmail);
-        if (!exists) {
-          donors.unshift({
-            id: `d-pix-${Date.now()}`,
-            name: donorName,
-            email: donorEmail,
-            type: 'INDIVIDUAL',
-            status: 'ACTIVE',
-            isRecurring: false,
-            joinedAt: new Date().toISOString().split('T')[0],
-            totalDonated: effectiveAmount,
-          });
-          localStorage.setItem('financial_donors', JSON.stringify(donors));
-        } else {
-          exists.totalDonated = (exists.totalDonated || 0) + effectiveAmount;
-          localStorage.setItem('financial_donors', JSON.stringify(donors));
-        }
-      } catch { /* noop */ }
+      // Persist donation intent
+      const donation: PixDonation = {
+        id: charge.txid,
+        projectId: project.id,
+        projectName: project.name,
+        donorName: donorName || undefined,
+        donorEmail: donorEmail || undefined,
+        amount: effectiveAmount,
+        pixPayload: charge.pixCopiaECola,
+        txId: charge.txid,
+        status: 'PENDING',
+        createdAt: charge.createdAt,
+      };
+      saveDonation(donation);
+
+      // Add to donors if email provided
+      if (donorName && donorEmail) {
+        try {
+          const raw = localStorage.getItem('financial_donors');
+          const donors = raw ? JSON.parse(raw) : [];
+          const exists = donors.find((d: any) => d.email === donorEmail);
+          if (!exists) {
+            donors.unshift({
+              id: `d-pix-${Date.now()}`,
+              name: donorName,
+              email: donorEmail,
+              type: 'INDIVIDUAL',
+              status: 'ACTIVE',
+              isRecurring: false,
+              joinedAt: new Date().toISOString().split('T')[0],
+              totalDonated: effectiveAmount,
+            });
+            localStorage.setItem('financial_donors', JSON.stringify(donors));
+          } else {
+            exists.totalDonated = (exists.totalDonated || 0) + effectiveAmount;
+            localStorage.setItem('financial_donors', JSON.stringify(donors));
+          }
+        } catch { /* noop */ }
+      }
+    } catch (err) {
+      console.error('Erro ao gerar cobrança PIX:', err);
+    } finally {
+      setGenerating(false);
+      setStep('qr');
     }
-
-    setGenerating(false);
-    setStep('qr');
   }
 
   function handleCopy() {
@@ -132,7 +133,7 @@ function QRModal({ project, onClose }: QRModalProps) {
   function handleDownloadQR() {
     const link = document.createElement('a');
     link.href = qrDataUrl;
-    link.download = `qr-pix-${project.shortName.toLowerCase().replace(/\s+/g, '-')}.png`;
+    link.download = `chave-pix-${project.shortName.toLowerCase().replace(/\s+/g, '-')}.png`;
     link.click();
   }
 
@@ -184,9 +185,10 @@ function QRModal({ project, onClose }: QRModalProps) {
             <input value={donorEmail} onChange={e => setDonorEmail(e.target.value)} placeholder="Seu e-mail" type="email"
               style={{ width: '100%', background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '12px 14px', color: '#e2e8f0', marginBottom: 20, outline: 'none', boxSizing: 'border-box', fontSize: 14 }} />
 
+            {/* PROMPT 182: Padronização do Botão para "Chave PIX" */}
             <button onClick={handleGenerate} disabled={effectiveAmount <= 0 || generating}
               style={{ width: '100%', background: `linear-gradient(135deg, ${project.color}, ${project.color}99)`, border: 'none', borderRadius: 12, padding: '14px 0', color: '#fff', fontWeight: 800, fontSize: 16, cursor: effectiveAmount > 0 ? 'pointer' : 'not-allowed', opacity: effectiveAmount <= 0 ? 0.5 : 1, transition: 'all 0.2s' }}>
-              {generating ? '⏳ Gerando QR...' : `🔐 Gerar QR PIX — ${formatBRL(effectiveAmount)}`}
+              {generating ? '⏳ Processando Chave PIX...' : `🔑 Chave PIX — ${formatBRL(effectiveAmount)}`}
             </button>
           </>
         ) : (
