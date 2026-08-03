@@ -42,7 +42,7 @@ function KpiCard({
   label: string;
   value: React.ReactNode;
   sub?: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   gradient: string;
   pulse?: boolean;
   trend?: { value: string; up: boolean };
