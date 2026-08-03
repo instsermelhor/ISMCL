@@ -42,16 +42,29 @@ const KnowledgeContext = createContext<KnowledgeContextType | undefined>(undefin
 
 export const KnowledgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useIAM();
-  const userRole: InstitutionalRole = currentUser?.roles[0] ?? 'super_admin';
+  // FIX BUG SEGURANÇA #5 (Prompt 181 — Auditoria Forense):
+  // Fallback anterior era 'super_admin', concedendo acesso máximo a usuários não autenticados.
+  // Corrigido para 'beneficiary' (acesso mínimo por princípio de menor privilégio).
+  const userRole: InstitutionalRole = currentUser?.roles?.[0] ?? 'beneficiary';
 
   const [documents, setDocuments] = useState<KnowledgeDocument[]>(() => {
-    const local = localStorage.getItem('@aura_knowledge_docs');
-    return local ? JSON.parse(local) : INITIAL_KNOWLEDGE_DOCUMENTS;
+    try {
+      const local = localStorage.getItem('@aura_knowledge_docs');
+      const parsed = local ? JSON.parse(local) : null;
+      return Array.isArray(parsed) ? parsed : INITIAL_KNOWLEDGE_DOCUMENTS;
+    } catch {
+      return INITIAL_KNOWLEDGE_DOCUMENTS;
+    }
   });
 
   const [auditLogs, setAuditLogs] = useState<KnowledgeAuditLog[]>(() => {
-    const local = localStorage.getItem('@aura_knowledge_logs');
-    return local ? JSON.parse(local) : INITIAL_KNOWLEDGE_AUDIT_LOGS;
+    try {
+      const local = localStorage.getItem('@aura_knowledge_logs');
+      const parsed = local ? JSON.parse(local) : null;
+      return Array.isArray(parsed) ? parsed : INITIAL_KNOWLEDGE_AUDIT_LOGS;
+    } catch {
+      return INITIAL_KNOWLEDGE_AUDIT_LOGS;
+    }
   });
 
   const [metrics, setMetrics] = useState<KnowledgeMetrics>(INITIAL_KNOWLEDGE_METRICS);
