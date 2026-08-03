@@ -22,6 +22,7 @@ export interface BankCredentials {
 }
 
 export type BankId =
+  | 'cora'       // Banco Cora SCD — Banco Institucional Oficial (Prompt 182)
   | 'efi'        // Efí Bank (ex-Gerencianet) — mais popular para OSC/MEI
   | 'sicredi'    // Sicredi — cooperativa
   | 'bb'         // Banco do Brasil
@@ -78,6 +79,10 @@ export interface BankStatement {
  */
 export async function getBankOAuthToken(creds: BankCredentials): Promise<string> {
   const OAUTH_URLS: Record<BankId, { sandbox: string; production: string }> = {
+    cora: {
+      sandbox: 'https://matls-clients.stage.cora.com.br/token',
+      production: 'https://matls-clients.api.cora.com.br/token',
+    },
     efi: {
       sandbox: 'https://pix-h.api.efipay.com.br/oauth/token',
       production: 'https://pix.api.efipay.com.br/oauth/token',
