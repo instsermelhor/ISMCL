@@ -332,7 +332,7 @@ export function AdminLogin() {
                     type="email"
                     value={email}
                     onChange={setEmail}
-                    placeholder={superAdminConfig.email || 'admin@institutosermelhor.org'}
+                    placeholder={superAdminConfig.email || 'aurainstitutosermelhor@gmail.com'}
                     autoComplete="email"
                     icon={Mail}
                     error={!!error}

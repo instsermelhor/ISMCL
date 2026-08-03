@@ -101,7 +101,7 @@ export function buildPermissions(roles: InstitutionalRole[]): Permission[] {
 export const MOCK_IAM_USERS: IAMUser[] = [
   {
     id: 'usr-001',
-    email: 'ism@ism.org',
+    email: 'aurainstitutosermelhor@gmail.com',
     name: 'Carlos Alberto Mendes',
     cpf: '000.000.000-00',
     phone: '+55 11 99999-0000',
@@ -546,7 +546,7 @@ export const MOCK_TRUSTED_DEVICES: TrustedDevice[] = [
 // ------ CREDENCIAIS DE ACESSO (MAPA PRIVADO) -----------------
 
 export const USER_CREDENTIALS: Record<string, { password: string; userId: string }> = {
-  'ism@ism.org': { password: 'teste', userId: 'usr-001' },
+  'aurainstitutosermelhor@gmail.com': { password: 'teste', userId: 'usr-001' },
   'voluntario@institutosermelhor.org': { password: 'senha123', userId: 'usr-002' },
   'auditora@institutosermelhor.org': { password: 'auditoria123', userId: 'usr-003' },
   'coordenadora@institutosermelhor.org': { password: 'coord123', userId: 'usr-004' },
