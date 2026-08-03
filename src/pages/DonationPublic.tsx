@@ -5,7 +5,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { platformProjects, type PlatformProject, type PixDonation } from '../data/financial-mock';
+import { platformProjects, INSTITUTIONAL_PIX, type PlatformProject, type PixDonation } from '../data/financial-mock';
 import { generatePixPayload, generateQRDataUrl } from '../services/pixService';
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -67,7 +67,7 @@ function QRModal({ project, onClose }: QRModalProps) {
     const desc = `Doacao ${project.shortName}`;
     const pixPayload = generatePixPayload({
       pixKey: project.pixKey,
-      merchantName: 'Instituto Ser Melhor',
+      merchantName: INSTITUTIONAL_PIX.shortName,
       merchantCity: 'SAO PAULO',
       amount: effectiveAmount,
       txId,
@@ -402,10 +402,10 @@ export default function DonationPublic() {
         {/* ─── FOOTER ───────────────────────────── */}
         <div style={{ textAlign: 'center', padding: '40px 24px', borderTop: '1px solid rgba(99,102,241,0.1)', marginTop: 20 }}>
           <div style={{ color: '#475569', fontSize: 13, marginBottom: 8 }}>
-            🔐 Doações processadas via <strong style={{ color: '#a5b4fc' }}>PIX</strong> do Banco Central do Brasil · CNPJ 10.527.336/0001-09
+            🔐 Doações processadas via <strong style={{ color: '#a5b4fc' }}>PIX ({INSTITUTIONAL_PIX.bankName})</strong> do Banco Central do Brasil · CNPJ {INSTITUTIONAL_PIX.cnpj}
           </div>
           <div style={{ color: '#334155', fontSize: 12 }}>
-            Instituto Ser Melhor · Gestão via <a href="/login" style={{ color: '#6366f1', textDecoration: 'none' }}>Plataforma Aura</a>
+            {INSTITUTIONAL_PIX.razaoSocial} · Gestão via <a href="/login" style={{ color: '#6366f1', textDecoration: 'none' }}>Plataforma Aura</a>
           </div>
         </div>
       </div>

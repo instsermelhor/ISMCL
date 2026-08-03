@@ -289,7 +289,7 @@ function AuraLandingColumn() {
             </button>
 
             <p className="text-center text-slate-600 text-[10px] mt-2">
-              🔐 Processado pelo Banco Central do Brasil · CNPJ 10.527.336/0001-09
+              🔐 Processado pelo Banco Central do Brasil · CNPJ 09.040.440/0001-47 (Banco Cora SCD)
             </p>
           </div>
         </div>

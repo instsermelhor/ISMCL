@@ -14,7 +14,7 @@ import {
   costCenters, financialCategories, donors, campaigns,
   agreements, transactions as initialTransactions, cashFlowSeries,
   bankStatementItems as initialStatementItems, bankIntegrations as initialBankIntegrations,
-  platformProjects, type Transaction, type Donor, type Campaign,
+  platformProjects, INSTITUTIONAL_PIX, type Transaction, type Donor, type Campaign,
   type Agreement, type BankStatementItem, type BankIntegration, type PixDonation,
 } from '../data/financial-mock';
 import { generatePixPayload, generateQRDataUrl } from '../services/pixService';
@@ -173,7 +173,7 @@ export function Financial() {
     const txId = `ISM${Date.now()}`.slice(0, 25);
     const payload = generatePixPayload({
       pixKey: proj.pixKey,
-      merchantName: 'Instituto Ser Melhor',
+      merchantName: INSTITUTIONAL_PIX.shortName,
       merchantCity: 'SAO PAULO',
       amount,
       txId,

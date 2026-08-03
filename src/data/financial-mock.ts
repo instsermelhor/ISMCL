@@ -328,27 +328,19 @@ export const bankStatementItems: BankStatementItem[] = [
   { id: 'bstd8', date: '2026-06-29', description: 'PIX RECEBIDO - MARIA CLARA LUZ', amount: 250.0, type: 'CREDIT', reconciled: false }, // Sem transação cadastrada
 ];
 
-// ─── INTEGRAÇÕES BANCÁRIAS ────────────────────────────────────
-export interface BankIntegration {
-  id: string;
-  bankId: string;
-  bankName: string;
-  bankLogo: string;
-  countryCode: 'BR' | 'US' | 'EU' | 'INT';
-  type: 'PIX' | 'OPEN_BANKING' | 'INTERNATIONAL' | 'GATEWAY';
-  pixKey?: string;
-  accountNumber?: string;
-  agency?: string;
-  balance?: number;
-  currency: 'BRL' | 'USD' | 'EUR';
-  status: 'CONNECTED' | 'DISCONNECTED' | 'PENDING' | 'ERROR';
-  lastSync?: string;
-  environment: 'sandbox' | 'production';
-}
+// ─── CONFIGURAÇÕES INSTITUCIONAIS PIX (PROMPT 180) ──────────────
+export const INSTITUTIONAL_PIX = {
+  cnpj: '09.040.440/0001-47',
+  rawCnpj: '09040440000147',
+  bankName: 'Banco Cora SCD',
+  bankCode: '403',
+  razaoSocial: 'ORGANIZAÇÃO ASSOCIATIVA CIVIL PARA PROMOÇÃO E DESENVOLVIMENTO DA ASSISTÊNCIA EDUCACIONAL, CULTURAL, AMBIENTAL E SOCIAL',
+  shortName: 'ORG ASSOC CIVIL ISM',
+};
 
 export const bankIntegrations: BankIntegration[] = [
-  { id: 'bank1', bankId: 'sicredi', bankName: 'Sicredi', bankLogo: '🟢', countryCode: 'BR', type: 'PIX', pixKey: 'ismcl@sermelhor.org.br', accountNumber: '12345-6', agency: '0101', balance: 0, currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
-  { id: 'bank2', bankId: 'bb', bankName: 'Banco do Brasil', bankLogo: '🟡', countryCode: 'BR', type: 'PIX', pixKey: '10.527.336/0001-09', accountNumber: '0001234-5', agency: '3928', balance: 0, currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
+  { id: 'bank1', bankId: 'cora', bankName: 'Banco Cora SCD', bankLogo: '🟣', countryCode: 'BR', type: 'PIX', pixKey: INSTITUTIONAL_PIX.cnpj, accountNumber: '0001234-5', agency: '0001', balance: 0, currency: 'BRL', status: 'CONNECTED', environment: 'production' },
+  { id: 'bank2', bankId: 'sicredi', bankName: 'Sicredi', bankLogo: '🟢', countryCode: 'BR', type: 'PIX', pixKey: INSTITUTIONAL_PIX.cnpj, accountNumber: '12345-6', agency: '0101', balance: 0, currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
   { id: 'bank3', bankId: 'itau', bankName: 'Itaú', bankLogo: '🟠', countryCode: 'BR', type: 'PIX', currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
   { id: 'bank4', bankId: 'bradesco', bankName: 'Bradesco', bankLogo: '🔴', countryCode: 'BR', type: 'PIX', currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
   { id: 'bank5', bankId: 'caixa', bankName: 'Caixa Econômica Federal', bankLogo: '🔵', countryCode: 'BR', type: 'OPEN_BANKING', currency: 'BRL', status: 'DISCONNECTED', environment: 'sandbox' },
@@ -377,14 +369,14 @@ export interface PlatformProject {
 }
 
 export const platformProjects: PlatformProject[] = [
-  { id: 'proj1', name: 'Escuta Ativa', shortName: 'Escuta Ativa', description: 'Atendimento psicossocial humanizado para indivíduos e famílias em situação de vulnerabilidade emocional e social.', category: 'SAUDE_MENTAL', icon: '🫂', color: '#6366f1', goalAmount: 50000, raisedAmount: 12400, beneficiariesCount: 142, pixKey: 'ismcl@sermelhor.org.br', active: true, route: '/portal-beneficiario' },
-  { id: 'proj2', name: 'Lar Protegido — PIARAVE', shortName: 'PIARAVE', description: 'Programa de acolhimento e proteção para vítimas de violência relacional e doméstica, com rede de suporte especializada.', category: 'PROTECAO', icon: '🏠', color: '#ec4899', goalAmount: 80000, raisedAmount: 31200, beneficiariesCount: 58, pixKey: 'ismcl@sermelhor.org.br', active: true, route: '/piarave/acolhimento' },
-  { id: 'proj3', name: 'Envelhecer Bem', shortName: 'Envelhecer Bem', description: 'Cuidados integrais para idosos: saúde física, mental e integração social com atividades terapêuticas e comunitárias.', category: 'IDOSO', icon: '👴', color: '#f59e0b', goalAmount: 40000, raisedAmount: 18600, beneficiariesCount: 87, pixKey: 'ismcl@sermelhor.org.br', active: true },
-  { id: 'proj4', name: 'Cuidar+', shortName: 'Cuidar+', description: 'Atendimento multiprofissional integrado, incluindo teleconsultas, triagem inteligente e acompanhamento contínuo.', category: 'SAUDE_MENTAL', icon: '💊', color: '#10b981', goalAmount: 60000, raisedAmount: 7800, beneficiariesCount: 213, pixKey: 'ismcl@sermelhor.org.br', active: true, route: '/portal-beneficiario' },
-  { id: 'proj5', name: 'SATAI — Triagem Inteligente', shortName: 'SATAI', description: 'Sistema de Acolhimento e Triagem Assistida por IA para priorização humanizada de atendimentos com eficiência e empatia.', category: 'TECNOLOGIA', icon: '🤖', color: '#8b5cf6', goalAmount: 30000, raisedAmount: 4200, beneficiariesCount: 320, pixKey: 'ismcl@sermelhor.org.br', active: true, route: '/acolhimento' },
-  { id: 'proj6', name: 'Teleconsulta & Saúde Digital', shortName: 'Teleconsulta', description: 'Acesso à saúde mental e social a distância, democratizando o atendimento profissional para todas as regiões.', category: 'SAUDE_MENTAL', icon: '📹', color: '#06b6d4', goalAmount: 45000, raisedAmount: 9100, beneficiariesCount: 94, pixKey: 'ismcl@sermelhor.org.br', active: true },
-  { id: 'proj7', name: 'Academia Corporativa', shortName: 'Academia SODO', description: 'Capacitação contínua de profissionais e voluntários com trilhas de aprendizagem, certificações e POPs operacionais.', category: 'CAPACITACAO', icon: '🎓', color: '#f97316', goalAmount: 20000, raisedAmount: 3400, beneficiariesCount: 67, pixKey: 'ismcl@sermelhor.org.br', active: true, route: '/academia' },
-  { id: 'proj8', name: 'Inclusão & Voluntariado (CGI)', shortName: 'CGI Voluntariado', description: 'Gestão de voluntários e programas de inclusão social com impacto mensurável nas comunidades atendidas.', category: 'INCLUSAO', icon: '🤝', color: '#84cc16', goalAmount: 25000, raisedAmount: 6700, beneficiariesCount: 180, pixKey: 'ismcl@sermelhor.org.br', active: true, route: '/cgi' },
+  { id: 'proj1', name: 'Escuta Ativa', shortName: 'Escuta Ativa', description: 'Atendimento psicossocial humanizado para indivíduos e famílias em situação de vulnerabilidade emocional e social.', category: 'SAUDE_MENTAL', icon: '🫂', color: '#6366f1', goalAmount: 50000, raisedAmount: 12400, beneficiariesCount: 142, pixKey: INSTITUTIONAL_PIX.cnpj, active: true, route: '/portal-beneficiario' },
+  { id: 'proj2', name: 'Lar Protegido — PIARAVE', shortName: 'PIARAVE', description: 'Programa de acolhimento e proteção para vítimas de violência relacional e doméstica, com rede de suporte especializada.', category: 'PROTECAO', icon: '🏠', color: '#ec4899', goalAmount: 80000, raisedAmount: 31200, beneficiariesCount: 58, pixKey: INSTITUTIONAL_PIX.cnpj, active: true, route: '/piarave/acolhimento' },
+  { id: 'proj3', name: 'Envelhecer Bem', shortName: 'Envelhecer Bem', description: 'Cuidados integrais para idosos: saúde física, mental e integração social com atividades terapêuticas e comunitárias.', category: 'IDOSO', icon: '👴', color: '#f59e0b', goalAmount: 40000, raisedAmount: 18600, beneficiariesCount: 87, pixKey: INSTITUTIONAL_PIX.cnpj, active: true },
+  { id: 'proj4', name: 'Cuidar+', shortName: 'Cuidar+', description: 'Atendimento multiprofissional integrado, incluindo teleconsultas, triagem inteligente e acompanhamento contínuo.', category: 'SAUDE_MENTAL', icon: '💊', color: '#10b981', goalAmount: 60000, raisedAmount: 7800, beneficiariesCount: 213, pixKey: INSTITUTIONAL_PIX.cnpj, active: true, route: '/portal-beneficiario' },
+  { id: 'proj5', name: 'SATAI — Triagem Inteligente', shortName: 'SATAI', description: 'Sistema de Acolhimento e Triagem Assistida por IA para priorização humanizada de atendimentos com eficiência e empatia.', category: 'TECNOLOGIA', icon: '🤖', color: '#8b5cf6', goalAmount: 30000, raisedAmount: 4200, beneficiariesCount: 320, pixKey: INSTITUTIONAL_PIX.cnpj, active: true, route: '/acolhimento' },
+  { id: 'proj6', name: 'Teleconsulta & Saúde Digital', shortName: 'Teleconsulta', description: 'Acesso à saúde mental e social a distância, democratizando o atendimento profissional para todas as regiões.', category: 'SAUDE_MENTAL', icon: '📹', color: '#06b6d4', goalAmount: 45000, raisedAmount: 9100, beneficiariesCount: 94, pixKey: INSTITUTIONAL_PIX.cnpj, active: true },
+  { id: 'proj7', name: 'Academia Corporativa', shortName: 'Academia SODO', description: 'Capacitação contínua de profissionais e voluntários com trilhas de aprendizagem, certificações e POPs operacionais.', category: 'CAPACITACAO', icon: '🎓', color: '#f97316', goalAmount: 20000, raisedAmount: 3400, beneficiariesCount: 67, pixKey: INSTITUTIONAL_PIX.cnpj, active: true, route: '/academia' },
+  { id: 'proj8', name: 'Inclusão & Voluntariado (CGI)', shortName: 'CGI Voluntariado', description: 'Gestão de voluntários e programas de inclusão social com impacto mensurável nas comunidades atendidas.', category: 'INCLUSAO', icon: '🤝', color: '#84cc16', goalAmount: 25000, raisedAmount: 6700, beneficiariesCount: 180, pixKey: INSTITUTIONAL_PIX.cnpj, active: true, route: '/cgi' },
 ];
 
 // ─── DOAÇÕES VIA PIX ─────────────────────────────────────────

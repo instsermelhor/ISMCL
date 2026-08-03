@@ -90,13 +90,8 @@ import { ACOP } from './pages/ACOP';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminSupremeDashboard } from './pages/AdminSupremeDashboard';
 
-// Prompt 179 — Centro Corporativo de Conhecimento
-import CorporateKnowledgeCenter from './pages/CorporateKnowledgeCenter';
-import { KnowledgeProvider } from './contexts/KnowledgeContext';
-
 export default function App() {
   return (
-    <KnowledgeProvider>
     <BrowserRouter>
       <Routes>
         {/* Rota pública: Login IAM institucional */}
@@ -226,6 +221,5 @@ export default function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
-    </KnowledgeProvider>
   );
 }
