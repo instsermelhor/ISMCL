@@ -11,9 +11,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Heart,
-  Shield,
-  ShieldCheck,
-  KeyRound,
   Clock,
 } from 'lucide-react';
 import { useIAM } from '../contexts/IAMContext';
@@ -21,10 +18,10 @@ import { MandatoryPasswordChangeModal } from '../components/auth/MandatoryPasswo
 import { getInitialSuperAdminConfig } from '../services/SecureCredentialsService';
 
 // ----------------------------------------------------------------
-// Campo de input reutilizável
+// Campo de input
 // ----------------------------------------------------------------
 
-function AdminInputField({
+function InputField({
   id,
   label,
   type = 'text',
@@ -70,7 +67,7 @@ function AdminInputField({
           autoComplete={autoComplete}
           disabled={disabled}
           className={`
-            w-full rounded-xl py-3.5 text-sm text-white placeholder:text-slate-500
+            w-full rounded-xl py-3.5 text-sm text-white placeholder:text-slate-600
             bg-white/5 border transition-all duration-200 outline-none
             ${Icon ? 'pl-11' : 'pl-4'}
             ${rightElement ? 'pr-12' : 'pr-4'}
@@ -91,8 +88,8 @@ function AdminInputField({
 }
 
 // ----------------------------------------------------------------
-// Componente Principal — Tela de Autenticação Administrativa
-// Prompt 177 — ETAPAS 1, 2, 3, 6, 8
+// AdminLogin — Área Restrita (Prompt 177 + Prompt 178)
+// Interface minimalista: apenas Logo · E-mail · Senha · Entrar · ← Voltar
 // ----------------------------------------------------------------
 
 type LoginStep = 'credentials' | 'success';
@@ -110,13 +107,12 @@ export function AdminLogin() {
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [lockCountdown, setLockCountdown] = useState(0);
 
-  // Troca obrigatória de senha (Prompt 177 ETAPA 3)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState<string>('/painel-supremo');
 
   const superAdminConfig = getInitialSuperAdminConfig();
 
-  // Redirecionar se já autenticado
+  // Redireciona se já autenticado
   useEffect(() => {
     if (isAuthenticated) {
       navigate(getRedirectPath(), { replace: true });
@@ -162,7 +158,7 @@ export function AdminLogin() {
         setShowPasswordChangeModal(true);
       } else {
         setStep('success');
-        setTimeout(() => navigate(result.redirectPath ?? '/painel-supremo', { replace: true }), 1200);
+        setTimeout(() => navigate(result.redirectPath ?? '/dashboard', { replace: true }), 1000);
       }
     } catch {
       setError('Erro de conexão. Tente novamente.');
@@ -174,7 +170,7 @@ export function AdminLogin() {
   const handlePasswordChangeComplete = () => {
     setShowPasswordChangeModal(false);
     setStep('success');
-    setTimeout(() => navigate(pendingRedirect, { replace: true }), 1000);
+    setTimeout(() => navigate(pendingRedirect, { replace: true }), 800);
   };
 
   const isLocked = !!lockedUntil && Date.now() < lockedUntil;
@@ -183,10 +179,10 @@ export function AdminLogin() {
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #1a0a2e 100%)',
+        background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 55%, #1a0a2e 100%)',
       }}
     >
-      {/* Modal de Troca Obrigatória de Senha (ETAPA 3) */}
+      {/* Modal de troca obrigatória de senha */}
       {showPasswordChangeModal && (
         <MandatoryPasswordChangeModal
           email={email}
@@ -194,141 +190,112 @@ export function AdminLogin() {
         />
       )}
 
-      {/* Decoração de fundo */}
+      {/* Ornamentos de fundo (decorativos, sem texto) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Orb teal */}
         <motion.div
-          className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-[0.07]"
-          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)' }}
-          animate={{ scale: [1, 1.1, 1], opacity: [0.07, 0.12, 0.07] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-48 -right-48 w-[560px] h-[560px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%)' }}
+          animate={{ scale: [1, 1.08, 1] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full opacity-[0.07]"
-          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)' }}
-          animate={{ scale: [1, 1.15, 1], opacity: [0.07, 0.14, 0.07] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          className="absolute -bottom-48 -left-48 w-[560px] h-[560px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%)' }}
+          animate={{ scale: [1, 1.12, 1] }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
         />
-        {/* Grid pattern */}
-        <svg className="absolute inset-0 w-full h-full opacity-[0.025]" xmlns="http://www.w3.org/2000/svg">
+        <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <pattern id="admin-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+            <pattern id="ar-grid" width="32" height="32" patternUnits="userSpaceOnUse">
               <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" strokeWidth="0.5" />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#admin-grid)" />
+          <rect width="100%" height="100%" fill="url(#ar-grid)" />
         </svg>
       </div>
 
-      {/* Card central */}
-      <div className="relative z-10 w-full max-w-md">
+      {/* Conteúdo central */}
+      <div className="relative z-10 w-full max-w-sm">
 
-        {/* Header institucional */}
+        {/* ── Logo do Projeto Aura ── */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-8"
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center mb-10"
         >
-          {/* Logo */}
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 relative">
-            <div
-              className="absolute inset-0 rounded-2xl"
-              style={{
-                background: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(124,58,237,0.15) 100%)',
-                border: '1px solid rgba(245,158,11,0.3)',
-              }}
-            />
+          <div className="relative w-20 h-20 mb-0">
+            {/* Anel animado */}
             <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
               className="absolute inset-0 rounded-2xl"
               style={{
-                background: 'conic-gradient(from 0deg, transparent 70%, rgba(245,158,11,0.2) 100%)',
+                background: 'conic-gradient(from 0deg, transparent 70%, rgba(245,158,11,0.25) 100%)',
               }}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
             />
-            <div className="relative flex items-center justify-center">
-              <Heart className="w-7 h-7 text-amber-400 fill-current" />
+            {/* Fundo do logo */}
+            <div
+              className="absolute inset-0.5 rounded-2xl flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(124,58,237,0.12) 100%)',
+                border: '1px solid rgba(245,158,11,0.2)',
+              }}
+            >
+              <Heart className="w-8 h-8 text-amber-400 fill-current" />
             </div>
-          </div>
-
-          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center justify-center gap-2 mb-1">
-            <ShieldCheck className="w-5 h-5 text-amber-400" />
-            Área Administrativa
-          </h1>
-          <p className="text-slate-400 text-sm font-medium">
-            Acesso exclusivo para administradores autorizados.
-          </p>
-
-          {/* Badge de segurança */}
-          <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-            <Shield className="w-3 h-3 text-amber-400" />
-            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-              Instituto Ser Melhor · IAM Protegido
-            </span>
           </div>
         </motion.div>
 
-        {/* Card de Autenticação */}
+        {/* ── Card de Autenticação ── */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.55, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
           className="rounded-3xl overflow-hidden shadow-2xl"
           style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(24px)',
+            background: 'rgba(255,255,255,0.035)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            backdropFilter: 'blur(28px)',
           }}
         >
           <AnimatePresence mode="wait">
 
-            {/* ---- STEP: LOGIN ---- */}
+            {/* ── PASSO: CREDENCIAIS ── */}
             {step === 'credentials' && (
               <motion.div
                 key="credentials"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.25 }}
-                className="p-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="p-8 space-y-5"
               >
-                {/* Header do card */}
-                <div className="mb-6 text-left border-b border-white/5 pb-4">
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-amber-400" />
-                    Autenticação Institucional
-                  </h2>
-                  <p className="text-slate-400 text-xs mt-0.5">
-                    Insira suas credenciais para acessar o Painel Supremo Administrativo
-                  </p>
-                </div>
-
-                {/* Alerta de bloqueio por força bruta */}
+                {/* Bloqueio por força bruta */}
                 <AnimatePresence>
                   {isLocked && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="mb-4 flex items-start gap-3 rounded-xl bg-red-950/50 border border-red-500/40 px-4 py-3"
+                      className="flex items-start gap-3 rounded-xl bg-red-950/50 border border-red-500/40 px-4 py-3"
                     >
                       <Clock className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-bold text-red-300">Conta temporariamente bloqueada</p>
+                        <p className="text-xs font-bold text-red-300">Acesso temporariamente suspenso</p>
                         <p className="text-xs text-red-400 mt-0.5">
-                          Muitas tentativas de login. Tente novamente em{' '}
-                          <strong className="text-red-200">{lockCountdown}s</strong>.
+                          Aguarde <strong className="text-red-200">{lockCountdown}s</strong> para tentar novamente.
                         </p>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <AdminInputField
-                    id="admin-email"
-                    label="E-mail Institucional"
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                  {/* Campo: E-mail */}
+                  <InputField
+                    id="ar-email"
+                    label="E-mail"
                     type="email"
                     value={email}
                     onChange={setEmail}
@@ -339,13 +306,14 @@ export function AdminLogin() {
                     disabled={isLocked}
                   />
 
-                  <AdminInputField
-                    id="admin-password"
+                  {/* Campo: Senha */}
+                  <InputField
+                    id="ar-password"
                     label="Senha"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={setPassword}
-                    placeholder="Digite sua senha"
+                    placeholder="••••••••••"
                     autoComplete="current-password"
                     icon={Lock}
                     error={!!error}
@@ -353,7 +321,7 @@ export function AdminLogin() {
                     rightElement={
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => setShowPassword(s => !s)}
                         className="text-slate-500 hover:text-slate-300 transition-colors"
                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                         tabIndex={-1}
@@ -371,7 +339,7 @@ export function AdminLogin() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-left"
+                        className="flex items-start gap-2.5 rounded-xl bg-red-500/10 border border-red-500/25 px-4 py-3 text-left"
                       >
                         <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                         <p className="text-xs text-red-300">{error}</p>
@@ -379,38 +347,23 @@ export function AdminLogin() {
                     )}
                   </AnimatePresence>
 
-                  {/* Botão Entrar (Prompt 177 - ETAPA 2) */}
-                  <button
+                  {/* Botão: Entrar */}
+                  <motion.button
                     type="submit"
                     disabled={isLoading || isLocked}
-                    id="btn-admin-login-submit"
-                    className="
-                      w-full flex items-center justify-center gap-2 rounded-xl py-3.5
-                      font-bold text-sm
-                      disabled:opacity-50 disabled:cursor-not-allowed
-                      transition-all duration-200 active:scale-[0.98] cursor-pointer
-                      shadow-lg
-                    "
+                    whileHover={!isLoading && !isLocked ? { scale: 1.01, translateY: -1 } : {}}
+                    whileTap={{ scale: 0.98 }}
+                    id="btn-ar-entrar"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer"
                     style={{
                       background: isLocked
-                        ? 'rgba(100,100,100,0.3)'
+                        ? 'rgba(100,100,100,0.25)'
                         : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                      boxShadow: isLocked ? 'none' : '0 0 24px rgba(245,158,11,0.3)',
-                      color: '#fff',
-                    }}
-                    onMouseEnter={e => {
-                      if (!isLocked && !isLoading) {
-                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 36px rgba(245,158,11,0.5)';
-                        (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = isLocked ? 'none' : '0 0 24px rgba(245,158,11,0.3)';
-                      (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                      boxShadow: isLocked ? 'none' : '0 0 20px rgba(245,158,11,0.28)',
                     }}
                   >
                     {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : isLocked ? (
                       <>
                         <Clock className="w-4 h-4" />
@@ -422,52 +375,48 @@ export function AdminLogin() {
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
-                  </button>
+                  </motion.button>
                 </form>
 
-                {/* Link: ← Voltar ao Portal Principal (Prompt 177 - ETAPA 2) */}
-                <div className="mt-6 border-t border-white/5 pt-4 text-center">
+                {/* Link: ← Voltar */}
+                <div className="pt-1 text-center">
                   <button
                     type="button"
                     onClick={() => navigate('/login')}
-                    id="btn-admin-voltar-portal"
-                    className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors bg-none border-none cursor-pointer"
+                    id="btn-ar-voltar"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    Voltar ao Portal Principal
+                    Voltar
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* ---- STEP: SUCESSO ---- */}
+            {/* ── PASSO: SUCESSO ── */}
             {step === 'success' && (
               <motion.div
                 key="success"
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.92 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="p-8 text-center"
+                transition={{ duration: 0.35 }}
+                className="p-10 flex flex-col items-center gap-4"
               >
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                  className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500/30 mb-4"
+                  transition={{ type: 'spring', stiffness: 220, damping: 14 }}
+                  className="w-14 h-14 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center"
                 >
-                  <CheckCircle2 className="w-8 h-8 text-amber-400" />
+                  <CheckCircle2 className="w-7 h-7 text-amber-400" />
                 </motion.div>
-                <h2 className="text-lg font-bold text-white mb-1">Acesso Autorizado</h2>
-                <p className="text-slate-400 text-xs">
-                  Carregando o Painel Supremo Administrativo...
-                </p>
-                <div className="flex justify-center gap-1 mt-4">
+                <div className="flex gap-1">
                   {[0, 1, 2].map(i => (
                     <motion.div
                       key={i}
                       className="w-1.5 h-1.5 rounded-full bg-amber-400"
-                      animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
+                      animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.18 }}
                     />
                   ))}
                 </div>
@@ -475,26 +424,6 @@ export function AdminLogin() {
             )}
 
           </AnimatePresence>
-        </motion.div>
-
-        {/* Rodapé de Segurança */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-center mt-6"
-        >
-          <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500">
-            <div className="flex items-center gap-1">
-              <Shield className="w-3 h-3 text-amber-500/70" />
-              <span>Zero Trust · RBAC/ABAC · Rate Limiting</span>
-            </div>
-            <span>•</span>
-            <span>Trilha de Auditoria Imutável</span>
-          </div>
-          <p className="text-[10px] text-slate-600 mt-1">
-            © 2026 Instituto Ser Melhor — Todos os direitos reservados
-          </p>
         </motion.div>
 
       </div>
