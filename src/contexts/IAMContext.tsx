@@ -33,6 +33,11 @@ import {
   MOCK_TRUSTED_DEVICES,
   USER_CREDENTIALS,
 } from '../data/iam-mock';
+import {
+  getInitialSuperAdminConfig,
+  verifyPasswordHash,
+  saveSuperAdminPasswordChange,
+} from '../services/SecureCredentialsService';
 
 // ----------------------------------------------------------------
 
@@ -118,6 +123,34 @@ function getRoleSubtitle(user: IAMUser): string {
 // Provider
 // ----------------------------------------------------------------
 
+// ---- Rate Limiting — Brute Force Protection (Prompt 177 ETAPA 6) ----
+const MAX_ATTEMPTS = 5;
+const BASE_LOCKOUT_MS = 30_000; // 30 segundos
+interface LoginAttempts { count: number; lockedUntil: number | null; }
+// Mapa de tentativas por e-mail (module-scoped, persiste na memória da sessão)
+const loginAttemptsMap: Record<string, LoginAttempts> = {};
+
+function getAttempts(email: string): LoginAttempts {
+  return loginAttemptsMap[email] ?? { count: 0, lockedUntil: null };
+}
+function recordFailure(email: string): LoginAttempts {
+  const prev = getAttempts(email);
+  const count = prev.count + 1;
+  // Progressivo: 30s * 2^(tentativas extras)
+  const lockoutMs = count >= MAX_ATTEMPTS
+    ? BASE_LOCKOUT_MS * Math.pow(2, Math.max(0, count - MAX_ATTEMPTS))
+    : null;
+  const updated: LoginAttempts = {
+    count,
+    lockedUntil: lockoutMs ? Date.now() + lockoutMs : null,
+  };
+  loginAttemptsMap[email] = updated;
+  return updated;
+}
+function resetAttempts(email: string) {
+  delete loginAttemptsMap[email];
+}
+
 export function IAMProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<IAMUser | null>(loadUserFromStorage);
   const [users, setUsers] = useState<IAMUser[]>(MOCK_IAM_USERS);
@@ -136,23 +169,76 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     setAuditLogs(prev => [log, ...prev]);
   }, []);
 
-  // ---- Login ----
+  // ---- Login com Rate Limiting e Proteção Força Bruta (Prompt 177 ETAPA 6) ----
   const login = useCallback(
     async (email: string, password: string): Promise<LoginResult> => {
-      await new Promise(r => setTimeout(r, 900)); // simula latência
-
       const lowerEmail = email.toLowerCase().trim();
-      const cred = USER_CREDENTIALS[lowerEmail];
 
-      if (!cred || cred.password !== password) {
+      // ── Rate Limiting: verifica bloqueio temporário ──────────────
+      const attempts = getAttempts(lowerEmail);
+      if (attempts.lockedUntil && Date.now() < attempts.lockedUntil) {
+        const remainingSec = Math.ceil((attempts.lockedUntil - Date.now()) / 1000);
         addAuditLog(generateAuditLog(null, 'login_failure', {
-          details: { email: lowerEmail, reason: 'invalid_credentials' },
-          severity: 'warning',
+          details: { email: lowerEmail, reason: 'rate_limited', remainingSec },
+          severity: 'critical',
         }));
-        return { success: false, error: 'E-mail ou senha incorretos.' };
+        return {
+          success: false,
+          error: `Conta temporariamente bloqueada por segurança. Aguarde ${remainingSec}s antes de tentar novamente.`,
+          lockedUntil: attempts.lockedUntil,
+        };
       }
 
-      const found = users.find(u => u.id === cred.userId);
+      await new Promise(r => setTimeout(r, 900)); // simula latência de rede
+
+      const superAdminSec = getInitialSuperAdminConfig();
+
+      let found = users.find(u => u.id === 'usr-001' || u.email.toLowerCase() === lowerEmail);
+
+      // Verificação específica do Super Administrador com credenciais seguras (Prompt 177)
+      if (superAdminSec.email && lowerEmail === superAdminSec.email.toLowerCase()) {
+        const isPassValid = await verifyPasswordHash(password, superAdminSec.initialPass);
+        if (!isPassValid) {
+          const att = recordFailure(lowerEmail);
+          addAuditLog(generateAuditLog(null, 'login_failure', {
+            details: { email: lowerEmail, reason: 'invalid_credentials', attempt: att.count },
+            severity: att.count >= MAX_ATTEMPTS ? 'critical' : 'warning',
+          }));
+          const attLeft = Math.max(0, MAX_ATTEMPTS - att.count);
+          const lockMsg = att.lockedUntil
+            ? ` Conta bloqueada por ${Math.ceil((att.lockedUntil - Date.now()) / 1000)}s.`
+            : attLeft > 0 ? ` ${attLeft} tentativa(s) restante(s) antes do bloqueio.` : '';
+          return { success: false, error: `E-mail ou senha incorretos.${lockMsg}` };
+        }
+
+        if (!found) {
+          found = users.find(u => u.id === 'usr-001');
+        }
+
+        if (found) {
+          found = {
+            ...found,
+            email: superAdminSec.email,
+            mustChangePassword: superAdminSec.mustChangePassword,
+          };
+        }
+      } else {
+        const cred = USER_CREDENTIALS[lowerEmail];
+        if (!cred || cred.password !== password) {
+          const att = recordFailure(lowerEmail);
+          addAuditLog(generateAuditLog(null, 'login_failure', {
+            details: { email: lowerEmail, reason: 'invalid_credentials', attempt: att.count },
+            severity: att.count >= MAX_ATTEMPTS ? 'critical' : 'warning',
+          }));
+          const attLeft = Math.max(0, MAX_ATTEMPTS - att.count);
+          const lockMsg = att.lockedUntil
+            ? ` Conta bloqueada por ${Math.ceil((att.lockedUntil - Date.now()) / 1000)}s.`
+            : attLeft > 0 ? ` ${attLeft} tentativa(s) restante(s) antes do bloqueio.` : '';
+          return { success: false, error: `E-mail ou senha incorretos.${lockMsg}` };
+        }
+        found = users.find(u => u.id === cred.userId);
+      }
+
       if (!found) {
         return { success: false, error: 'Usuário não encontrado na base de dados.' };
       }
@@ -169,25 +255,31 @@ export function IAMProvider({ children }: { children: ReactNode }) {
         return { success: false, error: msgs[found.status] ?? 'Acesso negado.' };
       }
 
-      // Login direto — MFA não bloqueia o login
-      // Se mfaRequired=true, o usuário será notificado após o login
+      // ── Login bem-sucedido: reset contador de tentativas ─────────
+      resetAttempts(lowerEmail);
+
       const updatedUser = {
         ...found,
         lastLogin: new Date().toISOString(),
         lastLoginIp: '127.0.0.1',
-        lastLoginDevice: 'Navegador',
+        lastLoginDevice: navigator.userAgent.includes('Mobile') ? 'Dispositivo Móvel' : 'Navegador',
       };
       setCurrentUser(updatedUser);
       persistUser(updatedUser);
 
       addAuditLog(generateAuditLog(updatedUser, 'login_success', {
-        details: { mfaEnabled: found.mfaEnabled },
+        details: {
+          mfaEnabled: found.mfaEnabled,
+          mustChangePassword: updatedUser.mustChangePassword,
+          userAgent: navigator.userAgent,
+        },
         severity: 'info',
       }));
 
       return {
         success: true,
         requiresMfa: false,
+        requiresPasswordChange: updatedUser.mustChangePassword ?? false,
         redirectPath: getRedirectPathForUser(updatedUser),
       };
     },
@@ -245,8 +337,8 @@ export function IAMProvider({ children }: { children: ReactNode }) {
   );
 
   function getRedirectPathForUser(user: IAMUser): string {
-    // Super admin e auditor têm prioridade
-    if (user.roles.includes('super_admin')) return ROLE_REDIRECT_MAP.super_admin;
+    // Super admin vai para o Painel Supremo Administrativo (Prompt 177 ETAPA 5)
+    if (user.roles.includes('super_admin')) return '/painel-supremo';
     if (user.roles.includes('auditor')) return ROLE_REDIRECT_MAP.auditor;
     if (user.roles.includes('director') || user.roles.includes('president'))
       return ROLE_REDIRECT_MAP.director;

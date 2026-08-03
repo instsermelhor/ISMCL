@@ -39,6 +39,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useIAM } from '../../contexts/IAMContext';
 import { ROLE_LABELS, ROLE_COLORS } from '../../types/iam';
 import type { InstitutionalRole } from '../../types/iam';
+import { useInactivityLogout } from '../../hooks/useInactivityLogout';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -51,6 +52,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: 'Painel Supremo (P177)', href: '/painel-supremo', icon: ShieldCheck },
   { name: 'Portal Beneficiário', href: '/portal-beneficiario', icon: Smile },
   { name: 'Portal Profissional', href: '/portal-profissional', icon: Award },
   { name: 'CGI — Gestão', href: '/cgi', icon: Building2 },
@@ -99,8 +101,14 @@ export function AppLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login', { replace: true });
+    navigate('/admin-login', { replace: true });
   };
+
+  // Logout por inatividade (Prompt 177 ETAPA 6)
+  useInactivityLogout({
+    enabled: !!currentUser,
+    onTimeout: handleLogout,
+  });
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900 overflow-hidden">

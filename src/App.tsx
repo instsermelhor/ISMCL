@@ -86,16 +86,30 @@ import { AIIC } from './pages/AIIC';
 // ACOP — Orquestração Cognitiva Multi-Agente (Prompt 152 — Fase III)
 import { ACOP } from './pages/ACOP';
 
+// Prompt 177 — Área Restrita e Painel Supremo Administrativo
+import { AdminLogin } from './pages/AdminLogin';
+import { AdminSupremeDashboard } from './pages/AdminSupremeDashboard';
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota pública: redireciona se já autenticado */}
+        {/* Rota pública: Login IAM institucional */}
         <Route
           path="/login"
           element={
             <PublicRoute>
               <IAMLogin />
+            </PublicRoute>
+          }
+        />
+
+        {/* Rota pública: Área Administrativa — Login exclusivo (Prompt 177 ETAPA 1 e 2) */}
+        <Route
+          path="/admin-login"
+          element={
+            <PublicRoute>
+              <AdminLogin />
             </PublicRoute>
           }
         />
@@ -196,6 +210,9 @@ export default function App() {
 
           {/* Rota de teleconsulta (tela cheia, fora do AppLayout) */}
           <Route path="/telehealth/:id" element={<Telehealth />} />
+
+          {/* Painel Supremo Administrativo (Prompt 177 - Tela Cheia) */}
+          <Route path="/painel-supremo" element={<AdminSupremeDashboard />} />
         </Route>
 
         {/* Fallback */}

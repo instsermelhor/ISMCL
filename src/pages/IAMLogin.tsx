@@ -5,6 +5,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  ArrowLeft,
   Mail,
   Lock,
   CheckCircle2,
@@ -12,9 +13,13 @@ import {
   Heart,
   Shield,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 import { useIAM } from '../contexts/IAMContext';
 import { useAuraContent } from '../contexts/AuraContentContext';
+import { MandatoryPasswordChangeModal } from '../components/auth/MandatoryPasswordChangeModal';
+import { RestrictedAreaButton } from '../components/auth/RestrictedAreaButton';
+import { getInitialSuperAdminConfig } from '../services/SecureCredentialsService';
 
 // ----------------------------------------------------------------
 // Campo de input reutilizável
@@ -45,7 +50,7 @@ function InputField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-300 mb-2">
+      <label htmlFor={id} className="block text-xs font-semibold text-slate-300 mb-1.5 text-left">
         {label}
       </label>
       <div className="relative">
@@ -104,9 +109,12 @@ function AuraLandingColumn() {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className="lg:col-span-7 bg-slate-900/40 border border-white/5 rounded-3xl p-6 lg:p-10 backdrop-blur-md space-y-6 text-left"
     >
-      {/* Badge */}
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold uppercase tracking-wider">
-        {content.badgeText}
+      {/* Header com Badge e Botão Área Restrita (Prompt 177 ETAPA 1) */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold uppercase tracking-wider">
+          {content.badgeText}
+        </div>
+        <RestrictedAreaButton variant="header" />
       </div>
 
       {/* Título */}
@@ -293,7 +301,7 @@ function AuraLandingColumn() {
 
 
 // ----------------------------------------------------------------
-// Tela de Login
+// Tela de Login Administrativo (Prompt 177 - ETAPAS 1, 2, 3, 6, 8)
 // ----------------------------------------------------------------
 
 type LoginStep = 'credentials' | 'success';
@@ -309,6 +317,13 @@ export function IAMLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showHints, setShowHints] = useState(false);
+
+  // Troca obrigatória de senha (Prompt 177 ETAPA 3)
+  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState<string>('/central-admin');
+
+  // Configuração segura das credenciais iniciais do Super Admin
+  const superAdminConfig = getInitialSuperAdminConfig();
 
   // Redirecionar se já autenticado
   useEffect(() => {
@@ -329,15 +344,25 @@ export function IAMLogin() {
       const result = await login(email, password);
       if (!result.success) {
         setError(result.error ?? 'E-mail ou senha incorretos.');
+      } else if (result.requiresPasswordChange) {
+        // Exige troca obrigatória de senha antes de acessar o painel
+        setPendingRedirect(result.redirectPath ?? '/central-admin');
+        setShowPasswordChangeModal(true);
       } else {
         setStep('success');
-        setTimeout(() => navigate(result.redirectPath ?? '/dashboard', { replace: true }), 1200);
+        setTimeout(() => navigate(result.redirectPath ?? '/central-admin', { replace: true }), 1200);
       }
     } catch {
       setError('Erro de conexão. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePasswordChangeComplete = () => {
+    setShowPasswordChangeModal(false);
+    setStep('success');
+    setTimeout(() => navigate(pendingRedirect, { replace: true }), 1000);
   };
 
   return (
@@ -347,6 +372,14 @@ export function IAMLogin() {
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f2027 100%)',
       }}
     >
+      {/* Modal de Troca Obrigatória de Senha (ETAPA 3) */}
+      {showPasswordChangeModal && (
+        <MandatoryPasswordChangeModal
+          email={email}
+          onSuccess={handlePasswordChangeComplete}
+        />
+      )}
+
       {/* Decoração de fundo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
@@ -369,31 +402,36 @@ export function IAMLogin() {
 
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10 py-6 px-4">
 
-        {/* Left Column: Institutional Presentation — conteúdo dinâmico via AuraContentContext */}
+        {/* Left Column: Institutional Presentation */}
         <AuraLandingColumn />
 
         {/* Right Column: Login Card & Credentials */}
         <div className="lg:col-span-5 w-full max-w-md mx-auto">
-          {/* Logo */}
+          {/* Logo do Projeto Aura & Título Restrito (Prompt 177 - ETAPA 2) */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="text-center mb-6 lg:mb-8"
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-2xl shadow-teal-500/30 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-2xl shadow-teal-500/30 mb-4 border border-teal-400/20">
               <Heart className="w-8 h-8 text-white fill-current" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Portal do Colaborador</h1>
-            <p className="text-slate-400 text-xs mt-1 font-medium">Acesso Restrito e Identificado</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-teal-400" />
+              Área Administrativa
+            </h1>
+            <p className="text-slate-400 text-xs mt-1.5 font-medium">
+              Acesso exclusivo para administradores autorizados.
+            </p>
           </motion.div>
 
-          {/* Card */}
+          {/* Card de Autenticação */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-3xl overflow-hidden"
+            className="rounded-3xl overflow-hidden shadow-2xl"
             style={{
               background: 'rgba(255,255,255,0.03)',
               border: '1px solid rgba(255,255,255,0.08)',
@@ -412,21 +450,24 @@ export function IAMLogin() {
                   transition={{ duration: 0.25 }}
                   className="p-6 lg:p-8"
                 >
-                  <div className="mb-6 text-left">
-                    <h2 className="text-lg font-bold text-white">Identificação</h2>
+                  <div className="mb-6 text-left border-b border-white/5 pb-4">
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-teal-400" />
+                      Autenticação Institucional
+                    </h2>
                     <p className="text-slate-400 text-xs mt-0.5">
-                      Insira suas credenciais institucionais
+                      Insira suas credenciais seguras para autenticar no Painel Supremo
                     </p>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <InputField
                       id="email"
-                      label="E-mail institucional"
+                      label="E-mail"
                       type="email"
                       value={email}
                       onChange={setEmail}
-                      placeholder="seu@institutosermelhor.org"
+                      placeholder="auraadmin@institutosermelhor.org"
                       autoComplete="email"
                       icon={Mail}
                       error={!!error}
@@ -476,7 +517,7 @@ export function IAMLogin() {
                           id="remember"
                           className="w-3.5 h-3.5 rounded border-slate-600 bg-white/5 text-teal-500 focus:ring-teal-500/30"
                         />
-                        <span className="text-xs text-slate-400">Lembrar acesso</span>
+                        <span className="text-xs text-slate-400">Lembrar acesso seguro</span>
                       </label>
                       <button
                         type="button"
@@ -486,40 +527,54 @@ export function IAMLogin() {
                       </button>
                     </div>
 
+                    {/* Botão Entrar (Prompt 177 - ETAPA 2) */}
                     <button
                       type="submit"
                       disabled={isLoading}
                       id="btn-login-submit"
                       className="
-                        w-full flex items-center justify-center gap-2 rounded-xl py-3
+                        w-full flex items-center justify-center gap-2 rounded-xl py-3.5
                         bg-gradient-to-r from-teal-500 to-teal-600
-                        text-white font-semibold text-sm
+                        text-white font-bold text-sm
                         shadow-lg shadow-teal-500/25
                         hover:from-teal-400 hover:to-teal-500
                         disabled:opacity-50 disabled:cursor-not-allowed
-                        transition-all duration-200 active:scale-[0.98]
+                        transition-all duration-200 active:scale-[0.98] cursor-pointer
                       "
                     >
                       {isLoading ? (
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       ) : (
                         <>
-                          Entrar no Painel
+                          Entrar
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
                     </button>
                   </form>
 
-                  {/* Credenciais de teste */}
-                  <div className="mt-4 border-t border-white/5 pt-4">
+                  {/* Link: ← Voltar ao Portal Principal (Prompt 177 - ETAPA 2) */}
+                  <div className="mt-6 border-t border-white/5 pt-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/')}
+                      id="btn-voltar-portal"
+                      className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-teal-400 transition-colors bg-none border-none cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Voltar ao Portal Principal
+                    </button>
+                  </div>
+
+                  {/* Credenciais de teste seguras */}
+                  <div className="mt-3">
                     <button
                       type="button"
                       onClick={() => setShowHints(!showHints)}
                       className="w-full flex items-center justify-center gap-2 text-[11px] text-slate-500 hover:text-slate-350 transition-colors py-1 cursor-pointer bg-none border-none"
                     >
                       <Info className="w-3 h-3" />
-                      {showHints ? 'Ocultar credenciais de demonstração' : 'Ver credenciais de demonstração'}
+                      {showHints ? 'Ocultar credenciais institucionais' : 'Ver credenciais institucionais de homologação'}
                     </button>
 
                     <AnimatePresence>
@@ -528,17 +583,15 @@ export function IAMLogin() {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="mt-2 rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5 overflow-hidden max-h-[180px] overflow-y-auto pr-1 custom-scrollbar text-left"
+                          className="mt-2 rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5 overflow-hidden max-h-[200px] overflow-y-auto pr-1 custom-scrollbar text-left"
                         >
                           {[
-                            { label: 'Super Admin',       email: 'ism@ism.org',                                 password: 'teste',            color: 'bg-slate-700 text-white' },
-                            { label: 'Prof. Voluntária',  email: 'voluntario@institutosermelhor.org',            password: 'senha123',         color: 'bg-emerald-900/60 text-emerald-300' },
-                            { label: 'Auditora',          email: 'auditora@institutosermelhor.org',              password: 'auditoria123',     color: 'bg-zinc-800 text-zinc-300' },
-                            { label: 'Coordenadora',      email: 'coordenadora@institutosermelhor.org',          password: 'coord123',         color: 'bg-orange-900/60 text-orange-300' },
-                            { label: 'Gestor',            email: 'gestor@institutosermelhor.org',                password: 'gestor123',        color: 'bg-rose-900/60 text-rose-300' },
-                            { label: 'Diretora',          email: 'diretora@institutosermelhor.org',              password: 'diretora123',      color: 'bg-purple-900/60 text-purple-300' },
-                            { label: 'Vol. Administrativa', email: 'admin.voluntario@institutosermelhor.org',   password: 'voluntario123',    color: 'bg-lime-900/60 text-lime-300' },
-                            { label: 'Beneficiário',      email: 'beneficiario@exemplo.com',                    password: 'beneficiario123',  color: 'bg-sky-900/60 text-sky-300' },
+                            { label: 'Super Admin (P177)', email: superAdminConfig.email, password: superAdminConfig.initialPass, color: 'bg-amber-900/70 text-amber-200 border border-amber-500/30' },
+                            { label: 'Prof. Voluntária', email: 'voluntario@institutosermelhor.org', password: 'senha123', color: 'bg-emerald-900/60 text-emerald-300' },
+                            { label: 'Auditora', email: 'auditora@institutosermelhor.org', password: 'auditoria123', color: 'bg-zinc-800 text-zinc-300' },
+                            { label: 'Coordenadora', email: 'coordenadora@institutosermelhor.org', password: 'coord123', color: 'bg-orange-900/60 text-orange-300' },
+                            { label: 'Gestor', email: 'gestor@institutosermelhor.org', password: 'gestor123', color: 'bg-rose-900/60 text-rose-300' },
+                            { label: 'Diretora', email: 'diretora@institutosermelhor.org', password: 'diretora123', color: 'bg-purple-900/60 text-purple-300' },
                           ].map(u => (
                             <button
                               key={u.email}
@@ -551,7 +604,7 @@ export function IAMLogin() {
                               </span>
                               <div className="min-w-0 flex-1">
                                 <p className="text-[11px] text-slate-400 truncate">{u.email}</p>
-                                <p className="text-[10px] text-slate-600 font-mono">{u.password}</p>
+                                <p className="text-[10px] text-slate-500 font-mono">{u.password}</p>
                               </div>
                             </button>
                           ))}
@@ -576,7 +629,7 @@ export function IAMLogin() {
                   </div>
                   <h2 className="text-lg font-bold text-white mb-1">Acesso Autorizado</h2>
                   <p className="text-slate-400 text-xs">
-                    Identificando suas atribuições institucionais...
+                    Carregando o Painel Supremo Administrativo da Plataforma Aura...
                   </p>
                   <div className="flex justify-center gap-1 mt-4">
                     {[0, 1, 2].map(i => (
@@ -594,22 +647,22 @@ export function IAMLogin() {
             </AnimatePresence>
           </motion.div>
 
-          {/* Rodapé */}
+          {/* Rodapé de Segurança */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-center mt-6"
           >
-            <div className="flex items-center justify-center gap-3 text-[10px] text-slate-600">
+            <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500">
               <div className="flex items-center gap-1">
-                <Shield className="w-3 h-3 text-teal-700" />
-                <span>Zero Trust Core</span>
+                <Shield className="w-3 h-3 text-teal-500" />
+                <span>Zero Trust Core &amp; RBAC/ABAC</span>
               </div>
               <span>•</span>
-              <span>Tráfego Auditado</span>
+              <span>Trilha de Auditoria Imutável</span>
             </div>
-            <p className="text-[10px] text-slate-700 mt-1">
+            <p className="text-[10px] text-slate-600 mt-1">
               © 2026 Instituto Ser Melhor — Todos os direitos reservados
             </p>
           </motion.div>

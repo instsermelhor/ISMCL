@@ -112,6 +112,10 @@ export interface IAMUser {
   mfaRequired?: boolean;   // Super Admin solicita ativação no próximo login
   mfaMethod?: 'totp' | 'sms' | 'email';
 
+  // Troca de Senha Obrigatória no Primeiro Acesso (Prompt 177)
+  mustChangePassword?: boolean;
+  passwordLastChangedAt?: string;
+
   // Sessão
   sessionTimeout?: number; // minutos
   allowMultipleSessions?: boolean;
@@ -368,9 +372,12 @@ export interface IAMContextType {
 export interface LoginResult {
   success: boolean;
   requiresMfa?: boolean;
+  requiresPasswordChange?: boolean;
   mfaMethod?: 'totp' | 'sms' | 'email';
   redirectPath?: string;
   error?: string;
+  /** Timestamp (ms) até quando o login está bloqueado por força bruta */
+  lockedUntil?: number;
 }
 
 // ------ MAPA DE REDIRECIONAMENTO -----------------------------
