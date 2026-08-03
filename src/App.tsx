@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Auth
@@ -9,6 +9,9 @@ import { AppLayout } from './components/layout/AppLayout';
 
 // Proteção de rotas
 import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
+
+// Error Boundaries granulares por rota (Prompt 181 — Fix Bug #4)
+import { RouteErrorBoundary } from './components/ErrorBoundary';
 
 // Módulos principais
 import { Dashboard } from './pages/Dashboard';
@@ -90,6 +93,44 @@ import { ACOP } from './pages/ACOP';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminSupremeDashboard } from './pages/AdminSupremeDashboard';
 
+// Prompt 179 — Centro Corporativo de Conhecimento
+// FIX BUG CRÍTICO #1 (Prompt 181 — Auditoria Forense): import ausente causava
+// ReferenceError: CorporateKnowledgeCenter is not defined → GlobalErrorBoundary → White Screen.
+import CorporateKnowledgeCenter from './pages/CorporateKnowledgeCenter';
+
+// ----------------------------------------------------------------
+// RouteSuspenseFallback — spinner inline para Suspense boundaries
+// ----------------------------------------------------------------
+function RouteSuspenseFallback() {
+  return (
+    <div
+      style={{
+        minHeight: 320,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        color: '#64748b',
+        fontFamily: "'Inter', system-ui, sans-serif",
+        fontSize: 13,
+      }}
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          width: 18,
+          height: 18,
+          border: '2px solid #e2e8f0',
+          borderTopColor: '#14b8a6',
+          borderRadius: '50%',
+          animation: 'spin 0.7s linear infinite',
+        }}
+      />
+      Carregando módulo…
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -99,7 +140,9 @@ export default function App() {
           path="/login"
           element={
             <PublicRoute>
-              <IAMLogin />
+              <RouteErrorBoundary>
+                <IAMLogin />
+              </RouteErrorBoundary>
             </PublicRoute>
           }
         />
@@ -109,112 +152,138 @@ export default function App() {
           path="/admin-login"
           element={
             <PublicRoute>
-              <AdminLogin />
+              <RouteErrorBoundary>
+                <AdminLogin />
+              </RouteErrorBoundary>
             </PublicRoute>
           }
         />
 
         {/* Rota pública: Cadastro Inteligente Adaptativo */}
-        <Route path="/registro" element={<AdaptiveRegistration />} />
+        <Route
+          path="/registro"
+          element={<RouteErrorBoundary><AdaptiveRegistration /></RouteErrorBoundary>}
+        />
 
         {/* Rota pública: Triagem/Acolhimento Inteligente (SATAI) */}
-        <Route path="/acolhimento" element={<SataiWizard />} />
+        <Route
+          path="/acolhimento"
+          element={<RouteErrorBoundary><SataiWizard /></RouteErrorBoundary>}
+        />
 
         {/* Rota pública: PIARAVE Acolhimento (Biblioteca migrada para área autenticada — Prompt 179) */}
-        <Route path="/piarave/acolhimento" element={<PiaraveAcolhimento />} />
+        <Route
+          path="/piarave/acolhimento"
+          element={<RouteErrorBoundary><PiaraveAcolhimento /></RouteErrorBoundary>}
+        />
 
         {/* Rota pública: Painel de Doações via PIX */}
-        <Route path="/doe" element={<DonationPublic />} />
+        <Route
+          path="/doe"
+          element={<RouteErrorBoundary><DonationPublic /></RouteErrorBoundary>}
+        />
 
-        {/* Rotas protegidas */}
+        {/* Rotas protegidas — cada rota isolada com RouteErrorBoundary (Prompt 181 Fix #4) */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="patients" element={<Patients />} />
-            <Route path="patients/new" element={<TriageForm />} />
-            <Route path="patients/:id" element={<PatientRecord />} />
-            <Route path="professionals" element={<Professionals />} />
-            <Route path="professionals/:id" element={<ProfessionalProfile />} />
-            <Route path="calendar" element={<Calendar />} />
-            <Route path="messages" element={<Messages />} />
-            <Route path="records" element={<Records />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="financial" element={<Financial />} />
-            <Route path="cgi" element={<CGI />} />
-            <Route path="seguranca" element={<MCSI />} />
-            <Route path="portal-beneficiario" element={<BeneficiaryPortal />} />
-            <Route path="portal-profissional" element={<ProfessionalPortal />} />
 
-            {/* IAM — Central de Identidade */}
-            <Route path="iam" element={<IAMCenter />} />
+            {/* ── MÓDULOS PRINCIPAIS ──────────────────────────────── */}
+            <Route path="dashboard" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><Dashboard /></Suspense></RouteErrorBoundary>} />
+            <Route path="patients" element={<RouteErrorBoundary><Patients /></RouteErrorBoundary>} />
+            <Route path="patients/new" element={<RouteErrorBoundary><TriageForm /></RouteErrorBoundary>} />
+            <Route path="patients/:id" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><PatientRecord /></Suspense></RouteErrorBoundary>} />
+            <Route path="professionals" element={<RouteErrorBoundary><Professionals /></RouteErrorBoundary>} />
+            <Route path="professionals/:id" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><ProfessionalProfile /></Suspense></RouteErrorBoundary>} />
+            <Route path="calendar" element={<RouteErrorBoundary><Calendar /></RouteErrorBoundary>} />
+            <Route path="messages" element={<RouteErrorBoundary><Messages /></RouteErrorBoundary>} />
+            <Route path="records" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><Records /></Suspense></RouteErrorBoundary>} />
+            <Route path="settings" element={<RouteErrorBoundary><Settings /></RouteErrorBoundary>} />
+            <Route path="financial" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><Financial /></Suspense></RouteErrorBoundary>} />
+            <Route path="cgi" element={<RouteErrorBoundary><CGI /></RouteErrorBoundary>} />
+            <Route path="seguranca" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><MCSI /></Suspense></RouteErrorBoundary>} />
+            <Route path="portal-beneficiario" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><BeneficiaryPortal /></Suspense></RouteErrorBoundary>} />
+            <Route path="portal-profissional" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><ProfessionalPortal /></Suspense></RouteErrorBoundary>} />
 
-            {/* BPMS — Central de Processos e Workflows */}
-            <Route path="processos" element={<BPMSCenter />} />
+            {/* ── IAM — Central de Identidade ─────────────────────── */}
+            <Route path="iam" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><IAMCenter /></Suspense></RouteErrorBoundary>} />
 
-            {/* ARE — Central do Cadastro Inteligente Adaptativo */}
-            <Route path="cadastro-adaptativo" element={<AdaptiveRegistrationAdmin />} />
+            {/* ── BPMS — Central de Processos e Workflows ─────────── */}
+            <Route path="processos" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><BPMSCenter /></Suspense></RouteErrorBoundary>} />
 
-            {/* SATAI — Central de Triagem e Acolhimento */}
-            <Route path="satai" element={<SataiAdmin />} />
+            {/* ── ARE — Central do Cadastro Inteligente Adaptativo ─── */}
+            <Route path="cadastro-adaptativo" element={<RouteErrorBoundary><AdaptiveRegistrationAdmin /></RouteErrorBoundary>} />
 
-            {/* PIARAVE — Painel Administrativo de Casos */}
-            <Route path="piarave" element={<PiaraveAdmin />} />
+            {/* ── SATAI — Central de Triagem e Acolhimento ────────── */}
+            <Route path="satai" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><SataiAdmin /></Suspense></RouteErrorBoundary>} />
 
-            {/* Platform Health & Audit Center */}
-            <Route path="auditoria-plataforma" element={<PlatformHealthCenter />} />
+            {/* ── PIARAVE — Painel Administrativo de Casos ────────── */}
+            <Route path="piarave" element={<RouteErrorBoundary><PiaraveAdmin /></RouteErrorBoundary>} />
 
-            {/* SODO — Sistema Oficial de Documentação Operacional */}
-            <Route path="sodo" element={<SodoPortal />} />
-            <Route path="academia" element={<SodoAcademy />} />
-            <Route path="pops" element={<SodoPops />} />
-            <Route path="governanca-conhecimento" element={<SodoAdmin />} />
+            {/* ── Platform Health & Audit Center ──────────────────── */}
+            <Route path="auditoria-plataforma" element={<RouteErrorBoundary><PlatformHealthCenter /></RouteErrorBoundary>} />
 
-            {/* AEGRC — Governança, Riscos, Compliance e Planejamento Estratégico */}
-            <Route path="aegrc" element={<AEGRC />} />
+            {/* ── SODO — Sistema Oficial de Documentação Operacional ─ */}
+            <Route path="sodo" element={<RouteErrorBoundary><SodoPortal /></RouteErrorBoundary>} />
+            <Route path="academia" element={<RouteErrorBoundary><SodoAcademy /></RouteErrorBoundary>} />
+            <Route path="pops" element={<RouteErrorBoundary><SodoPops /></RouteErrorBoundary>} />
+            <Route path="governanca-conhecimento" element={<RouteErrorBoundary><SodoAdmin /></RouteErrorBoundary>} />
 
-            {/* AECM — Gestão Documental e Arquivo Digital */}
-            <Route path="aecm" element={<AECM />} />
+            {/* ── AEGRC — Governança, Riscos, Compliance ──────────── */}
+            <Route path="aegrc" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><AEGRC /></Suspense></RouteErrorBoundary>} />
 
-            {/* ACU — Universidade Corporativa e Gestão de Competências */}
-            <Route path="acu" element={<ACU />} />
+            {/* ── AECM — Gestão Documental e Arquivo Digital ──────── */}
+            <Route path="aecm" element={<RouteErrorBoundary><AECM /></RouteErrorBoundary>} />
 
-            {/* AEIP — Integrações, Barramento e APIs */}
-            <Route path="aeip" element={<AEIP />} />
+            {/* ── ACU — Universidade Corporativa ───────────────────── */}
+            <Route path="acu" element={<RouteErrorBoundary><ACU /></RouteErrorBoundary>} />
 
-            {/* AEAGO — Governança Arquitetural e Digital Twin */}
-            <Route path="aeago" element={<AEAGO />} />
+            {/* ── AEIP — Integrações, Barramento e APIs ───────────── */}
+            <Route path="aeip" element={<RouteErrorBoundary><AEIP /></RouteErrorBoundary>} />
 
-            {/* APRCG — Production Readiness & Go-Live */}
-            <Route path="aprcg" element={<APRCG />} />
+            {/* ── AEAGO — Governança Arquitetural e Digital Twin ───── */}
+            <Route path="aeago" element={<RouteErrorBoundary><AEAGO /></RouteErrorBoundary>} />
 
-            {/* AMAC — Certificação Mestre e Baseline Final (Prompt 150) */}
-            <Route path="amac" element={<AMAC />} />
+            {/* ── APRCG — Production Readiness & Go-Live ───────────── */}
+            <Route path="aprcg" element={<RouteErrorBoundary><APRCG /></RouteErrorBoundary>} />
 
-            {/* AIIC — Centro de Inteligência Institucional (Prompt 151 — Fase II) */}
-            <Route path="aiic" element={<AIIC />} />
+            {/* ── AMAC (Prompt 150) ────────────────────────────────── */}
+            <Route path="amac" element={<RouteErrorBoundary><AMAC /></RouteErrorBoundary>} />
 
-            {/* ACOP — Orquestração Cognitiva Multi-Agente (Prompt 152 — Fase III) */}
-            <Route path="acop" element={<ACOP />} />
+            {/* ── AIIC (Prompt 151 — Fase II) ──────────────────────── */}
+            <Route path="aiic" element={<RouteErrorBoundary><AIIC /></RouteErrorBoundary>} />
 
-            {/* Alias semânticos de redirecionamento por perfil */}
-            <Route path="area-familia" element={<BeneficiaryPortal />} />
-            <Route path="erp-social" element={<Dashboard />} />
-            <Route path="portal-voluntario" element={<Dashboard />} />
-            <Route path="dashboard-gerencial" element={<Dashboard />} />
-            <Route path="dashboard-executivo" element={<Dashboard />} />
-            <Route path="central-admin" element={<IAMCenter />} />
-            <Route path="painel-auditoria" element={<IAMCenter />} />
+            {/* ── ACOP (Prompt 152 — Fase III) ─────────────────────── */}
+            <Route path="acop" element={<RouteErrorBoundary><ACOP /></RouteErrorBoundary>} />
 
-            {/* Prompt 179 — Centro Corporativo de Conhecimento (Rota Protegida) */}
-            <Route path="conhecimento-corporativo" element={<CorporateKnowledgeCenter />} />
+            {/* ── Alias semânticos de redirecionamento por perfil ──── */}
+            <Route path="area-familia" element={<RouteErrorBoundary><BeneficiaryPortal /></RouteErrorBoundary>} />
+            <Route path="erp-social" element={<RouteErrorBoundary><Dashboard /></RouteErrorBoundary>} />
+            <Route path="portal-voluntario" element={<RouteErrorBoundary><Dashboard /></RouteErrorBoundary>} />
+            <Route path="dashboard-gerencial" element={<RouteErrorBoundary><Dashboard /></RouteErrorBoundary>} />
+            <Route path="dashboard-executivo" element={<RouteErrorBoundary><Dashboard /></RouteErrorBoundary>} />
+            <Route path="central-admin" element={<RouteErrorBoundary><IAMCenter /></RouteErrorBoundary>} />
+            <Route path="painel-auditoria" element={<RouteErrorBoundary><IAMCenter /></RouteErrorBoundary>} />
+
+            {/* ── Prompt 179 — Centro Corporativo de Conhecimento ──── */}
+            {/* FIX BUG CRÍTICO #1 (Prompt 181): componente agora importado corretamente */}
+            <Route
+              path="conhecimento-corporativo"
+              element={
+                <RouteErrorBoundary>
+                  <Suspense fallback={<RouteSuspenseFallback />}>
+                    <CorporateKnowledgeCenter />
+                  </Suspense>
+                </RouteErrorBoundary>
+              }
+            />
           </Route>
 
           {/* Rota de teleconsulta (tela cheia, fora do AppLayout) */}
-          <Route path="/telehealth/:id" element={<Telehealth />} />
+          <Route path="/telehealth/:id" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><Telehealth /></Suspense></RouteErrorBoundary>} />
 
-          {/* Painel Supremo Administrativo (Prompt 177 - Tela Cheia) */}
-          <Route path="/painel-supremo" element={<AdminSupremeDashboard />} />
+          {/* Painel Supremo Administrativo (Prompt 177 — Tela Cheia) */}
+          <Route path="/painel-supremo" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><AdminSupremeDashboard /></Suspense></RouteErrorBoundary>} />
         </Route>
 
         {/* Fallback */}
