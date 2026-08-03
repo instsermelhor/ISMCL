@@ -23,6 +23,7 @@ import {
   GitBranch,
   Monitor,
   BookOpen,
+  Library,
   GraduationCap,
   FileCheck,
   Scale,
@@ -76,6 +77,8 @@ const adminNavigation = [
   { name: 'AMAC — Certificação Mestre', href: '/amac', icon: Award },
   { name: 'AIIC — Inteligência Institucional', href: '/aiic', icon: Brain },
   { name: 'ACOP — Orquestração Cognitiva', href: '/acop', icon: Cpu },
+  // Prompt 179 — Centro Corporativo de Conhecimento
+  { name: 'Centro Corporativo de Conhecimento (P179)', href: '/conhecimento-corporativo', icon: Library },
 ];
 
 function RolePill({ role }: { role: InstitutionalRole }) {

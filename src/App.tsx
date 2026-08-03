@@ -90,8 +90,13 @@ import { ACOP } from './pages/ACOP';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminSupremeDashboard } from './pages/AdminSupremeDashboard';
 
+// Prompt 179 — Centro Corporativo de Conhecimento
+import CorporateKnowledgeCenter from './pages/CorporateKnowledgeCenter';
+import { KnowledgeProvider } from './contexts/KnowledgeContext';
+
 export default function App() {
   return (
+    <KnowledgeProvider>
     <BrowserRouter>
       <Routes>
         {/* Rota pública: Login IAM institucional */}
@@ -120,9 +125,8 @@ export default function App() {
         {/* Rota pública: Triagem/Acolhimento Inteligente (SATAI) */}
         <Route path="/acolhimento" element={<SataiWizard />} />
 
-        {/* Rota pública: PIARAVE Acolhimento e Biblioteca */}
+        {/* Rota pública: PIARAVE Acolhimento (Biblioteca migrada para área autenticada — Prompt 179) */}
         <Route path="/piarave/acolhimento" element={<PiaraveAcolhimento />} />
-        <Route path="/piarave/biblioteca" element={<PiaraveBiblioteca />} />
 
         {/* Rota pública: Painel de Doações via PIX */}
         <Route path="/doe" element={<DonationPublic />} />
@@ -206,6 +210,9 @@ export default function App() {
             <Route path="dashboard-executivo" element={<Dashboard />} />
             <Route path="central-admin" element={<IAMCenter />} />
             <Route path="painel-auditoria" element={<IAMCenter />} />
+
+            {/* Prompt 179 — Centro Corporativo de Conhecimento (Rota Protegida) */}
+            <Route path="conhecimento-corporativo" element={<CorporateKnowledgeCenter />} />
           </Route>
 
           {/* Rota de teleconsulta (tela cheia, fora do AppLayout) */}
@@ -219,5 +226,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
+    </KnowledgeProvider>
   );
 }

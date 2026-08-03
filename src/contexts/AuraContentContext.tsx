@@ -108,12 +108,12 @@ export const DEFAULT_AURA_CONTENT: AuraLandingContent = {
         'bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 text-teal-400',
     },
     {
-      id: 'library',
-      label: 'Biblioteca Relacional',
-      emoji: '📚',
-      route: '/piarave/biblioteca',
+      id: 'programs',
+      label: 'Conheça os Programas',
+      emoji: '🌟',
+      route: '/login',
       colorClass:
-        'bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400',
+        'bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400',
     },
   ],
   version: 1,
