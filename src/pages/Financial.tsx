@@ -4,7 +4,7 @@ import {
   Calendar, Users, Target, BookOpen, AlertCircle, CheckCircle2,
   XCircle, BarChart2, Plus, ArrowUpRight, Search, FileSpreadsheet,
   RefreshCw, ClipboardCheck, Sparkles, Brain, Check, FileDown, ShieldAlert, X,
-  Building2, QrCode, Wifi, WifiOff, ExternalLink, Copy, Landmark,
+  Building2, QrCode, Wifi, WifiOff, ExternalLink, Copy, Landmark, Shield,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
