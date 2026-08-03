@@ -21,11 +21,11 @@ export interface SuperAdminConfig {
 const STORAGE_KEY = 'aura_super_admin_sec_config';
 
 // Indicador de ambiente de desenvolvimento
-const IS_DEV = import.meta.env.DEV === true;
+const IS_DEV = (import.meta as any).env.DEV === true;
 
 /**
  * Obtém as credenciais iniciais do Super Administrador a partir das variáveis de ambiente.
- * Em runtime client-side Vite, usa import.meta.env.
+ * Em runtime client-side Vite, usa (import.meta as any).env.
  *
  * SEGURANÇA: Nenhuma credencial real deve estar hardcoded neste arquivo.
  * Configure VITE_AURA_SUPERADMIN_EMAIL e VITE_AURA_SUPERADMIN_PASS no .env.local
@@ -43,8 +43,8 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
   }
 
   // 2. Carrega de variáveis de ambiente (Vite)
-  const envEmail = import.meta.env.VITE_AURA_SUPERADMIN_EMAIL as string | undefined;
-  const envPass = import.meta.env.VITE_AURA_SUPERADMIN_PASS as string | undefined;
+  const envEmail = (import.meta as any).env.VITE_AURA_SUPERADMIN_EMAIL as string | undefined;
+  const envPass = (import.meta as any).env.VITE_AURA_SUPERADMIN_PASS as string | undefined;
 
   // 3. Aviso explícito em desenvolvimento se variáveis não estiverem configuradas
   if (IS_DEV && (!envEmail || !envPass)) {
@@ -68,7 +68,7 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
  */
 export function getAdminSessionTimeoutMs(): number {
   const minutes = parseInt(
-    (import.meta.env.VITE_ADMIN_SESSION_TIMEOUT_MINUTES as string) ?? '30',
+    ((import.meta as any).env.VITE_ADMIN_SESSION_TIMEOUT_MINUTES as string) ?? '30',
     10
   );
   const validMinutes = isNaN(minutes) || minutes < 5 ? 30 : minutes;
