@@ -36,15 +36,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // Mapeia papéis IAM para papel legado
-function mapIAMRoleToLegacy(iamRoles: InstitutionalRole[]): UserRole {
-  if (iamRoles.includes('super_admin')) return 'admin';
-  if (iamRoles.includes('auditor')) return 'admin';
-  if (iamRoles.includes('director') || iamRoles.includes('president') || iamRoles.includes('manager') || iamRoles.includes('coordinator')) return 'admin';
-  if (iamRoles.includes('professional') || iamRoles.includes('volunteer_professional')) return 'ref';
+function mapIAMRoleToLegacy(iamRoles: InstitutionalRole[] = []): UserRole {
+  const roles = Array.isArray(iamRoles) ? iamRoles : [];
+  if (roles.includes('super_admin')) return 'admin';
+  if (roles.includes('auditor')) return 'admin';
+  if (roles.includes('director') || roles.includes('president') || roles.includes('manager') || roles.includes('coordinator')) return 'admin';
+  if (roles.includes('professional') || roles.includes('volunteer_professional')) return 'ref';
   return 'volunteer';
 }
 
-function getRoleSubtitle(iamRoles: InstitutionalRole[]): string {
+function getRoleSubtitle(iamRoles: InstitutionalRole[] = []): string {
   const labels: Record<InstitutionalRole, string> = {
     beneficiary: 'Portal do Beneficiário',
     legal_guardian: 'Área da Família',
@@ -59,7 +60,8 @@ function getRoleSubtitle(iamRoles: InstitutionalRole[]): string {
     super_admin: 'Super Administrador',
     auditor: 'Auditoria',
   };
-  const primary = iamRoles[0];
+  const roles = Array.isArray(iamRoles) ? iamRoles : [];
+  const primary = roles[0];
   return primary ? labels[primary] : 'Acesso Geral';
 }
 
@@ -67,14 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const iam = useIAM();
 
   // Constrói o AuthUser legado a partir do IAMUser
+  const roles = Array.isArray(iam.currentUser?.roles) ? iam.currentUser!.roles : [];
   const user: AuthUser | null = iam.currentUser
     ? {
         email: iam.currentUser.email,
         name: iam.currentUser.name,
-        role: mapIAMRoleToLegacy(iam.currentUser.roles),
+        role: mapIAMRoleToLegacy(roles),
         initials: iam.currentUser.initials,
-        subtitle: getRoleSubtitle(iam.currentUser.roles),
-        iamRoles: iam.currentUser.roles,
+        subtitle: getRoleSubtitle(roles),
+        iamRoles: roles,
         iamId: iam.currentUser.id,
       }
     : null;
