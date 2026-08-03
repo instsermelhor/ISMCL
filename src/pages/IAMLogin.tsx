@@ -13,7 +13,6 @@ import {
   Heart,
   Shield,
   Info,
-  ShieldCheck,
 } from 'lucide-react';
 import { useIAM } from '../contexts/IAMContext';
 import { useAuraContent } from '../contexts/AuraContentContext';
@@ -407,7 +406,7 @@ export function IAMLogin() {
 
         {/* Right Column: Login Card & Credentials */}
         <div className="lg:col-span-5 w-full max-w-md mx-auto">
-          {/* Logo do Projeto Aura & Título Restrito (Prompt 177 - ETAPA 2) */}
+          {/* Logo do Projeto Aura & Título Institucional (Prompt 178 - ETAPA 2/7) */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -417,12 +416,11 @@ export function IAMLogin() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-2xl shadow-teal-500/30 mb-4 border border-teal-400/20">
               <Heart className="w-8 h-8 text-white fill-current" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-teal-400" />
-              Área Administrativa
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              Área Institucional
             </h1>
             <p className="text-slate-400 text-xs mt-1.5 font-medium">
-              Acesso exclusivo para administradores autorizados.
+              Acesse sua conta institucional
             </p>
           </motion.div>
 
@@ -456,7 +454,7 @@ export function IAMLogin() {
                       Autenticação Institucional
                     </h2>
                     <p className="text-slate-400 text-xs mt-0.5">
-                      Insira suas credenciais seguras para autenticar no Painel Supremo
+                      Entre com seu e-mail e senha cadastrados
                     </p>
                   </div>
 
@@ -585,13 +583,10 @@ export function IAMLogin() {
                           exit={{ opacity: 0, height: 0 }}
                           className="mt-2 rounded-xl bg-white/5 border border-white/10 p-3 space-y-1.5 overflow-hidden max-h-[200px] overflow-y-auto pr-1 custom-scrollbar text-left"
                         >
+                          {/* Apenas perfis externos: beneficiários e responsáveis legais */}
                           {[
-                            { label: 'Super Admin (P177)', email: superAdminConfig.email, password: superAdminConfig.initialPass, color: 'bg-amber-900/70 text-amber-200 border border-amber-500/30' },
-                            { label: 'Prof. Voluntária', email: 'voluntario@institutosermelhor.org', password: 'senha123', color: 'bg-emerald-900/60 text-emerald-300' },
-                            { label: 'Auditora', email: 'auditora@institutosermelhor.org', password: 'auditoria123', color: 'bg-zinc-800 text-zinc-300' },
-                            { label: 'Coordenadora', email: 'coordenadora@institutosermelhor.org', password: 'coord123', color: 'bg-orange-900/60 text-orange-300' },
-                            { label: 'Gestor', email: 'gestor@institutosermelhor.org', password: 'gestor123', color: 'bg-rose-900/60 text-rose-300' },
-                            { label: 'Diretora', email: 'diretora@institutosermelhor.org', password: 'diretora123', color: 'bg-purple-900/60 text-purple-300' },
+                            { label: 'Beneficiário', email: 'beneficiario@exemplo.org', password: 'beneficio123', color: 'bg-sky-900/60 text-sky-300' },
+                            { label: 'Responsável Legal', email: 'responsavel@exemplo.org', password: 'familia123', color: 'bg-indigo-900/60 text-indigo-300' },
                           ].map(u => (
                             <button
                               key={u.email}
@@ -606,6 +601,7 @@ export function IAMLogin() {
                                 <p className="text-[11px] text-slate-400 truncate">{u.email}</p>
                                 <p className="text-[10px] text-slate-500 font-mono">{u.password}</p>
                               </div>
+
                             </button>
                           ))}
                         </motion.div>
@@ -627,9 +623,9 @@ export function IAMLogin() {
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-500/20 border border-teal-500/30 mb-4">
                     <CheckCircle2 className="w-8 h-8 text-teal-400" />
                   </div>
-                  <h2 className="text-lg font-bold text-white mb-1">Acesso Autorizado</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">Bem-vindo(a)!</h2>
                   <p className="text-slate-400 text-xs">
-                    Carregando o Painel Supremo Administrativo da Plataforma Aura...
+                    Carregando sua área pessoal...
                   </p>
                   <div className="flex justify-center gap-1 mt-4">
                     {[0, 1, 2].map(i => (
