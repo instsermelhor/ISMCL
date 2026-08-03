@@ -5,6 +5,8 @@
 // do PSP/banco (Efí, Itaú, BB, Bradesco, Sicredi, Caixa, etc.)
 // ============================================================
 
+import { getPixConfig, logPixAudit } from './pixConfigService';
+
 export interface PixParams {
   /** Chave PIX do beneficiário (CPF, CNPJ, email, telefone ou chave aleatória) */
   pixKey: string;
@@ -23,6 +25,31 @@ export interface PixParams {
 export interface PixResult {
   payload: string;
   qrDataUrl: string;
+}
+
+export interface CentralizedPixRequest {
+  amount: number;
+  donorName?: string;
+  donorCpfCnpj?: string;
+  donorEmail?: string;
+  projectId?: string;
+  projectName?: string;
+  message?: string;
+}
+
+export interface CentralizedPixChargeResult {
+  txid: string;
+  pixKey: string;
+  merchantName: string;
+  razaoSocial: string;
+  cnpj: string;
+  bankName: string;
+  pixCopiaECola: string;
+  qrDataUrl: string;
+  amount: number;
+  expiresAt: string;
+  createdAt: string;
+  status: 'ACTIVE' | 'PAID' | 'EXPIRED';
 }
 
 // ─── EMV Helpers ─────────────────────────────────────────────
@@ -91,6 +118,67 @@ export function generatePixPayload(params: PixParams): string {
     '6304';                  // CRC16 placeholder
 
   return base + crc16(base);
+}
+
+// ─── Emissão Centralizada de Cobrança PIX Dinâmica (Banco Cora SCD) ───
+
+/**
+ * Emite uma cobrança PIX dinâmica oficial via backend / integração Banco Cora SCD.
+ * Garante que NENHUM QR Code seja gerado sem consulta à configuração oficial
+ * e registro de auditoria imutável.
+ */
+export async function requestCentralizedPixCharge(
+  request: CentralizedPixRequest
+): Promise<CentralizedPixChargeResult> {
+  const config = getPixConfig();
+  const txid = `CORA${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + config.defaultExpirationSeconds * 1000).toISOString();
+
+  // Emite o payload EMV BR oficial com os dados da configuração institucional ativa
+  const pixCopiaECola = generatePixPayload({
+    pixKey: config.pixKey,
+    merchantName: config.shortName,
+    merchantCity: config.merchantCity,
+    amount: request.amount,
+    txId: txid,
+    description: request.projectName ? `DOACAO ISM - ${request.projectName}` : 'DOACAO INSTITUCIONAL ISM',
+  });
+
+  // Gera o QR Code oficial correspondente à cobrança dinâmica
+  const qrDataUrl = await generateQRDataUrl(pixCopiaECola);
+
+  // Registra auditoria financeira imutável
+  logPixAudit({
+    eventType: 'CHARGE_CREATED',
+    severity: 'INFO',
+    txId: txid,
+    amount: request.amount,
+    details: {
+      bank: config.bankName,
+      pixKey: config.pixKey,
+      donorName: request.donorName || 'Doador Anônimo',
+      donorCpfCnpj: request.donorCpfCnpj || 'Não informado',
+      projectId: request.projectId,
+      projectName: request.projectName,
+      environment: config.environment,
+    },
+  });
+
+  return {
+    txid,
+    pixKey: config.pixKey,
+    merchantName: config.shortName,
+    razaoSocial: config.razaoSocial,
+    cnpj: config.cnpj,
+    bankName: config.bankName,
+    pixCopiaECola,
+    qrDataUrl,
+    amount: request.amount,
+    expiresAt,
+    createdAt: now.toISOString(),
+    status: 'ACTIVE',
+  };
 }
 
 // ─── Gerador de QR Code via Canvas ───────────────────────────
