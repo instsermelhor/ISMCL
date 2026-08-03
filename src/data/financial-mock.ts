@@ -350,8 +350,9 @@ export interface BankIntegration {
   agency?: string;
   balance?: number;
   currency: string;
-  status: 'CONNECTED' | 'DISCONNECTED';
+  status: 'CONNECTED' | 'DISCONNECTED' | 'PENDING' | 'ERROR';
   environment: 'production' | 'sandbox';
+  lastSync?: string;
 }
 
 export const bankIntegrations: BankIntegration[] = [
