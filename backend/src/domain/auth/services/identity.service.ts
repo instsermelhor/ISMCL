@@ -110,17 +110,17 @@ export class IdentityService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
-        id: string;
-        name: true;
-        email: true;
-        cpf: true;
-        phone: true;
-        role: true;
-        status: true;
-        mfaEnabled: true;
-        organizationId: true;
-        createdAt: true;
-        updatedAt: true;
+        id: true,
+        name: true,
+        email: true,
+        cpf: true,
+        phone: true,
+        role: true,
+        status: true,
+        mfaEnabled: true,
+        organizationId: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
