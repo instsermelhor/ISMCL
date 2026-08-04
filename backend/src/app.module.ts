@@ -55,13 +55,11 @@ import { EnterpriseIntegrationModule } from './domain/enterprise-integration/ent
 import { FederatedMultiTenantModule } from './domain/federated-multi-tenant/federated-multi-tenant.module';
 import { EnterpriseStrategyModule } from './domain/enterprise-strategy/enterprise-strategy.module';
 import { BusinessContinuityModule } from './domain/business-continuity/business-continuity.module';
-import { EnterpriseKnowledgeModule } from './domain/enterprise-knowledge/enterprise-knowledge.module';
 import { EnterpriseArchitectureModule } from './domain/enterprise-architecture/enterprise-architecture.module';
 import { EnterpriseDataModule } from './domain/enterprise-data/enterprise-data.module';
 import { EnterpriseObservabilityModule } from './domain/enterprise-observability/enterprise-observability.module';
 import { EnterpriseHyperautomationModule } from './domain/enterprise-hyperautomation/enterprise-hyperautomation.module';
 import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/enterprise-ai-governance.module';
-import { EnterpriseIntegrationModule } from './domain/enterprise-integration/enterprise-integration.module';
 
 /**
  * AppModule — Módulo Raiz da Plataforma Aura
@@ -231,13 +229,11 @@ import { EnterpriseIntegrationModule } from './domain/enterprise-integration/ent
     FederatedMultiTenantModule,
     EnterpriseStrategyModule,
     BusinessContinuityModule,
-    EnterpriseKnowledgeModule,
     EnterpriseArchitectureModule,
     EnterpriseDataModule,
     EnterpriseObservabilityModule,
     EnterpriseHyperautomationModule,
     EnterpriseAIGovernanceModule,
-    EnterpriseIntegrationModule,
   ],
 })
 export class AppModule {}
