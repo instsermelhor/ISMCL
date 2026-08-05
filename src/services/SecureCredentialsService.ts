@@ -21,7 +21,7 @@ export interface SuperAdminConfig {
 const STORAGE_KEY = 'aura_super_admin_sec_config';
 
 // Indicador de ambiente de desenvolvimento
-const IS_DEV = (import.meta as any).env.DEV === true;
+const IS_DEV = ((import.meta as any).env as Record<string, any>)?.DEV === true;
 
 /**
  * Obtém as credenciais iniciais do Super Administrador a partir das variáveis de ambiente.
@@ -43,8 +43,9 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
   }
 
   // 2. Carrega de variáveis de ambiente (Vite)
-  const envEmail = (import.meta as any).env.VITE_AURA_SUPERADMIN_EMAIL as string | undefined;
-  const envPass = (import.meta as any).env.VITE_AURA_SUPERADMIN_PASS as string | undefined;
+  const envObj = ((import.meta as any).env as Record<string, any>) || {};
+  const envEmail = envObj.VITE_AURA_SUPERADMIN_EMAIL as string | undefined;
+  const envPass = envObj.VITE_AURA_SUPERADMIN_PASS as string | undefined;
 
   // 3. Aviso explícito em desenvolvimento se variáveis não estiverem configuradas
   if (IS_DEV && (!envEmail || !envPass)) {
@@ -67,8 +68,9 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
  * Configurável via VITE_ADMIN_SESSION_TIMEOUT_MINUTES (padrão: 30 minutos).
  */
 export function getAdminSessionTimeoutMs(): number {
+  const envObj = ((import.meta as any).env as Record<string, any>) || {};
   const minutes = parseInt(
-    ((import.meta as any).env.VITE_ADMIN_SESSION_TIMEOUT_MINUTES as string) ?? '30',
+    (envObj.VITE_ADMIN_SESSION_TIMEOUT_MINUTES as string) ?? '30',
     10
   );
   const validMinutes = isNaN(minutes) || minutes < 5 ? 30 : minutes;
