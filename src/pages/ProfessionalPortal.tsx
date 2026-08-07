@@ -37,6 +37,8 @@ import {
   type CareGoal
 } from '../contexts/ProfessionalPortalContext';
 
+import { OneClickJoin } from '../components/actg/OneClickJoin';
+
 // ─── Config Maps ─────────────────────────────────────────────────────────────
 
 const APPOINTMENT_STATUS_CONFIG = {
@@ -168,9 +170,16 @@ function CockpitPanel() {
                     </div>
                     <div className="flex gap-2">
                       {appt.type === 'ONLINE' ? (
-                        <button className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm">
-                          <Video className="w-3.5 h-3.5" /> Iniciar Teleconsulta
-                        </button>
+                        <OneClickJoin
+                          appointmentId={appt.id}
+                          participantId={professional.id}
+                          appointmentDate={formatDate(appt.date)}
+                          appointmentTime={appt.time}
+                          professionalName={appt.patientName}
+                          channelType="WEBRTC_NATIVE"
+                          sessionStatus="ACTIVE"
+                          variant="inline"
+                        />
                       ) : (
                         <span className="text-xs text-slate-500 font-medium">Atendimento Presencial</span>
                       )}
