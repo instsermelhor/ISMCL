@@ -37,6 +37,8 @@ import {
   type AppointmentType,
 } from '../contexts/BeneficiaryPortalContext';
 
+import { OneClickJoin } from '../components/actg/OneClickJoin';
+
 // ─── Config Maps ─────────────────────────────────────────────────────────────
 
 const APPOINTMENT_STATUS_CONFIG: Record<AppointmentStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
@@ -254,10 +256,19 @@ function HomePanel() {
                 </div>
               )}
               {nextAppointment.type === 'TELECONSULTA' && (
-                <button className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors">
-                  <Video className="w-4 h-4" />
-                  Entrar na Teleconsulta
-                </button>
+                <div className="mt-2">
+                  <OneClickJoin
+                    appointmentId={nextAppointment.id}
+                    participantId={beneficiary.id}
+                    appointmentDate={nextAppointment.date.split('-').reverse().join('/')}
+                    appointmentTime={nextAppointment.time}
+                    professionalName={nextAppointment.professional}
+                    specialtyName={nextAppointment.specialty}
+                    channelType="WEBRTC_NATIVE"
+                    sessionStatus="ACTIVE"
+                    variant="card"
+                  />
+                </div>
               )}
             </div>
           </PortalCard>
