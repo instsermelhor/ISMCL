@@ -238,6 +238,8 @@ model Appointment {
   
   // Teleatendimento
   meetingLink         String?  // Link gerado automaticamente
+  channelType         String?  // WHATSAPP_BUSINESS | GOOGLE_MEET | TEAMS | IN_PERSON | PHONE | HYBRID | WEBRTC_NATIVE
+  appointmentChannel  AppointmentChannel?
   
   // Rastreabilidade
   cancellationReason  String?
@@ -846,3 +848,175 @@ model BehaviorAlert {
   resolvedBy         Professional?        @relation("AlertResolver", fields: [resolvedById], references: [id])
 }
 
+// =========================================================================
+// MÓDULO ACTG: AURA COMMUNICATION & TELEATTENDANCE GATEWAY
+// =========================================================================
+
+model CommunicationProvider {
+  id              String   @id @default(uuid())
+  name            String
+  type            String   // WHATSAPP_BUSINESS | GOOGLE_MEET | TEAMS | ZOOM | WEBEX | JITSI | WEBRTC_NATIVE
+  status          String   @default("ACTIVE") // ACTIVE | INACTIVE | DEPRECATED
+  isEnabled       Boolean  @default(true)
+  supportsVideo   Boolean  @default(false)
+  supportsAudio   Boolean  @default(false)
+  supportsChat    Boolean  @default(false)
+  supportsNotify  Boolean  @default(true)
+  configSchema    Json?    // JSON schema das configurações necessárias
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  accounts        CommunicationAccount[]
+  healthStatuses  ProviderHealthStatus[]
+  channels        AppointmentChannel[]
+}
+
+model CommunicationAccount {
+  id              String   @id @default(uuid())
+  providerId      String
+  name            String
+  environment     String   @default("PRODUCTION") // PRODUCTION | STAGING | SANDBOX
+  vaultPath       String   // HashiCorp Vault / AWS Secrets Manager path
+  webhookUrl      String?
+  webhookSecretHash String? // HMAC-SHA256 hash of webhook secret
+  isActive        Boolean  @default(true)
+  lastHealthCheck DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  provider        CommunicationProvider @relation(fields: [providerId], references: [id])
+  channels        AppointmentChannel[]
+}
+
+model AppointmentChannel {
+  id                String   @id @default(uuid())
+  appointmentId     String   @unique
+  channelType       String   // WHATSAPP_BUSINESS | GOOGLE_MEET | TEAMS | IN_PERSON | PHONE | HYBRID | WEBRTC_NATIVE
+  providerId        String?
+  accountId         String?
+  selectedByUserId  String?
+  preferenceSource  String   @default("INSTITUTIONAL") // BENEFICIARY | PROFESSIONAL | INSTITUTIONAL | FALLBACK
+  isFallback        Boolean  @default(false)
+  originalChannelType String? // Canal original antes do fallback
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  appointment       Appointment            @relation(fields: [appointmentId], references: [id])
+  provider          CommunicationProvider? @relation(fields: [providerId], references: [id])
+  account           CommunicationAccount?  @relation(fields: [accountId], references: [id])
+  externalMeeting   ExternalMeeting?
+}
+
+model ExternalMeeting {
+  id                  String   @id @default(uuid())
+  appointmentChannelId String  @unique
+  externalMeetingId   String   // ID da reunião no provedor externo
+  joinUrl             String   // Link de acesso para participantes
+  hostJoinUrl         String?  // Link do anfitrião (quando diferente)
+  providerType        String   // GOOGLE_MEET | TEAMS | ZOOM | etc
+  status              String   @default("ACTIVE") // ACTIVE | CANCELLED | COMPLETED | EXPIRED
+  idempotencyKey      String   @unique // Previne duplicidade
+  scheduledStart      DateTime
+  scheduledEnd        DateTime
+  cancelledAt         DateTime?
+  cancellationReason  String?
+  completedAt         DateTime?
+  rawMetadata         Json?    // Dados específicos do provedor (sanitizados)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  appointmentChannel  AppointmentChannel @relation(fields: [appointmentChannelId], references: [id])
+}
+
+model CommunicationEvent {
+  id                String   @id @default(uuid())
+  appointmentId     String?
+  externalMeetingId String?
+  eventType         String   // SESSION_CREATED | SESSION_UPDATED | SESSION_CANCELLED | SESSION_JOINED | SESSION_COMPLETED | NOTIFICATION_SENT | FALLBACK_TRIGGERED | PROVIDER_ERROR
+  providerType      String?
+  source            String   // AURA | PROVIDER_WEBHOOK
+  actorId           String?
+  actorType         String?  // BENEFICIARY | PROFESSIONAL | SYSTEM
+  payload           Json?    // Sanitized payload (sem dados clínicos)
+  correlationId     String?
+  timestamp         DateTime @default(now())
+}
+
+model WebhookEvent {
+  id              String   @id @default(uuid())
+  providerId      String?
+  externalEventId String?
+  eventType       String
+  rawPayload      Bytes?   // Criptografado em repouso
+  signatureValid  Boolean  @default(false)
+  processed       Boolean  @default(false)
+  appointmentId   String?  // Após correlação
+  processingError String?
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+}
+
+model NotificationLog {
+  id              String   @id @default(uuid())
+  appointmentId   String?
+  recipientId     String
+  recipientType   String   // BENEFICIARY | PROFESSIONAL
+  channel         String   // WHATSAPP | EMAIL | SMS | PUSH | PORTAL
+  eventType       String   // APPOINTMENT_CREATED | APPOINTMENT_CONFIRMED | REMINDER_7D | REMINDER_24H | REMINDER_2H | REMINDER_30MIN | APPOINTMENT_CANCELLED | APPOINTMENT_RESCHEDULED | SESSION_STARTED | SESSION_COMPLETED
+  idempotencyKey  String   @unique // recipientId:appointmentId:eventType:channel
+  status          String   @default("PENDING") // PENDING | SENT | DELIVERED | FAILED
+  messageContent  String?  // Sanitized — sem dados clínicos
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  failedAt        DateTime?
+  failureReason   String?
+  createdAt       DateTime @default(now())
+}
+
+model CommunicationPreference {
+  id                 String   @id @default(uuid())
+  entityId           String
+  entityType         String   // BENEFICIARY | PROFESSIONAL
+  preferredChannel   String   @default("PORTAL") // WHATSAPP | EMAIL | SMS | PUSH | PORTAL
+  fallbackChannels   Json     @default("[]")
+  allowWhatsApp      Boolean  @default(false)
+  allowEmail         Boolean  @default(true)
+  allowSms           Boolean  @default(false)
+  allowPush          Boolean  @default(true)
+  reminderIntervals  Json     @default("[\"24h\", \"2h\"]")
+  accessibilityNeeds Json?
+  consentRecordedAt  DateTime?
+  consentVersion     String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([entityId, entityType])
+}
+
+model ProviderHealthStatus {
+  id            String   @id @default(uuid())
+  providerId    String
+  status        String   // ONLINE | DEGRADED | UNAVAILABLE
+  latencyMs     Int?
+  errorRate     Float?
+  lastCheckedAt DateTime @default(now())
+  lastOnlineAt  DateTime?
+  incidentId    String?
+
+  provider      CommunicationProvider @relation(fields: [providerId], references: [id])
+}
+
+model CommunicationTemplate {
+  id           String   @id @default(uuid())
+  providerId   String?
+  name         String   // Ex: APPOINTMENT_CONFIRMATION_PT
+  eventType    String   // Evento que dispara este template
+  channel      String   // WHATSAPP | EMAIL | SMS
+  language     String   @default("pt_BR")
+  subject      String?  // Para e-mail
+  body         String   // Template com placeholders {name}, {date}, {link}
+  isActive     Boolean  @default(true)
+  mcsiMaxLevel Int      @default(2) // Nível MCSI máximo que pode usar este template
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
