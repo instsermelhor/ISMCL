@@ -98,6 +98,9 @@ import { AdminSupremeDashboard } from './pages/AdminSupremeDashboard';
 // ReferenceError: CorporateKnowledgeCenter is not defined → GlobalErrorBoundary → White Screen.
 import CorporateKnowledgeCenter from './pages/CorporateKnowledgeCenter';
 
+// Prompt 188 — ACTG
+import OmnichannelDashboard from './pages/OmnichannelDashboard';
+
 // ----------------------------------------------------------------
 // RouteSuspenseFallback — spinner inline para Suspense boundaries
 // ----------------------------------------------------------------
@@ -249,6 +252,9 @@ export default function App() {
 
             {/* ── AMAC (Prompt 150) ────────────────────────────────── */}
             <Route path="amac" element={<RouteErrorBoundary><AMAC /></RouteErrorBoundary>} />
+
+            {/* ── ACTG — Comunicação e Teleatendimento ────────────── */}
+            <Route path="omnichannel" element={<RouteErrorBoundary><OmnichannelDashboard /></RouteErrorBoundary>} />
 
             {/* ── AIIC (Prompt 151 — Fase II) ──────────────────────── */}
             <Route path="aiic" element={<RouteErrorBoundary><AIIC /></RouteErrorBoundary>} />
