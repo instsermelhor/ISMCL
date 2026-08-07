@@ -31,6 +31,7 @@ import { ProductionReadinessModule } from './domain/production-readiness/product
 import { MasterCertificationModule } from './domain/master-certification/master-certification.module';
 import { InstitutionalIntelligenceModule } from './domain/institutional-intelligence/institutional-intelligence.module';
 import { CognitiveOrchestrationModule } from './domain/cognitive-orchestration/cognitive-orchestration.module';
+import { ActgModule } from './domain/actg/actg.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -107,6 +108,17 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
         // AWS (opcional em dev)
         AWS_REGION: Joi.string().optional().default('us-east-1'),
         S3_BUCKET: Joi.string().optional(),
+
+        // ACTG (Aura Communication & Teleattendance Gateway)
+        WHATSAPP_PHONE_NUMBER_ID: Joi.string().optional(),
+        WHATSAPP_ACCESS_TOKEN: Joi.string().optional(),
+        GOOGLE_SERVICE_ACCOUNT_TOKEN: Joi.string().optional(),
+        GOOGLE_CALENDAR_ID: Joi.string().optional().default('primary'),
+        TEAMS_TENANT_ID: Joi.string().optional(),
+        TEAMS_CLIENT_ID: Joi.string().optional(),
+        TEAMS_CLIENT_SECRET: Joi.string().optional(),
+        TEAMS_ORGANIZER_USER_ID: Joi.string().optional(),
+        ACTG_WEBHOOK_SECRET: Joi.string().optional(),
       }),
     }),
 
@@ -213,6 +225,7 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
     MasterCertificationModule,
     InstitutionalIntelligenceModule,
     CognitiveOrchestrationModule,
+    ActgModule,
     AutonomousEvolutionModule,
     EnterpriseInteroperabilityModule,
     UnifiedOperationsModule,
