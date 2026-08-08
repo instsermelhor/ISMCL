@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import {
   Activity, Wifi, WifiOff, AlertTriangle, CheckCircle2, XCircle,
   Video, MessageCircle, RefreshCw, Settings, ArrowRight,
@@ -87,7 +88,9 @@ const FALLBACK_CHAIN = [
 
 const OmnichannelDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [providerHealth, setProviderHealth] = useState<ProviderHealthStatus[]>(getMockProviderHealth());
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'events' | 'webhooks' | 'config'>('events');
@@ -157,6 +160,17 @@ const OmnichannelDashboard: React.FC = () => {
             >
               <RefreshCw className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin')} />
               Atualizar
+            </motion.button>
+            <motion.button
+              id="actg-configure-btn"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/omnichannel-admin')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-white transition-all"
+              style={{ background: 'linear-gradient(135deg,rgba(20,184,166,0.25),rgba(14,165,233,0.2))', border: '1px solid rgba(20,184,166,0.35)' }}
+            >
+              <Settings className="w-3.5 h-3.5 text-teal-400" />
+              Configurar
             </motion.button>
           </div>
         </motion.div>
