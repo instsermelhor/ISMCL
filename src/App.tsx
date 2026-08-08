@@ -100,6 +100,7 @@ import CorporateKnowledgeCenter from './pages/CorporateKnowledgeCenter';
 
 // Prompt 188 — ACTG
 import OmnichannelDashboard from './pages/OmnichannelDashboard';
+import ActgAdminPage from './pages/ActgAdminPage';
 
 // ----------------------------------------------------------------
 // RouteSuspenseFallback — spinner inline para Suspense boundaries
@@ -255,6 +256,7 @@ export default function App() {
 
             {/* ── ACTG — Comunicação e Teleatendimento ────────────── */}
             <Route path="omnichannel" element={<RouteErrorBoundary><OmnichannelDashboard /></RouteErrorBoundary>} />
+            <Route path="omnichannel-admin" element={<RouteErrorBoundary><ActgAdminPage /></RouteErrorBoundary>} />
 
             {/* ── AIIC (Prompt 151 — Fase II) ──────────────────────── */}
             <Route path="aiic" element={<RouteErrorBoundary><AIIC /></RouteErrorBoundary>} />
