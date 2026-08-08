@@ -9,6 +9,7 @@ import { FallbackEngineService } from './services/fallback-engine.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { WebhookProcessorService } from './services/webhook-processor.service';
 import { ACTGGatewayService } from './services/actg-gateway.service';
+import { ACTGAdminService } from './services/actg-admin.service';
 import { ACTGController } from './controllers/actg.controller';
 
 /**
@@ -38,13 +39,16 @@ import { ACTGController } from './controllers/actg.controller';
     NotificationOrchestratorService,
     WebhookProcessorService,
     ACTGGatewayService,
+    ACTGAdminService,
   ],
   controllers: [ACTGController],
   exports: [
     ACTGGatewayService,
+    ACTGAdminService,
     NotificationOrchestratorService,
     ProviderHealthService,
     ProviderRegistryService,
   ],
 })
 export class ActgModule {}
+
