@@ -147,6 +147,7 @@ const MODULE_GRID = [
   { name: 'Portal Beneficiário', href: '/portal-beneficiario', icon: Users2, category: 'portals', color: '#34d399' },
   { name: 'Portal Profissional', href: '/portal-profissional', icon: BriefcaseMedical, category: 'portals', color: '#60a5fa' },
   { name: 'Configurações', href: '/settings', icon: Settings, category: 'admin', color: '#94a3b8' },
+  { name: 'ACTG — Canais', href: '/omnichannel-admin', icon: Wifi, category: 'admin', color: '#2dd4bf' },
 ];
 
 const SERVICES = [
