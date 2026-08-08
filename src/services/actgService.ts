@@ -1,6 +1,6 @@
 import type { ActgSession, ProviderHealthStatus, CommunicationPreference, ChannelType, NotificationEventType, NotificationChannel } from '../types/actg.types';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:3001';
 const ACTG_BASE = `${API_BASE}/api/v1/actg`;
 
 function getAuthHeaders(): HeadersInit {
