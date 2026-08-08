@@ -1,9 +1,10 @@
 import {
-  Controller, Get, Post, Delete, Body, Param, Query,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query,
   HttpCode, HttpStatus, Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ACTGGatewayService } from '../services/actg-gateway.service';
+import { ACTGAdminService } from '../services/actg-admin.service';
 import { ProviderHealthService } from '../services/provider-health.service';
 import { WebhookProcessorService } from '../services/webhook-processor.service';
 import { NotificationOrchestratorService } from '../services/notification-orchestrator.service';
@@ -12,6 +13,11 @@ import {
   CancelExternalMeetingDto,
   SendNotificationDto,
   WebhookPayloadDto,
+  UpdateCommunicationProviderDto,
+  CreateCommunicationAccountDto,
+  UpdateCommunicationAccountDto,
+  CreateCommunicationTemplateDto,
+  UpdateCommunicationTemplateDto,
   ChannelType,
   NotificationChannel,
 } from '../dto/actg.dto';
@@ -32,6 +38,7 @@ export class ACTGController {
 
   constructor(
     private readonly gateway: ACTGGatewayService,
+    private readonly adminService: ACTGAdminService,
     private readonly providerHealth: ProviderHealthService,
     private readonly webhookProcessor: WebhookProcessorService,
     private readonly notificationOrchestrator: NotificationOrchestratorService,
@@ -50,6 +57,65 @@ export class ACTGController {
   @ApiOperation({ summary: 'Executa health check em tempo real para um provedor específico' })
   async checkProviderHealth(@Param('channelType') channelType: string) {
     return this.providerHealth.checkProvider(channelType);
+  }
+
+  // ── Admin Management Endpoints ─────────────────────────────────────────────
+
+  @Get('admin/providers')
+  @ApiOperation({ summary: 'Lista todos os provedores de comunicação cadastrados' })
+  getAdminProviders() {
+    return this.adminService.listProviders();
+  }
+
+  @Patch('admin/providers/:id')
+  @ApiOperation({ summary: 'Atualiza estado/configuração de um provedor' })
+  updateAdminProvider(
+    @Param('id') id: string,
+    @Body() dto: UpdateCommunicationProviderDto,
+  ) {
+    return this.adminService.updateProvider(id, dto);
+  }
+
+  @Get('admin/accounts')
+  @ApiOperation({ summary: 'Lista todas as contas de comunicação atreladas ao Vault' })
+  getAdminAccounts() {
+    return this.adminService.listAccounts();
+  }
+
+  @Post('admin/accounts')
+  @ApiOperation({ summary: 'Cria uma nova conta de comunicação vinculando ao caminho no Vault' })
+  createAdminAccount(@Body() dto: CreateCommunicationAccountDto) {
+    return this.adminService.createAccount(dto);
+  }
+
+  @Patch('admin/accounts/:id')
+  @ApiOperation({ summary: 'Atualiza uma conta de comunicação existente' })
+  updateAdminAccount(
+    @Param('id') id: string,
+    @Body() dto: UpdateCommunicationAccountDto,
+  ) {
+    return this.adminService.updateAccount(id, dto);
+  }
+
+  @Get('admin/templates')
+  @ApiOperation({ summary: 'Lista todos os templates de comunicação' })
+  getAdminTemplates() {
+    return this.adminService.listTemplates();
+  }
+
+  @Post('admin/templates')
+  @ApiOperation({ summary: 'Cria um novo template de comunicação' })
+  createAdminTemplate(@Body() dto: CreateCommunicationTemplateDto) {
+    return this.adminService.createTemplate(dto);
+  }
+
+  @Patch('admin/templates/:id')
+  @ApiOperation({ summary: 'Atualiza um template de comunicação' })
+  updateAdminTemplate(
+    @Param('id') id: string,
+    @Body() dto: UpdateCommunicationTemplateDto,
+  ) {
+    return this.adminService.updateTemplate(id, dto);
   }
 
   // ── Appointment Channels ───────────────────────────────────────────────────
