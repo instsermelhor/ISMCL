@@ -152,3 +152,141 @@ export class WebhookPayloadDto {
   @IsString()
   providerType: string;
 }
+
+// ── Admin DTOs ─────────────────────────────────────────────────────────────
+
+export class UpdateCommunicationProviderDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  configSchema?: Record<string, unknown>;
+}
+
+export class CreateCommunicationAccountDto {
+  @ApiProperty()
+  @IsString()
+  providerId: string;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+
+  @ApiPropertyOptional({ default: 'PRODUCTION' })
+  @IsOptional()
+  @IsString()
+  environment?: string;
+
+  @ApiProperty({ description: 'HashiCorp Vault / AWS Secrets Manager path' })
+  @IsString()
+  vaultPath: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  webhookUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  webhookSecretHash?: string;
+}
+
+export class UpdateCommunicationAccountDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  environment?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vaultPath?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  webhookUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class CreateCommunicationTemplateDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  providerId?: string;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+
+  @ApiProperty()
+  @IsString()
+  eventType: string;
+
+  @ApiProperty({ enum: NotificationChannel })
+  @IsEnum(NotificationChannel)
+  channel: NotificationChannel;
+
+  @ApiPropertyOptional({ default: 'pt_BR' })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @ApiProperty()
+  @IsString()
+  body: string;
+
+  @ApiPropertyOptional({ default: 2 })
+  @IsOptional()
+  mcsiMaxLevel?: number;
+}
+
+export class UpdateCommunicationTemplateDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  mcsiMaxLevel?: number;
+}
+
