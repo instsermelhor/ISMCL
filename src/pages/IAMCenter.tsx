@@ -134,6 +134,9 @@ const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   config_changed: 'Configuração alterada',
   ai_suggestion_approved: 'Sugestão IA aprovada',
   ai_suggestion_rejected: 'Sugestão IA rejeitada',
+  impersonation_started: 'Impersonação assistida iniciada',
+  impersonation_ended: 'Impersonação assistida encerrada',
+  access_granted: 'Acesso concedido',
 };
 
 // ----------------------------------------------------------------
