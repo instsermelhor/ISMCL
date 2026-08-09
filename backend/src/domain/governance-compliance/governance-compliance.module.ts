@@ -15,6 +15,10 @@ import { GovernanceDashboardService } from './services/governance-dashboard.serv
 
 // Controller
 import { GovernanceComplianceController } from './controllers/governance-compliance.controller';
+import { LgpdController } from './controllers/lgpd.controller';
+
+// LGPD — P12
+import { LgpdConsentService } from './services/lgpd-consent.service';
 
 /**
  * GovernanceComplianceModule — Prompt 161 (AGCC)
@@ -28,7 +32,7 @@ import { GovernanceComplianceController } from './controllers/governance-complia
  */
 @Module({
   imports: [EventBusModule],
-  controllers: [GovernanceComplianceController],
+  controllers: [GovernanceComplianceController, LgpdController],
   providers: [
     ContinuousAuditService,
     ComplianceEvidenceService,
@@ -40,6 +44,7 @@ import { GovernanceComplianceController } from './controllers/governance-complia
     EnterpriseRiskValidationService,
     GovernanceRecommendationService,
     GovernanceDashboardService,
+    LgpdConsentService,
   ],
   exports: [
     ContinuousAuditService,
@@ -47,6 +52,7 @@ import { GovernanceComplianceController } from './controllers/governance-complia
     AutonomousGovernanceService,
     EnterpriseRiskValidationService,
     GovernanceDashboardService,
+    LgpdConsentService,
   ],
 })
 export class GovernanceComplianceModule {}
