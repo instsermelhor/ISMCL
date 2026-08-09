@@ -19,6 +19,7 @@ import {
 } from '../data/financial-mock';
 import { generatePixPayload, generateQRDataUrl, requestCentralizedPixCharge } from '../services/pixService';
 import { getPixConfig, updatePixConfig, getPixAuditLogs, type PixInstitutionalConfig, type PixAuditLog } from '../services/pixConfigService';
+import { financialService } from '../services/financialService';
 
 // ─── Helpers ───────────────────────────────────────────────
 function formatBRL(val: number) {
