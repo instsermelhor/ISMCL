@@ -66,7 +66,7 @@ export class OrganizationalMemoryService {
 
     this.memoryStore.push(entry);
 
-    await this.audit.recordAudit('RECORD_MEMORY', memoryId, dto.eventType, dto.recordedBy ?? 'SYSTEM');
+    await this.audit.recordAudit('RECORD_MEMORY', memoryId, dto.recordedBy ?? 'SYSTEM', { eventType: dto.eventType });
 
     await this.eventBus.publish(
       'aura.knowledge.memory.updated.v1',
