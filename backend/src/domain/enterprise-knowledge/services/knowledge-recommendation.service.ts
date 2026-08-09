@@ -39,29 +39,25 @@ export class KnowledgeRecommendationService {
   async generateRecommendations(dto: GenerateRecommendationDto): Promise<RecommendationResult> {
     const seq = Math.random().toString(36).substring(2, 8).toUpperCase();
     const recommendationId = `REC-${Date.now()}-${seq}`;
-    const limit = dto.maxRecommendations ?? 3;
+    const limit = dto.limit ?? 3;
 
-    const domainFilter = dto.contextDomain ?? (dto.userRole?.toLowerCase().includes('psico') ? KnowledgeDomain.ASSISTENTIAL : KnowledgeDomain.OPERATIONAL);
-
-    const items = this.knowledgeService.listKnowledgeItems(domainFilter);
+    const items = this.knowledgeService.listKnowledgeItems();
 
     const recommendations: KnowledgeRecommendation[] = items.slice(0, limit).map((item) => ({
       item,
       recommendationScore: 0.94,
-      reason: `Recomendado para a função '${dto.userRole ?? 'Profissional'}' no domínio ${domainFilter}`,
+      reason: `Recomendado para o usuário '${dto.userId}'`,
     }));
 
     const result: RecommendationResult = {
       recommendationId,
       userId: dto.userId,
-      userRole: dto.userRole,
+      userRole: 'PROFESSIONAL',
       recommendations,
       recommendedAt: new Date().toISOString(),
     };
 
-    await this.audit.recordAudit('GENERATE_RECOMMENDATIONS', recommendationId, 'RECOMMENDATION', dto.userId, {
-      count: recommendations.length,
-    });
+    await this.audit.recordAudit('GENERATE_RECOMMENDATIONS', recommendationId, 'RECOMMENDATION', dto.userId);
 
     await this.eventBus.publish(
       'aura.knowledge.recommendation.generated.v1',
