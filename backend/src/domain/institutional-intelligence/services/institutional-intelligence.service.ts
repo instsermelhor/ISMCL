@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EventBusService } from '../../events/event-bus.service';
+import { EventBusService } from '../../../events/event-bus.service';
 import { UnifiedOrganizationalViewDto } from '../dto/institutional-intelligence.dto';
 
 @Injectable()
