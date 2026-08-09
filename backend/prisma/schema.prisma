@@ -1127,3 +1127,134 @@ model ImpersonationSession {
   targetUser   User      @relation("TargetUser", fields: [targetUserId], references: [id])
 }
 
+// =========================================================================
+// MÓDULO LGPD/GDPR: PRIVACIDADE, CONSENTIMENTO & DIREITOS DO TITULAR
+// =========================================================================
+
+model DataConsent {
+  id                String    @id @default(uuid())
+  entityId          String    // ID do titular (beneficiário, usuário, profissional)
+  entityType        String    // BENEFICIARY | PROFESSIONAL | USER | VISITOR
+  tenantId          String    @default("default")
+  consentVersion    String    // Versão do termo (ex: "2025-08-01-v3")
+  purposes          Json      // Array de finalidades aceitas
+  legalBasis        String    // CONSENTIMENTO | CONTRATO | OBRIGACAO_LEGAL | INTERESSE_LEGITIMO
+  isActive          Boolean   @default(true)
+  isMinor           Boolean   @default(false)
+  guardianId        String?
+  ipAddress         String?
+  userAgent         String?
+  collectionChannel String    @default("WEB")
+  expiresAt         DateTime?
+  withdrawnAt       DateTime?
+  withdrawalReason  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  requests          DataSubjectRequest[]
+
+  @@index([entityId, entityType])
+  @@index([tenantId, isActive])
+}
+
+model DataSubjectRequest {
+  id              String    @id @default(uuid())
+  consentId       String?
+  entityId        String
+  entityType      String
+  tenantId        String    @default("default")
+  requestType     String    // ACCESS | PORTABILITY | RECTIFICATION | ERASURE | RESTRICTION | OBJECTION
+  status          String    @default("PENDING")
+  description     String?
+  requestedBy     String?
+  assignedTo      String?
+  dueDate         DateTime  // Prazo legal (15 dias úteis)
+  completedAt     DateTime?
+  rejectionReason String?
+  evidenceLog     Json?
+  exportUrl       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  consent         DataConsent? @relation(fields: [consentId], references: [id])
+
+  @@index([entityId, status])
+  @@index([tenantId, requestType, status])
+}
+
+model DataProcessingLog {
+  id              String   @id @default(uuid())
+  entityId        String
+  entityType      String
+  tenantId        String   @default("default")
+  operation       String   // READ | CREATE | UPDATE | DELETE | EXPORT | ANONYMIZE
+  resource        String
+  resourceId      String?
+  purpose         String
+  legalBasis      String
+  actorId         String?
+  actorType       String   @default("SYSTEM")
+  isAutomated     Boolean  @default(false)
+  dataFields      Json?
+  ipAddress       String?
+  correlationId   String?
+  timestamp       DateTime @default(now())
+
+  @@index([entityId, timestamp])
+  @@index([tenantId, operation, timestamp])
+}
+
+model AnonymizationRecord {
+  id              String   @id @default(uuid())
+  entityId        String
+  entityType      String
+  tenantId        String   @default("default")
+  technique       String   // PSEUDONYMIZATION | FULL_ERASURE
+  fieldsProcessed Json
+  requestId       String?
+  performedBy     String?
+  verifiedBy      String?
+  legalBasis      String
+  completedAt     DateTime @default(now())
+  retentionUntil  DateTime?
+  notes           String?
+}
+
+// =========================================================================
+// MÓDULO PWA & OFFLINE-FIRST: SINCRONIZAÇÃO DE AGENTES DE CAMPO (Fase P13)
+// =========================================================================
+
+model OfflineSyncBatch {
+  id            String   @id @default(uuid())
+  deviceId      String   // Identificador do dispositivo móvel do agente
+  agentId       String   // ID do agente de campo
+  tenantId      String   @default("default")
+  totalItems    Int
+  syncedItems   Int      @default(0)
+  failedItems   Int      @default(0)
+  status        String   @default("PENDING") // PENDING | PROCESSING | COMPLETED | PARTIAL_FAILURE
+  payload       Json     // Lote de triagens e notas capturadas offline
+  clientTime    DateTime // Data/hora local do dispositivo no momento da captura
+  syncedAt      DateTime?
+  createdAt     DateTime @default(now())
+
+  logs          OfflineSyncLog[]
+
+  @@index([agentId, status])
+  @@index([deviceId, createdAt])
+}
+
+model OfflineSyncLog {
+  id            String   @id @default(uuid())
+  batchId       String
+  itemType      String   // TRIAGE | CLINICAL_EVOLUTION | BENEFICIARY
+  localId       String   // ID gerado offline no IndexedDB
+  serverId      String?  // ID final gerado no PostgreSQL
+  status        String   // SUCCESS | FAILED | CONFLICT
+  errorMessage  String?
+  processedAt   DateTime @default(now())
+
+  batch         OfflineSyncBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+}
+
+
