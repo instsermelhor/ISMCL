@@ -86,13 +86,17 @@ describe('P170 EKG — Enterprise Knowledge Governance, Institutional Memory & D
     it('deve criar documento corporativo com hash de versão', async () => {
       const doc = await knowledgeSvc.createDocument({
         title: 'Política de Proteção Infantil',
+        summary: 'Diretrizes de proteção integral à criança e ao adolescente.',
         category: DocumentCategory.POLICY,
         content: 'Diretrizes completas de segurança...',
+        authorId: 'autora-01',
         author: 'Dra. Maria',
+        tags: ['proteção-infantil'],
         confidentiality: ConfidentialityLevel.INTERNAL,
       });
       expect(doc.documentId).toMatch(/^DOC-POLICY-/);
       expect(doc.version).toBe(1);
+      expect(doc.summary).toBeDefined();
       expect(doc.versionHistory).toHaveLength(1);
       expect(doc.versionHistory[0].sha256Hash).toHaveLength(64);
     });
@@ -100,9 +104,11 @@ describe('P170 EKG — Enterprise Knowledge Governance, Institutional Memory & D
     it('deve atualizar documento e incrementar histórico de versão', async () => {
       const doc = await knowledgeSvc.createDocument({
         title: 'POP Atendimento',
+        summary: 'Procedimento operacional padrão de atendimento.',
         category: DocumentCategory.STANDARD_OPERATING_PROCEDURE,
         content: 'Versão 1',
-        author: 'Autor',
+        authorId: 'autor-01',
+        tags: [],
       });
       const updated = await knowledgeSvc.updateDocument(doc.documentId, {
         content: 'Versão 2 atualizada',
