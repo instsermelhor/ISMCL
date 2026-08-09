@@ -12,6 +12,8 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import { cn } from '../utils';
+import { intakeService } from '../services/intakeService';
+import { registrationService } from '../services/registrationService';
 
 // =========================================================================
 // MÓDULO DE TRIAGEM / ACOLHIMENTO (AURA UI)
@@ -400,6 +402,25 @@ export function TriageForm() {
                     };
 
                     localStorage.setItem('satai_dossiers', JSON.stringify([newDossier, ...dossiersList]));
+
+                    // Sincronização assíncrona com o backend (Acolhimento e Triagem)
+                    try {
+                      const intake = await intakeService.startIntake({
+                        beneficiaryId: newDossier.dossierId,
+                        channel: 'IN_PERSON',
+                        chiefComplaint: formData.chiefComplaint || 'Acolhimento Inicial',
+                      });
+                      if (intake?.data?.intakeSessionId) {
+                        await intakeService.classifyTriage({
+                          intakeSessionId: intake.data.intakeSessionId,
+                          riskLevel: hasHighRisk ? 'HIGH' : 'MEDIUM',
+                          mcsiLevel: hasHighRisk ? 3 : 1,
+                          priorityScore: hasHighRisk ? 75 : 25,
+                        });
+                      }
+                    } catch {
+                      // Fallback resiliente em desenvolvimento
+                    }
                   } catch (err) {
                     console.error(err);
                   }
