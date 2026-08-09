@@ -9,23 +9,36 @@ export const RequirePortal = (portal: 'ADMIN' | 'CLINIC') => SetMetadata('portal
  * CLINIC CONTROLLER - VISÃO CLÍNICA DO PACIENTE (BENEFICIÁRIO)
  * Exclusivo para o portal clínico (profissional.institutosermelhor.org.br)
  */
+// Mock services para evitar erros de compilação na demonstração
+class AuditService {
+  async log(_data: unknown) {}
+  async logSecurityIncident(_data: unknown) {}
+}
+class CaseService { async verifyProfessionalAccess(_patientId: string, _professionalId: string) { return true; } }
+class BeneficiaryService { async getClinicalProfile(_id: string) { return {}; } }
+class MedicalRecordService { async getPatientEvolutions(_id: string) { return []; } }
+
 @Controller('clinic/patients')
 @UseGuards(PortalAccessGuard)
 @RequirePortal('CLINIC')
 export class PatientClinicController {
-  
+  private readonly auditService = new AuditService();
+  private readonly caseService = new CaseService();
+  private readonly beneficiaryService = new BeneficiaryService();
+  private readonly medicalRecordService = new MedicalRecordService();
+
   /**
    * Retorna a visão clínica do beneficiário para um psicólogo/psiquiatra.
-   * Aplica ABAC (Attribute-Based Access Control) para garantir que o profissional 
+   * Aplica ABAC (Attribute-Based Access Control) para garantir que o profissional
    * está alocado ao "Caso" do beneficiário.
    */
   @Get(':id/medical-record')
   async getPatientClinicalRecord(@Param('id') patientId: string, @Req() req: Request) {
-    const professionalId = req.user['id'];
+    const professionalId = (req as any).user?.['id'] as string;
 
     // 1. ABAC: Verifica se o profissional é voluntário ativo no CASO deste paciente
     const hasActiveCase = await this.caseService.verifyProfessionalAccess(patientId, professionalId);
-    
+
     if (!hasActiveCase) {
       // Falha de privilégio: Gera incidente de segurança
       await this.auditService.logSecurityIncident({
@@ -54,12 +67,3 @@ export class PatientClinicController {
     };
   }
 }
-
-// Mock services para evitar erros de compilação na demonstração
-class AuditService { 
-  async log(data: any) {} 
-  async logSecurityIncident(data: any) {}
-}
-class CaseService { async verifyProfessionalAccess(patientId: string, professionalId: string) { return true; } }
-class BeneficiaryService { async getClinicalProfile(id: string) { return {}; } }
-class MedicalRecordService { async getPatientEvolutions(id: string) { return []; } }
