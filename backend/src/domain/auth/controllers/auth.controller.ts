@@ -118,6 +118,34 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
+  @Get('me')
+  @ApiOperation({ summary: 'Perfil do Usuário Autenticado (validação de sessão)' })
+  @ApiResponse({ status: 200, description: 'Perfil do usuário autenticado retornado.' })
+  @ApiResponse({ status: 401, description: 'Token inválido ou expirado.' })
+  async getMe(@Req() req: FastifyRequest & { user: AuraJwtPayload }) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const user = await this.identityService.findById(req.user.sub);
+
+    // Mapeia o perfil do banco para o envelope IAMUser esperado pelo frontend
+    const iamUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      initials: (user.name ?? 'US').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase(),
+      primaryRole: (user.role ?? 'beneficiary').toLowerCase(),
+      roles: [(user.role ?? 'beneficiary').toLowerCase()],
+      permissions: [],
+      status: (user.status ?? 'active').toLowerCase(),
+      mfaEnabled: user.mfaEnabled ?? false,
+      createdAt: user.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString?.() ?? new Date().toISOString(),
+    };
+
+    return BaseResponseDto.ok(iamUser, requestId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Post('logout-global')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout Global (Revoga todas as sessões ativas do usuário)' })
