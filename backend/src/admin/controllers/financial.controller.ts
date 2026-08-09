@@ -57,9 +57,9 @@ export class FinancialController {
     });
 
     return {
+      ...result,
       success: true,
       message: 'Movimentação financeira registrada.',
-      ...result
     };
   }
 
@@ -116,9 +116,9 @@ export class FinancialController {
     const result = await this.financialService.reverseTransaction(id, actorId, data.justification);
 
     return {
+      ...result,
       success: true,
       message: 'Lançamento estornado com sucesso (lançamento de ajuste criado).',
-      ...result
     };
   }
 
