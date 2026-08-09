@@ -43,6 +43,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '../utils';
 import { generateSOAP, summarizeHistory, semanticSearch } from '../services/gemini';
+import { ehrService } from '../services/ehrService';
 
 // =========================================================================
 // MÓDULO 05: PRONTUÁRIO ELETRÔNICO INTELIGENTE (PEI) E GESTÃO CLÍNICA
@@ -431,7 +432,7 @@ export function PatientRecord() {
     return () => clearTimeout(timer);
   }, [newEvoContent, isWriting]);
 
-  const handleSignEvolution = () => {
+  const handleSignEvolution = async () => {
     if (!newEvoContent.trim()) return;
     const now = new Date();
     const signatureHash = 'CRP-SIGN-98765-' + Math.random().toString(36).substring(2, 6).toUpperCase() + Date.now().toString().substring(10);
@@ -451,6 +452,20 @@ export function PatientRecord() {
     setNewEvoCid('');
     setIsWriting(false);
     addAuditEntry('ASSINATURA_EVOLUÇÃO', `Assinou digitalmente evolução clínica. Hash: ${signatureHash}`, 'success');
+
+    // Sincroniza assincronamente com o backend (AIEHSR REST API)
+    try {
+      await ehrService.createClinicalNote({
+        beneficiaryId: id ?? 'ben-001',
+        specialty: 'PSYCHOLOGY',
+        subjective: newEvoContent,
+        objective: newEvoCid ? `CID-10: ${newEvoCid}` : 'Sem observações adicionais',
+        assessment: 'Evolução registrada via Portal PEI',
+        plan: 'Acompanhamento contínuo',
+      });
+    } catch {
+      // Fallback gracioso mantendo disponibilidade da UI em ambiente offline/dev
+    }
   };
 
   // Adendo (RN03)
