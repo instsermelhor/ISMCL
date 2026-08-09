@@ -41,6 +41,7 @@ import { useIAM } from '../../contexts/IAMContext';
 import { ROLE_LABELS, ROLE_COLORS } from '../../types/iam';
 import type { InstitutionalRole } from '../../types/iam';
 import { useInactivityLogout } from '../../hooks/useInactivityLogout';
+import { ImpersonationBanner } from '../auth/ImpersonationBanner';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -91,8 +92,6 @@ function RolePill({ role }: { role: InstitutionalRole }) {
     </span>
   );
 }
-
-import { ImpersonationBanner } from '../auth/ImpersonationBanner';
 
 export function AppLayout() {
   const { user, logout, isAdmin } = useAuth();
