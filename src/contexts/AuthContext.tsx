@@ -38,7 +38,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // Mapeia papéis IAM para papel legado
 function mapIAMRoleToLegacy(iamRoles: InstitutionalRole[] = []): UserRole {
   const roles = Array.isArray(iamRoles) ? iamRoles : [];
-  if (roles.includes('super_admin')) return 'admin';
+  if (roles.includes('super_user_universal') || roles.includes('super_admin')) return 'admin';
   if (roles.includes('auditor')) return 'admin';
   if (roles.includes('director') || roles.includes('president') || roles.includes('manager') || roles.includes('coordinator')) return 'admin';
   if (roles.includes('professional') || roles.includes('volunteer_professional')) return 'ref';
