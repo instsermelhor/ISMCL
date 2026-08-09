@@ -92,6 +92,8 @@ function RolePill({ role }: { role: InstitutionalRole }) {
   );
 }
 
+import { ImpersonationBanner } from '../auth/ImpersonationBanner';
+
 export function AppLayout() {
   const { user, logout, isAdmin } = useAuth();
   const { currentUser, aiSuggestions } = useIAM();
@@ -119,6 +121,7 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900 overflow-hidden">
+      <ImpersonationBanner />
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
         {/* Logo */}
