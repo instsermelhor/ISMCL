@@ -119,14 +119,27 @@ export class AuthenticationService {
 
     this.logger.log(`[Auth] Login bem-sucedido para ${user.email} (Session: ${session.sessionId})`);
 
+    // Perfil IAMUser compatível com o frontend
+    const iamUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      initials: (user.name ?? 'US').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase(),
+      primaryRole: user.role.toLowerCase(),
+      roles: [user.role.toLowerCase()],
+      permissions: [] as string[],
+      status: 'active',
+      mfaEnabled: user.mfaEnabled ?? false,
+      createdAt: user.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString?.() ?? new Date().toISOString(),
+    };
+
     return {
       mfaRequired: false,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      // Campos na raiz para leitura direta pelo frontend (res.data.accessToken)
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: iamUser,
       tokens,
     };
   }
