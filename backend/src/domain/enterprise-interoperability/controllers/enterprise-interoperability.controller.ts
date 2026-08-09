@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../shared/guards/roles.guard';
-import { Roles } from '../../../shared/decorators/roles.decorator';
+import { Roles, AuraRole } from '../../../shared/decorators/roles.decorator';
 import {
   ApiGatewayRouteDto,
   ConfigureConnectorDto,
