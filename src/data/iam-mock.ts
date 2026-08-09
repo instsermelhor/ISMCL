@@ -34,6 +34,7 @@ export function buildPermissions(roles: InstitutionalRole[]): Permission[] {
 
   for (const role of roles) {
     switch (role) {
+      case 'super_user_universal':
       case 'super_admin':
         (['dashboard','beneficiaries','professionals','calendar','records',
           'messages','financial','cgi','mcsi','iam','telehealth',
