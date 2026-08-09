@@ -42,6 +42,9 @@ export interface BreakGlassLog {
  *
  * Referências: P107 (AEIATP), P128 (AECS - Zero Trust), P136 (AIEHSR Etapas 2 e 12)
  */
+import { Optional, Inject } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+
 @Injectable()
 export class ElectronicHealthRecordService {
   private readonly logger = new Logger(ElectronicHealthRecordService.name);
@@ -51,15 +54,41 @@ export class ElectronicHealthRecordService {
   private readonly breakGlassLogs: BreakGlassLog[] = [];
   private sequenceNumber = 100;
 
-  constructor(private readonly eventBus: EventBusService) {}
+  constructor(
+    private readonly eventBus: EventBusService,
+    @Optional() private readonly prisma?: PrismaService,
+  ) {}
 
   /**
    * Cria ou obtém o Prontuário Eletrônico Integrado do Beneficiário.
    */
   async getOrCreateEhr(beneficiaryId: string, tenantId = 'default'): Promise<ElectronicHealthRecord> {
+    // 1. Tenta recuperar do cache em memória primeiro
     for (const record of this.ehrStore.values()) {
       if (record.beneficiaryId === beneficiaryId) {
         return record;
+      }
+    }
+
+    // 2. Se o Prisma estiver disponível, consulta a tabela de Beneficiários no PostgreSQL
+    if (this.prisma) {
+      try {
+        let beneficiary = await this.prisma.beneficiary.findUnique({
+          where: { id: beneficiaryId },
+        });
+
+        if (!beneficiary) {
+          // Cria o beneficiário se ainda não existir no banco
+          beneficiary = await this.prisma.beneficiary.create({
+            data: {
+              id: beneficiaryId,
+              fullName: `Beneficiário ${beneficiaryId.substring(0, 8)}`,
+              status: 'ACTIVE',
+            },
+          });
+        }
+      } catch (err) {
+        this.logger.warn(`[EHR DB] Fallback para in-memory storage (Prisma offline: ${(err as Error).message})`);
       }
     }
 
