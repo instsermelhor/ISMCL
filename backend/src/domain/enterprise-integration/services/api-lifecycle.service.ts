@@ -29,7 +29,7 @@ export class APILifecycleService {
   async registerAPI(dto: RegisterAPIDto, registeredBy: string): Promise<APIRecord> {
     const record: APIRecord = {
       apiId: dto.apiId, name: dto.name, version: dto.version, basePath: dto.basePath,
-      owner: dto.owner, description: dto.description ?? '', rateLimitRpm: dto.rateLimitRpm ?? 60,
+      owner: dto.owner ?? registeredBy, description: dto.description ?? '', rateLimitRpm: dto.rateLimitRpm ?? 60,
       stage: APILifecycleStage.DRAFT, registeredAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
     this.apis.set(dto.apiId, record);
