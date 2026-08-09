@@ -33,9 +33,10 @@ export class WebhookManagementService {
   ) {}
 
   async registerWebhook(dto: RegisterWebhookDto, registeredBy: string): Promise<WebhookRecord> {
-    const record: WebhookRecord = { webhookId: dto.webhookId, targetUrl: dto.targetUrl, events: dto.events, subscriberId: dto.subscriberId, status: WebhookStatus.ACTIVE, deliveryLog: [], registeredAt: new Date().toISOString() };
+    const events = dto.events ?? dto.subscribedEvents ?? [];
+    const record: WebhookRecord = { webhookId: dto.webhookId, targetUrl: dto.targetUrl, events, subscriberId: dto.subscriberId, status: WebhookStatus.ACTIVE, deliveryLog: [], registeredAt: new Date().toISOString() };
     this.webhooks.set(dto.webhookId, record);
-    await this.auditSvc.recordAudit('WEBHOOK_REGISTERED', dto.webhookId, registeredBy, { targetUrl: dto.targetUrl, events: dto.events });
+    await this.auditSvc.recordAudit('WEBHOOK_REGISTERED', dto.webhookId, registeredBy, { targetUrl: dto.targetUrl, events });
     this.logger.log(`[WebhookMgmt] Webhook registrado: ${dto.webhookId} -> ${dto.targetUrl}`);
     return record;
   }
