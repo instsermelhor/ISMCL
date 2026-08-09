@@ -50,7 +50,7 @@ export default function PrivacyCenter() {
   const [requestDescription, setRequestDescription] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const entityId = user?.id ?? 'anonymous';
+  const entityId = user?.iamId ?? user?.email ?? 'anonymous';
 
   useEffect(() => {
     async function loadData() {
