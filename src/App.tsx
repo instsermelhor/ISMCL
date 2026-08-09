@@ -62,6 +62,9 @@ import SodoAdmin from './pages/SodoAdmin';
 // Painel Público de Doações via PIX
 import DonationPublic from './pages/DonationPublic';
 
+// Central de Privacidade LGPD — P12
+import PrivacyCenter from './pages/PrivacyCenter';
+
 // AEGRC — Governança, Riscos, Compliance e Gestão Estratégica
 import { AEGRC } from './pages/AEGRC';
 
@@ -185,6 +188,12 @@ export default function App() {
         <Route
           path="/doe"
           element={<RouteErrorBoundary><DonationPublic /></RouteErrorBoundary>}
+        />
+
+        {/* Rota pública: Central de Privacidade LGPD — P12 */}
+        <Route
+          path="/privacy"
+          element={<RouteErrorBoundary><PrivacyCenter /></RouteErrorBoundary>}
         />
 
         {/* Rotas protegidas — cada rota isolada com RouteErrorBoundary (Prompt 181 Fix #4) */}
