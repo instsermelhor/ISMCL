@@ -16,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useIAM } from '../contexts/IAMContext';
 import { useInactivityLogout } from '../hooks/useInactivityLogout';
 import { getAdminSessionTimeoutMs } from '../services/SecureCredentialsService';
+import type { InstitutionalRole } from '../types/iam';
 
 // ---- Helpers ----
 
