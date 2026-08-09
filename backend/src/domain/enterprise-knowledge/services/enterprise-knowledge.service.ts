@@ -67,7 +67,7 @@ export class EnterpriseKnowledgeService {
     const initialVersion: DocumentVersion = {
       versionNumber: 1,
       content: dto.content,
-      updatedBy: dto.author ?? author,
+      updatedBy: dto.author ?? dto.authorId ?? author,
       changeSummary: 'Criação inicial do documento',
       timestamp: now,
       sha256Hash,
@@ -78,7 +78,7 @@ export class EnterpriseKnowledgeService {
       title: dto.title,
       category: dto.category,
       content: dto.content,
-      author: dto.author ?? author,
+      author: dto.author ?? dto.authorId ?? author,
       status: KnowledgeStatus.DRAFT,
       confidentiality: dto.confidentiality ?? ConfidentialityLevel.INTERNAL,
       tags: dto.tags ?? [],
@@ -120,23 +120,24 @@ export class EnterpriseKnowledgeService {
     doc.updatedAt = now;
 
     const sha256Hash = require('crypto').createHash('sha256').update(doc.content).digest('hex');
+    const updatedBy = dto.updatedBy ?? 'SYSTEM';
     doc.versionHistory.push({
       versionNumber: doc.version,
       content: doc.content,
-      updatedBy: dto.updatedBy,
+      updatedBy,
       changeSummary: dto.changeSummary ?? 'Atualização documental',
       timestamp: now,
       sha256Hash,
     });
 
-    await this.auditSvc.recordAudit('KNOWLEDGE_UPDATED', documentId, dto.updatedBy, {
+    await this.auditSvc.recordAudit('KNOWLEDGE_UPDATED', documentId, updatedBy, {
       newVersion: doc.version,
       changeSummary: dto.changeSummary,
     });
 
     await this.eventBus.publish(
       'aura.ekg.knowledge.updated.v1',
-      { documentId, version: doc.version, updatedBy: dto.updatedBy },
+      { documentId, version: doc.version, updatedBy },
       'EKG',
       { subject: documentId },
     );
