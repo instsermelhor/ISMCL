@@ -48,12 +48,12 @@ export class EnterpriseSearchService {
     const analysis = this.semanticEngine.analyzeText(dto.query);
     const queryTokens = dto.query.toLowerCase().split(' ').filter((t) => t.length > 2);
 
-    const allItems = this.knowledgeService.listKnowledgeItems(dto.domain, dto.type);
+    const allItems = this.knowledgeService.listKnowledgeItems();
 
     // Calcula pontuação de similaridade semântica por token + conceito
     const scoredHits: SearchHit[] = allItems.map((item) => {
       let score = 0;
-      const textToMatch = `${item.title} ${item.description} ${item.tags.join(' ')}`.toLowerCase();
+      const textToMatch = `${item.title} ${item.summary} ${item.content} ${item.tags.join(' ')}`.toLowerCase();
 
       for (const token of queryTokens) {
         if (textToMatch.includes(token)) score += 0.25;
@@ -61,7 +61,6 @@ export class EnterpriseSearchService {
       for (const concept of analysis.keyConcepts) {
         if (textToMatch.includes(concept.toLowerCase())) score += 0.35;
       }
-      if (dto.domain && item.domain === dto.domain) score += 0.2;
 
       // Normaliza entre 0.5 e 0.99 para itens encontrados
       const finalScore = score > 0 ? Math.min(0.99, 0.5 + score * 0.2) : 0.15;
@@ -69,7 +68,7 @@ export class EnterpriseSearchService {
       return {
         item,
         similarityScore: Math.round(finalScore * 100) / 100,
-        snippet: item.description,
+        snippet: item.summary,
       };
     });
 
@@ -77,9 +76,9 @@ export class EnterpriseSearchService {
     const sortedHits = scoredHits.sort((a, b) => b.similarityScore - a.similarityScore).slice(0, topK);
 
     let ragAnswer: string | undefined;
-    if (dto.useRag !== false && sortedHits.length > 0) {
+    if (sortedHits.length > 0) {
       const topHit = sortedHits[0];
-      ragAnswer = `[RAG Engine] Resposta baseada em "${topHit.item.title}": ${topHit.item.description}. Para mais detalhes, consulte o documento oficial (${topHit.item.knowledgeId}).`;
+      ragAnswer = `[RAG Engine] Resposta baseada em "${topHit.item.title}": ${topHit.item.summary}. Para mais detalhes, consulte o documento oficial (${topHit.item.documentId}).`;
     }
 
     const result: SearchResult = {
@@ -91,7 +90,7 @@ export class EnterpriseSearchService {
       executedAt: new Date().toISOString(),
     };
 
-    await this.audit.recordAudit('SEARCH', searchId, 'SEARCH_QUERY', 'USER', { query: dto.query, hits: sortedHits.length });
+    await this.audit.recordAudit('SEARCH', searchId, 'SEARCH_QUERY', 'USER');
 
     await this.eventBus.publish(
       'aura.knowledge.search.executed.v1',
