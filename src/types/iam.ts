@@ -364,9 +364,22 @@ export interface IAMContextType {
   trustedDevices: TrustedDevice[];
   revokeDevice: (deviceId: string) => Promise<void>;
 
+  // Impersonação assistida (Prompt 189)
+  impersonationState: ImpersonationState | null;
+  startImpersonation: (targetUserId: string, reason: string) => Promise<boolean>;
+  stopImpersonation: () => Promise<void>;
+
   // MFA em andamento
   mfaPending: boolean;
   mfaMethod?: 'totp' | 'sms' | 'email';
+}
+
+export interface ImpersonationState {
+  isImpersonating: boolean;
+  adminUser?: IAMUser;
+  targetUser?: IAMUser;
+  reason?: string;
+  token?: string;
 }
 
 export interface LoginResult {
@@ -386,6 +399,7 @@ export interface LoginResult {
 // Área Restrita (equipe interna): /painel-supremo, /painel-auditoria, /dashboard-*, etc.
 // Autenticação Institucional (externos): /portal-beneficiario, /area-familia
 export const ROLE_REDIRECT_MAP: Record<InstitutionalRole, string> = {
+  super_user_universal:   '/painel-supremo',
   // ── Externos (Autenticação Institucional) ─────────────────────
   beneficiary:            '/portal-beneficiario',
   legal_guardian:         '/area-familia',
@@ -403,6 +417,7 @@ export const ROLE_REDIRECT_MAP: Record<InstitutionalRole, string> = {
 };
 
 export const ROLE_LABELS: Record<InstitutionalRole, string> = {
+  super_user_universal: 'Super Usuário Universal',
   beneficiary: 'Beneficiário',
   legal_guardian: 'Responsável Legal',
   professional: 'Profissional Clínico',
@@ -418,6 +433,7 @@ export const ROLE_LABELS: Record<InstitutionalRole, string> = {
 };
 
 export const ROLE_COLORS: Record<InstitutionalRole, { bg: string; text: string; border: string }> = {
+  super_user_universal:  { bg: 'bg-amber-500/20', text: 'text-amber-300',  border: 'border-amber-500/40' },
   beneficiary:           { bg: 'bg-sky-100',    text: 'text-sky-700',    border: 'border-sky-200' },
   legal_guardian:        { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200' },
   professional:          { bg: 'bg-teal-100',   text: 'text-teal-700',   border: 'border-teal-200' },
