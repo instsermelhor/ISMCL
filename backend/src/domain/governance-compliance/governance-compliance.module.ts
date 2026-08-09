@@ -19,6 +19,7 @@ import { LgpdController } from './controllers/lgpd.controller';
 
 // LGPD — P12
 import { LgpdConsentService } from './services/lgpd-consent.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * GovernanceComplianceModule — Prompt 161 (AGCC)
@@ -45,6 +46,7 @@ import { LgpdConsentService } from './services/lgpd-consent.service';
     GovernanceRecommendationService,
     GovernanceDashboardService,
     LgpdConsentService,
+    PrismaService,
   ],
   exports: [
     ContinuousAuditService,
