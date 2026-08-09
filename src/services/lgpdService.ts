@@ -119,9 +119,9 @@ class LgpdService {
    */
   async getActiveConsent(entityId: string, entityType = 'BENEFICIARY'): Promise<DataConsent | null> {
     try {
-      const response = await apiClient.get(`${this.BASE}/consent/${entityId}`, {
-        params: { entityType },
-      });
+      const response = await apiClient.get<DataConsent>(
+        `${this.BASE}/consent/${entityId}?entityType=${encodeURIComponent(entityType)}`,
+      );
       return response.data as DataConsent;
     } catch {
       return null;
@@ -133,9 +133,9 @@ class LgpdService {
    */
   async hasValidConsent(entityId: string, purpose: string): Promise<boolean> {
     try {
-      const response = await apiClient.get(`${this.BASE}/check-consent`, {
-        params: { entityId, purpose },
-      });
+      const response = await apiClient.get<{ hasConsent: boolean }>(
+        `${this.BASE}/check-consent?entityId=${encodeURIComponent(entityId)}&purpose=${encodeURIComponent(purpose)}`,
+      );
       return (response.data as { hasConsent: boolean }).hasConsent;
     } catch {
       return false;
@@ -177,9 +177,9 @@ class LgpdService {
    */
   async getRequests(entityId: string): Promise<DataSubjectRequest[]> {
     try {
-      const response = await apiClient.get(`${this.BASE}/requests/${entityId}`, {
-        params: { tenantId: 'default' },
-      });
+      const response = await apiClient.get<DataSubjectRequest[]>(
+        `${this.BASE}/requests/${entityId}?tenantId=default`,
+      );
       return response.data as DataSubjectRequest[];
     } catch {
       return [];
