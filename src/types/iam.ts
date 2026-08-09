@@ -6,6 +6,7 @@
 // ------ PERFIS INSTITUCIONAIS --------------------------------
 
 export type InstitutionalRole =
+  | 'super_user_universal' // Super Usuário Universal — ROOT/PLATFORM_OWNER/GLOBAL (Prompt 189)
   | 'beneficiary'         // Beneficiário
   | 'legal_guardian'      // Responsável Legal
   | 'professional'        // Profissional Clínico
@@ -244,7 +245,10 @@ export type AuditEventType =
   | 'data_imported'
   | 'config_changed'
   | 'ai_suggestion_approved'
-  | 'ai_suggestion_rejected';
+  | 'ai_suggestion_rejected'
+  | 'impersonation_started'
+  | 'impersonation_ended'
+  | 'access_granted';
 
 export interface AuditLog {
   id: string;
