@@ -39,6 +39,7 @@ import {
   verifyPasswordHash,
   saveSuperAdminPasswordChange,
 } from '../services/SecureCredentialsService';
+import { apiClient } from '../shared/lib/api-client';
 
 // ----------------------------------------------------------------
 
@@ -180,6 +181,30 @@ export function IAMProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !!currentUser;
 
+  // ---- Restauração de Sessão via /api/v1/auth/me ----
+  useEffect(() => {
+    const token = apiClient.getAuthToken();
+    if (!token) return; // Sem token — não há sessão a restaurar
+
+    let cancelled = false;
+    apiClient.get<IAMUser>('/api/v1/auth/me')
+      .then(res => {
+        if (!cancelled && res?.data) {
+          setCurrentUser(res.data);
+          persistUser(res.data);
+        }
+      })
+      .catch(() => {
+        // Token inválido ou expirado — limpa localmente
+        if (!cancelled) {
+          apiClient.clearAuthToken();
+        }
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- Adiciona log de auditoria ----
   const addAuditLog = useCallback((log: AuditLog) => {
     setAuditLogs(prev => [log, ...prev]);
@@ -205,7 +230,37 @@ export function IAMProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      await new Promise(r => setTimeout(r, 900)); // simula latência de rede
+      // ── Tentativa de Autenticação via API REST Corporativa ───────
+      try {
+        const apiRes = await apiClient.post<{ user: IAMUser; accessToken: string }>('/api/v1/auth/login', {
+          email: lowerEmail,
+          password,
+        });
+
+        if (apiRes && apiRes.data && apiRes.data.accessToken) {
+          apiClient.setAuthToken(apiRes.data.accessToken);
+          const apiUser = apiRes.data.user;
+          resetAttempts(lowerEmail);
+          setCurrentUser(apiUser);
+          persistUser(apiUser);
+
+          addAuditLog(generateAuditLog(apiUser, 'login_success', {
+            details: { source: 'REST_API', userAgent: navigator.userAgent },
+            severity: 'info',
+          }));
+
+          return {
+            success: true,
+            requiresMfa: false,
+            requiresPasswordChange: apiUser.mustChangePassword ?? false,
+            redirectPath: getRedirectPathForUser(apiUser),
+          };
+        }
+      } catch (apiErr) {
+        // API offline ou indisponível — prossegue com validação local de contingência
+      }
+
+      await new Promise(r => setTimeout(r, 400)); // simula latência de rede em modo local
 
       const superAdminSec = getInitialSuperAdminConfig();
 
@@ -326,7 +381,10 @@ export function IAMProvider({ children }: { children: ReactNode }) {
         details: { sessionDuration: 'calculado em produção' },
         severity: 'info',
       }));
+      // Notifica backend (fire-and-forget — sem await)
+      apiClient.post('/api/v1/auth/logout').catch(() => {});
     }
+    apiClient.clearAuthToken();
     setCurrentUser(null);
     persistUser(null);
     setMfaPending(false);
