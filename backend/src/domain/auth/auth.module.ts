@@ -7,6 +7,9 @@ import { AuthenticationService } from './services/authentication.service';
 import { SessionManagementService } from './services/session-management.service';
 import { MfaService } from './services/mfa.service';
 import { RolePermissionService } from './services/role-permission.service';
+import { SuperUserInitService } from './services/super-user-init.service';
+import { DelegationService } from './services/delegation.service';
+import { ImpersonationService } from './services/impersonation.service';
 import { PolicyEngine } from './policies/policy.engine';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventBusModule } from '../../events/event-bus.module';
@@ -20,9 +23,12 @@ import { EventBusModule } from '../../events/event-bus.module';
  * - SessionManagementService
  * - MfaService
  * - RolePermissionService
+ * - SuperUserInitService (Prompt 189 — Bootstrapping da Identidade Root)
+ * - DelegationService (Prompt 189 — Gestão de Acessos e Delegação)
+ * - ImpersonationService (Prompt 189 — Impersonação Assistida)
  * - PolicyEngine (Zero Trust Engine)
  *
- * Referências: P107 (AEIATP), P128 (AECS), P132 (AIFI)
+ * Referências: P107 (AEIATP), P128 (AECS), P132 (AIFI), P189
  */
 @Module({
   imports: [
@@ -45,6 +51,9 @@ import { EventBusModule } from '../../events/event-bus.module';
     SessionManagementService,
     MfaService,
     RolePermissionService,
+    SuperUserInitService,
+    DelegationService,
+    ImpersonationService,
     PolicyEngine,
     PrismaService,
   ],
@@ -54,7 +63,11 @@ import { EventBusModule } from '../../events/event-bus.module';
     SessionManagementService,
     MfaService,
     RolePermissionService,
+    SuperUserInitService,
+    DelegationService,
+    ImpersonationService,
     PolicyEngine,
   ],
 })
 export class AuthModule {}
+
