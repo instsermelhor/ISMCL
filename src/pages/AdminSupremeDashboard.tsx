@@ -229,11 +229,175 @@ export function AdminSupremeDashboard() {
 
   const categories = Array.from(new Set(MODULE_GRID.map(m => m.category)));
 
+  // Modal States para Governança Global (Prompt 189)
+  const [showDelegationModal, setShowDelegationModal] = useState(false);
+  const [showImpersonationModal, setShowImpersonationModal] = useState(false);
+  const [targetUserId, setTargetUserId] = useState('');
+  const [impersonationReason, setImpersonationReason] = useState('');
+  const [delegateUserId, setDelegateUserId] = useState('');
+  const [delegateRoleName, setDelegateRoleName] = useState<InstitutionalRole>('manager');
+  const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+
+  const { users, addRole, startImpersonation } = useIAM();
+  const isSuperUser = currentUser?.roles?.includes('super_user_universal') || currentUser?.primaryRole === 'super_user_universal' || user?.email === 'ribeiro.rikardo@gmail.com';
+
+  const handleStartImpersonationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetUserId || !impersonationReason) return;
+    const ok = await startImpersonation(targetUserId, impersonationReason);
+    if (ok) {
+      setShowImpersonationModal(false);
+      setNotificationMsg('Sessão de impersonação assistida iniciada com sucesso.');
+      setTimeout(() => setNotificationMsg(null), 3000);
+    }
+  };
+
+  const handleDelegateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!delegateUserId || !delegateRoleName) return;
+    await addRole(delegateUserId, delegateRoleName);
+    setShowDelegationModal(false);
+    setNotificationMsg(`Função ${delegateRoleName} delegada com sucesso.`);
+    setTimeout(() => setNotificationMsg(null), 3000);
+  };
+
   return (
     <div
       className="min-h-screen"
       style={{ background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 60%, #1a0a2e 100%)' }}
     >
+      {/* ── Notificação Toast ── */}
+      <AnimatePresence>
+        {notificationMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -40 }}
+            className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-2xl flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            {notificationMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Impersonação Assistida ── */}
+      <AnimatePresence>
+        {showImpersonationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowImpersonationModal(false)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-white z-10"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm uppercase tracking-wider">
+                  <Eye className="w-4 h-4" /> Impersonação Assistida
+                </div>
+                <button onClick={() => setShowImpersonationModal(false)} className="text-slate-500 hover:text-white">✕</button>
+              </div>
+              <p className="text-xs text-slate-400 mb-4">
+                Permite visualizar a experiência do sistema como outro usuário para prestar suporte direto. Esta sessão é <strong>100% auditada</strong>.
+              </p>
+              <form onSubmit={handleStartImpersonationSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Selecione o Usuário Alvo</label>
+                  <select
+                    value={targetUserId}
+                    onChange={(e) => setTargetUserId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none focus:border-amber-400"
+                  >
+                    <option value="">-- Escolha um usuário --</option>
+                    {users.filter(u => u.primaryRole !== 'super_user_universal').map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email}) — {u.primaryRole}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Motivo da Impersonação (Obrigatório)</label>
+                  <textarea
+                    value={impersonationReason}
+                    onChange={(e) => setImpersonationReason(e.target.value)}
+                    required
+                    rows={3}
+                    placeholder="Ex: Suporte técnico assistido à edição de prontuário #104"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none focus:border-amber-400 resize-none"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={() => setShowImpersonationModal(false)} className="flex-1 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700">Cancelar</button>
+                  <button type="submit" className="flex-1 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-xs font-bold text-slate-950 hover:from-amber-400 hover:to-orange-500">Iniciar Impersonação</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Delegação de Funções ── */}
+      <AnimatePresence>
+        {showDelegationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDelegationModal(false)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-white z-10"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-teal-400 font-bold text-sm uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4" /> Delegação de Funções (RBAC)
+                </div>
+                <button onClick={() => setShowDelegationModal(false)} className="text-slate-500 hover:text-white">✕</button>
+              </div>
+              <p className="text-xs text-slate-400 mb-4">
+                Delegue papéis administrativos ou institucionais com controle direto sob o princípio do Menor Privilégio.
+              </p>
+              <form onSubmit={handleDelegateSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Usuário Destinatário</label>
+                  <select
+                    value={delegateUserId}
+                    onChange={(e) => setDelegateUserId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none focus:border-teal-400"
+                  >
+                    <option value="">-- Selecione o usuário --</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Função a Delegar</label>
+                  <select
+                    value={delegateRoleName}
+                    onChange={(e) => setDelegateRoleName(e.target.value as InstitutionalRole)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none focus:border-teal-400"
+                  >
+                    <option value="manager">Gestor</option>
+                    <option value="coordinator">Coordenador</option>
+                    <option value="professional">Profissional Clínico</option>
+                    <option value="admin_collaborator">Colaborador Administrativo</option>
+                    <option value="auditor">Auditor de Compliance</option>
+                    <option value="director">Diretor</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={() => setShowDelegationModal(false)} className="flex-1 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700">Cancelar</button>
+                  <button type="submit" className="flex-1 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 text-xs font-bold text-white hover:from-teal-400 hover:to-emerald-500">Conceder Delegação</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* ── Aviso de sessão prestes a expirar ── */}
       <AnimatePresence>
         {sessionWarning && (
@@ -280,7 +444,7 @@ export function AdminSupremeDashboard() {
           </div>
           <div>
             <div className="text-xs font-bold text-amber-400 uppercase tracking-wider leading-none">
-              Painel Supremo
+              {isSuperUser ? 'Governança Global Aura' : 'Painel Supremo'}
             </div>
             <div className="text-[10px] text-slate-500 leading-none mt-0.5">Instituto Ser Melhor</div>
           </div>
@@ -313,14 +477,16 @@ export function AdminSupremeDashboard() {
         {/* Perfil */}
         <div className="flex items-center gap-2">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-white leading-none">{user?.name ?? 'Super Admin'}</p>
-            <p className="text-[10px] text-amber-400 font-semibold leading-none mt-0.5">Super Administrador</p>
+            <p className="text-xs font-bold text-white leading-none">{user?.name ?? 'Super Usuário'}</p>
+            <p className="text-[10px] text-amber-400 font-semibold leading-none mt-0.5">
+              {isSuperUser ? 'Super Usuário Universal' : 'Super Administrador'}
+            </p>
           </div>
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
             style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#0a0f1e' }}
           >
-            {user?.initials ?? 'SA'}
+            {user?.initials ?? 'SU'}
           </div>
         </div>
 
@@ -337,7 +503,7 @@ export function AdminSupremeDashboard() {
       {/* ── Conteúdo principal ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
-        {/* Saudação */}
+        {/* Saudação + Ações do Super Usuário Universal */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -346,11 +512,29 @@ export function AdminSupremeDashboard() {
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-2xl font-extrabold text-white">
-                {getGreeting()}, {user?.name?.split(' ')[0] ?? 'Administrador'}! 👋
+                {getGreeting()}, {user?.name?.split(' ')[0] ?? 'Super Usuário'}! 👋
               </h1>
               <p className="text-slate-400 text-sm mt-1">{fmtDate()}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {isSuperUser && (
+                <>
+                  <button
+                    onClick={() => setShowDelegationModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-teal-300 bg-teal-500/20 border border-teal-500/40 hover:bg-teal-500/30 transition-all"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Delegação de Funções
+                  </button>
+                  <button
+                    onClick={() => setShowImpersonationModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 transition-all"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Impersonação Assistida
+                  </button>
+                </>
+              )}
               <div
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
                 style={{
@@ -360,7 +544,7 @@ export function AdminSupremeDashboard() {
                 }}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Super Administrador · Acesso Total
+                {isSuperUser ? 'ROOT / PLATFORM_OWNER (GLOBAL)' : 'Super Administrador · Acesso Total'}
               </div>
               <div
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold"
