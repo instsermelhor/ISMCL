@@ -34,6 +34,7 @@ interface ErrorBoundaryState {
   error: Error | null;
   errorInfo: React.ErrorInfo | null;
   retryCount: number;
+  manualRetryCount?: number;
 }
 
 interface ErrorBoundaryProps {
@@ -421,7 +422,7 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null, retryCount: 0 };
+    this.state = { hasError: false, error: null, errorInfo: null, retryCount: 0, manualRetryCount: 0 };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
@@ -430,7 +431,7 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     const label = this.props.label ?? 'RouteErrorBoundary';
-    const maxRetries = this.props.maxAutoRetries ?? 2; // rotas tentam 2x antes de mostrar UI de erro
+    const maxRetries = this.props.maxAutoRetries ?? 2;
 
     this.setState({ errorInfo });
 
@@ -439,9 +440,14 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
 
     if (this.props.onError) this.props.onError(error, errorInfo);
 
-    // Auto-retry com backoff exponencial
+    // Circuit Breaker: se o usuário já tentou manualmente, interrompe auto-retry infinito
+    const manualCount = this.state.manualRetryCount ?? 0;
+    if (manualCount >= 1) {
+      return;
+    }
+
     if (this.state.retryCount < maxRetries) {
-      const delay = Math.pow(2, this.state.retryCount) * 300; // 300ms, 600ms
+      const delay = Math.pow(2, this.state.retryCount) * 300;
       this.autoRetryTimer = setTimeout(() => {
         this.setState(prev => ({
           hasError: false,
@@ -457,12 +463,35 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
     if (this.autoRetryTimer) clearTimeout(this.autoRetryTimer);
   }
 
+  handleManualRetry = () => {
+    const currentManual = this.state.manualRetryCount ?? 0;
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      retryCount: 0,
+      manualRetryCount: currentManual + 1,
+    });
+  };
+
+  handleSafeReset = () => {
+    try {
+      sessionStorage.removeItem('aura_last_error');
+    } catch {}
+    const isInternal =
+      window.location.pathname.includes('admin') ||
+      window.location.pathname.includes('painel') ||
+      window.location.pathname.includes('iam');
+    window.location.href = isInternal ? '/admin-login' : '/login';
+  };
+
   render() {
     if (this.state.hasError) {
       const isDev = (import.meta as any).env.DEV;
-      const { error, errorInfo } = this.state;
+      const { error, errorInfo, manualRetryCount = 0 } = this.state;
       const maxRetries = this.props.maxAutoRetries ?? 2;
       const exhausted = this.state.retryCount >= maxRetries;
+      const circuitBreakerTripped = manualRetryCount >= 1;
 
       return (
         <div
@@ -477,19 +506,22 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
             fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >
-          <span style={{ fontSize: 40 }}>⚠️</span>
+          <span style={{ fontSize: 40 }}>{circuitBreakerTripped ? '🛡️' : '⚠️'}</span>
 
-          <div style={{ textAlign: 'center', maxWidth: 420 }}>
-            <p style={{ fontWeight: 700, color: '#e2e8f0', margin: '0 0 6px', fontSize: 15 }}>
-              Erro ao carregar este módulo
+          <div style={{ textAlign: 'center', maxWidth: 460 }}>
+            <p style={{ fontWeight: 700, color: '#e2e8f0', margin: '0 0 6px', fontSize: 16 }}>
+              {circuitBreakerTripped
+                ? 'Circuit Breaker: Falha Persistente de Carregamento'
+                : 'Erro ao carregar este módulo'}
             </p>
             <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
-              {isDev
-                ? error?.message ?? 'Erro desconhecido'
-                : 'Ocorreu um problema ao renderizar este conteúdo. Tente novamente.'}
+              {circuitBreakerTripped
+                ? 'O módulo tentou ser recuperado, mas a falha de renderização ou autorização persiste. Para evitar loops de re-renderização, o sistema interrompeu o recarregamento automático.'
+                : (isDev
+                    ? error?.message ?? 'Erro desconhecido'
+                    : 'Ocorreu um problema ao renderizar este conteúdo. Tente novamente.')}
             </p>
 
-            {/* Rota em DEV */}
             {isDev && (
               <code
                 style={{
@@ -504,14 +536,14 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
                   fontFamily: 'monospace',
                 }}
               >
-                📍 {window.location.pathname}
+                📍 {window.location.pathname} {error?.message ? `— ${error.message}` : ''}
               </code>
             )}
           </div>
 
-          {exhausted && (
+          {!circuitBreakerTripped && exhausted && (
             <button
-              onClick={() => this.setState({ hasError: false, error: null, errorInfo: null, retryCount: 0 })}
+              onClick={this.handleManualRetry}
               style={{
                 padding: '9px 22px',
                 borderRadius: 10,
@@ -527,7 +559,41 @@ export class RouteErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
             </button>
           )}
 
-          {/* Component Stack em DEV */}
+          {circuitBreakerTripped && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={this.handleSafeReset}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 10,
+                  background: 'linear-gradient(to right, #0d9488, #0284c7)',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                🔑 Reautenticar / Reiniciar Sessão
+              </button>
+              <button
+                onClick={() => { window.location.href = '/'; }}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.08)',
+                  color: '#cbd5e1',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                🏠 Página Inicial
+              </button>
+            </div>
+          )}
+
           {isDev && errorInfo?.componentStack && (
             <details
               style={{
