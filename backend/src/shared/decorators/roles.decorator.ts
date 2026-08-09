@@ -8,6 +8,7 @@ export const PERMISSIONS_KEY = 'permissions';
  * Referência: P107 (AEIATP), P128 (AECS)
  */
 export enum AuraRole {
+  SUPER_USER_UNIVERSAL = 'SUPER_USER_UNIVERSAL',
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   DIRECTOR = 'DIRECTOR',
