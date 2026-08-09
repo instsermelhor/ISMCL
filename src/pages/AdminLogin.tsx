@@ -299,7 +299,7 @@ export function AdminLogin() {
                     type="email"
                     value={email}
                     onChange={setEmail}
-                    placeholder={superAdminConfig.email || 'aurainstitutosermelhor@gmail.com'}
+                    placeholder="Seu e-mail"
                     autoComplete="email"
                     icon={Mail}
                     error={!!error}
