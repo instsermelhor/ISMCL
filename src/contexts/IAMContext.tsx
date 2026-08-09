@@ -23,6 +23,7 @@ import type {
   TrustedDevice,
   LoginResult,
   AuditEventType,
+  ImpersonationState,
 } from '../types/iam';
 import { ROLE_REDIRECT_MAP } from '../types/iam';
 import {
@@ -112,6 +113,7 @@ function persistUser(user: IAMUser | null) {
 
 function getRoleSubtitle(user: IAMUser): string {
   const labels: Record<InstitutionalRole, string> = {
+    super_user_universal: 'Governança Global Aura',
     beneficiary: 'Portal do Beneficiário',
     legal_guardian: 'Área da Família',
     professional: 'Workspace Clínico',
@@ -620,8 +622,8 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     setImpersonationState(state);
     setCurrentUser(target);
 
-    addAuditLog(generateAuditLog(currentUser, 'access_granted', {
-      eventType: 'access_granted',
+    addAuditLog(generateAuditLog(currentUser, 'impersonation_started', {
+      eventType: 'impersonation_started',
       details: {
         action: 'IMPERSONATION_STARTED',
         targetUserId: target.id,
@@ -641,8 +643,8 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     setCurrentUser(admin);
     setImpersonationState(null);
 
-    addAuditLog(generateAuditLog(admin, 'session_revoked', {
-      eventType: 'session_revoked',
+    addAuditLog(generateAuditLog(admin, 'impersonation_ended', {
+      eventType: 'impersonation_ended',
       details: {
         action: 'IMPERSONATION_ENDED',
       },
