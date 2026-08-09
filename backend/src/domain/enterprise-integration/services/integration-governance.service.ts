@@ -35,16 +35,16 @@ export class IntegrationGovernanceService {
     const review: IntegrationGovernanceReview = {
       reviewId,
       integrationId: dto.integrationId,
-      decision: dto.decision,
-      reviewedBy: dto.reviewedBy,
-      reviewNotes: dto.reviewNotes,
+      decision: dto.decision ?? dto.status,
+      reviewedBy: dto.reviewedBy ?? dto.reviewerId,
+      reviewNotes: dto.notes ?? '',
       reviewedAt: new Date().toISOString(),
     };
 
     this.reviewHistory.push(review);
 
-    await this.auditService.recordAudit('REVIEW_INTEGRATION', dto.integrationId, dto.reviewedBy, {
-      reviewId, decision: dto.decision,
+    await this.auditService.recordAudit('REVIEW_INTEGRATION', dto.integrationId, dto.reviewedBy ?? dto.reviewerId, {
+      reviewId, decision: dto.decision ?? dto.status,
     });
 
     const eventName = dto.decision === IntegrationStatus.APPROVED
