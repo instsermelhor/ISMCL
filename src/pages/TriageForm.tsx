@@ -336,7 +336,7 @@ export function TriageForm() {
               </button>
             ) : (
               <button 
-                onClick={() => {
+                onClick={async () => {
                   const saved = localStorage.getItem('patients_list');
                   const list = saved ? JSON.parse(saved) : [];
                   const hasHighRisk = formData.violenceHistory || formData.suicidalIdeation;
@@ -406,13 +406,14 @@ export function TriageForm() {
                     // Sincronização assíncrona com o backend (Acolhimento e Triagem)
                     try {
                       const intake = await intakeService.startIntake({
-                        beneficiaryId: newDossier.dossierId,
+                        beneficiaryId: newDossier.id,
                         channel: 'IN_PERSON',
                         chiefComplaint: formData.chiefComplaint || 'Acolhimento Inicial',
                       });
-                      if (intake?.data?.intakeSessionId) {
+                      const intakeData = intake?.data as { intakeSessionId?: string } | undefined;
+                      if (intakeData?.intakeSessionId) {
                         await intakeService.classifyTriage({
-                          intakeSessionId: intake.data.intakeSessionId,
+                          intakeSessionId: intakeData.intakeSessionId,
                           riskLevel: hasHighRisk ? 'HIGH' : 'MEDIUM',
                           mcsiLevel: hasHighRisk ? 3 : 1,
                           priorityScore: hasHighRisk ? 75 : 25,
