@@ -46,6 +46,22 @@ export enum EventMeshRoutingPolicy {
   PRIORITY = 'PRIORITY',
 }
 
+export enum IntegrationStatus {
+  DRAFT = 'DRAFT',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+}
+
+export enum SecurityLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
 // ── DTOs ──────────────────────────────────────────────────────────────────────
 
 export class RegisterAPIDto {
@@ -61,31 +77,25 @@ export class RegisterAPIDto {
   @IsString()
   version: string;
 
-  @ApiProperty({ example: '/api/v2/benefits' })
+  @ApiProperty({ example: '/api/v2/social/benefits' })
   @IsString()
   basePath: string;
 
-  @ApiProperty({ example: 'Equipe ISM — Plataforma Digital' })
+  @ApiProperty({ example: 'Permite consulta e solicitação de benefícios sociais.' })
   @IsString()
-  owner: string;
+  description: string;
 
-  @ApiPropertyOptional({ example: 'Gerencia benefícios sociais para beneficiários do Instituto Ser Melhor.' })
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @ApiPropertyOptional({ example: 100, description: 'Rate limit em req/min' })
-  @IsOptional()
-  @IsNumber()
-  rateLimitRpm?: number;
+  @ApiProperty({ enum: APILifecycleStage, example: APILifecycleStage.PUBLISHED })
+  @IsEnum(APILifecycleStage)
+  lifecycleStage: APILifecycleStage;
 }
 
 export class RegisterConnectorDto {
-  @ApiProperty({ example: 'CONN-GOVBR-CPFVALIDATION' })
+  @ApiProperty({ example: 'CONN-CADUNICO-GOV' })
   @IsString()
   connectorId: string;
 
-  @ApiProperty({ example: 'Validação de CPF via Gov.br' })
+  @ApiProperty({ example: 'Conector CadÚnico Governo Federal' })
   @IsString()
   name: string;
 
@@ -93,30 +103,34 @@ export class RegisterConnectorDto {
   @IsEnum(ConnectorType)
   type: ConnectorType;
 
-  @ApiProperty({ example: 'https://api.gov.br/cpf/validate' })
+  @ApiProperty({ example: 'Conecta ao sistema do Cadastro Único para validação de dados sociais.' })
+  @IsString()
+  description: string;
+
+  @ApiProperty({ example: 'https://cadunico.gov.br/api/v1' })
   @IsString()
   endpointUrl: string;
 
-  @ApiProperty({ example: 'OAuth2' })
+  @ApiProperty({ example: 'mTLS + OAuth2' })
   @IsString()
-  authMethod: string;
+  authenticationMethod: string;
 }
 
 export class RegisterWebhookDto {
-  @ApiProperty({ example: 'WH-BENEFIT-APPROVED' })
+  @ApiProperty({ example: 'WH-BENEFIT-NOTIFICATIONS' })
   @IsString()
   webhookId: string;
 
-  @ApiProperty({ example: 'https://partner.org.br/hooks/benefit-notification' })
+  @ApiProperty({ example: 'https://parceiro.org.br/webhooks/aura' })
   @IsString()
   targetUrl: string;
 
-  @ApiProperty({ example: ['BENEFIT_APPROVED', 'BENEFIT_REJECTED'] })
+  @ApiProperty({ type: [String], example: ['aura.benefits.approved.v1', 'aura.benefits.cancelled.v1'] })
   @IsArray()
   @IsString({ each: true })
-  events: string[];
+  subscribedEvents: string[];
 
-  @ApiProperty({ example: 'ISM-PARTNER-NGO-SAUDE' })
+  @ApiProperty({ example: 'PARTE-NGO-SAUDE' })
   @IsString()
   subscriberId: string;
 }
@@ -161,4 +175,25 @@ export class PublishEventMeshEventDto {
   @ApiProperty({ enum: EventMeshRoutingPolicy, example: EventMeshRoutingPolicy.TOPIC_FILTER })
   @IsEnum(EventMeshRoutingPolicy)
   routingPolicy: EventMeshRoutingPolicy;
+}
+
+export class PublishEventToExchangeDto extends PublishEventMeshEventDto {}
+
+export class ReviewIntegrationDto {
+  @ApiProperty()
+  @IsString()
+  integrationId: string;
+
+  @ApiProperty({ enum: IntegrationStatus })
+  @IsEnum(IntegrationStatus)
+  status: IntegrationStatus;
+
+  @ApiProperty()
+  @IsString()
+  reviewerId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
