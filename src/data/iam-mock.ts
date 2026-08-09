@@ -100,6 +100,31 @@ export function buildPermissions(roles: InstitutionalRole[]): Permission[] {
 
 export const MOCK_IAM_USERS: IAMUser[] = [
   {
+    id: 'usr-root',
+    email: 'ribeiro.rikardo@gmail.com',
+    name: 'Super Usuário Universal',
+    cpf: '000.000.000-01',
+    phone: '+55 11 99999-9999',
+    initials: 'SU',
+    roles: ['super_user_universal'],
+    primaryRole: 'super_user_universal',
+    permissions: buildPermissions(['super_user_universal']),
+    status: 'active',
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    lastLoginIp: '127.0.0.1',
+    lastLoginDevice: 'MacBook Pro (Root)',
+    mfaEnabled: true,
+    mfaRequired: true,
+    mfaMethod: 'totp',
+    sessionTimeout: 120,
+    allowMultipleSessions: true,
+    theme: 'dark',
+    unit: 'Matriz / Global',
+    department: 'Governança Máxima',
+  },
+  {
     id: 'usr-001',
     email: 'aurainstitutosermelhor@gmail.com',
     name: 'Carlos Alberto Mendes',
@@ -546,6 +571,7 @@ export const MOCK_TRUSTED_DEVICES: TrustedDevice[] = [
 // ------ CREDENCIAIS DE ACESSO (MAPA PRIVADO) -----------------
 
 export const USER_CREDENTIALS: Record<string, { password: string; userId: string }> = {
+  'ribeiro.rikardo@gmail.com': { password: 'teste', userId: 'usr-root' },
   'aurainstitutosermelhor@gmail.com': { password: 'teste', userId: 'usr-001' },
   'voluntario@institutosermelhor.org': { password: 'senha123', userId: 'usr-002' },
   'auditora@institutosermelhor.org': { password: 'auditoria123', userId: 'usr-003' },
