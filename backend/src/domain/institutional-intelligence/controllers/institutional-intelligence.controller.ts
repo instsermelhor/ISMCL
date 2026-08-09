@@ -16,10 +16,9 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { AuraRole } from '../../auth/enums/aura-role.enum';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../shared/guards/roles.guard';
+import { Roles, AuraRole } from '../../../shared/decorators/roles.decorator';
 import { InstitutionalIntelligenceService } from '../services/institutional-intelligence.service';
 import { DecisionIntelligenceService } from '../services/decision-intelligence.service';
 import { PredictiveAnalyticsService } from '../services/predictive-analytics.service';
@@ -82,7 +81,7 @@ export class InstitutionalIntelligenceController {
   }
 
   @Post('predictive/risk')
-  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.SPECIALIST)
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Calcula previsões de risco (Evasão, Sobrecarga, Financeiro, Operacional)' })
   @ApiResponse({ status: 200, type: PredictiveRiskResultDto })
@@ -93,7 +92,7 @@ export class InstitutionalIntelligenceController {
   }
 
   @Post('recommendations')
-  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.SPECIALIST)
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL)
   @ApiOperation({ summary: 'Cria uma nova recomendação inteligente explicável' })
   @ApiResponse({ status: 201, description: 'Recomendação criada com sucesso' })
   async createRecommendation(@Body() dto: CreateRecommendationDto) {
@@ -101,7 +100,7 @@ export class InstitutionalIntelligenceController {
   }
 
   @Patch('recommendations/:id/feedback')
-  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.SPECIALIST)
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL)
   @ApiOperation({ summary: 'Registra o feedback de aceitação ou rejeição de uma recomendação' })
   @ApiResponse({ status: 200, description: 'Feedback processado para o modelo' })
   async processRecommendationFeedback(
