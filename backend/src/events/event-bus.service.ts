@@ -25,6 +25,8 @@ export interface PublishOptions {
   correlationId?: string;
   /** Subject específico do evento (e.g. ID do recurso afetado) */
   subject?: string;
+  /** Origem customizada do evento */
+  source?: string;
   /** Atraso em ms antes de publicar (para retry/delay patterns) */
   delay?: number;
 }
@@ -74,7 +76,7 @@ export class EventBusService {
     const event: AuraCloudEvent<T> = {
       specversion: '1.0',
       id: randomUUID(),
-      source: this.APP_SOURCE,
+      source: options.source ?? this.APP_SOURCE,
       type: eventType,
       subject: options.subject,
       datacontenttype: 'application/json',
