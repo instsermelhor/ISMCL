@@ -25,7 +25,7 @@ export class ExternalConnectorService {
   ) {}
 
   async installConnector(dto: RegisterConnectorDto, installedBy: string): Promise<ConnectorRecord> {
-    const record: ConnectorRecord = { connectorId: dto.connectorId, name: dto.name, type: dto.type, endpointUrl: dto.endpointUrl, authMethod: dto.authMethod, status: 'ACTIVE', registeredAt: new Date().toISOString() };
+    const record: ConnectorRecord = { connectorId: dto.connectorId, name: dto.name, type: dto.type, endpointUrl: dto.endpointUrl, authMethod: dto.authMethod ?? dto.authenticationMethod ?? 'NONE', status: 'ACTIVE', registeredAt: new Date().toISOString() };
     this.connectors.set(dto.connectorId, record);
     await this.auditSvc.recordAudit('CONNECTOR_INSTALLED', dto.connectorId, installedBy, { type: dto.type, endpointUrl: dto.endpointUrl });
     await this.eventBus.publish('aura.eiemp.connector.installed.v1', { connectorId: dto.connectorId, name: dto.name, type: dto.type }, 'EIEMP', { subject: dto.connectorId });
