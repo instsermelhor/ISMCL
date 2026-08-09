@@ -210,16 +210,6 @@ export class UpdateKnowledgeDocumentDto {
   @IsString()
   changeSummary?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  summary?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  content?: string;
-
   @ApiPropertyOptional({ enum: DocumentCategory })
   @IsOptional()
   @IsEnum(DocumentCategory)
