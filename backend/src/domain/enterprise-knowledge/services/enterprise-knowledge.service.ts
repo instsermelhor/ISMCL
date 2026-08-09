@@ -22,6 +22,7 @@ export interface DocumentVersion {
 export interface KnowledgeDocument {
   documentId: string;
   title: string;
+  summary: string;
   category: DocumentCategory;
   content: string;
   author: string;
@@ -76,6 +77,7 @@ export class EnterpriseKnowledgeService {
     const doc: KnowledgeDocument = {
       documentId,
       title: dto.title,
+      summary: dto.summary,
       category: dto.category,
       content: dto.content,
       author: dto.author ?? dto.authorId ?? author,
