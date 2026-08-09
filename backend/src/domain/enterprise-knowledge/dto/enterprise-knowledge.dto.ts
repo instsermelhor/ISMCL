@@ -57,96 +57,102 @@ export enum KnowledgeNodeType {
   EVIDENCE = 'EVIDENCE',
 }
 
+export type KnowledgeType = KnowledgeNodeType;
+export const KnowledgeType = KnowledgeNodeType;
+
+export enum KnowledgeDomain {
+  CLINICAL = 'CLINICAL',
+  SOCIAL = 'SOCIAL',
+  ADMINISTRATIVE = 'ADMINISTRATIVE',
+  GOVERNANCE = 'GOVERNANCE',
+  LEGAL = 'LEGAL',
+  FINANCIAL = 'FINANCIAL',
+  TECHNOLOGY = 'TECHNOLOGY',
+  OPERATIONAL = 'OPERATIONAL',
+}
+
+export enum MemoryEventType {
+  STRATEGIC_DECISION = 'STRATEGIC_DECISION',
+  POLICY_CHANGE = 'POLICY_CHANGE',
+  INCIDENT_LESSON = 'INCIDENT_LESSON',
+  PROJECT_MILESTONE = 'PROJECT_MILESTONE',
+  INNOVATION = 'INNOVATION',
+}
+
 // ── ENTERPRISE KNOWLEDGE DTOs ─────────────────────────────────────────────────
 
 export class CreateKnowledgeDocumentDto {
-  @ApiProperty({ example: 'Política Corporativa de Proteção à Criança e Adolescente' })
+  @ApiProperty({ example: 'Política de Proteção à Infância e Adolescência' })
   @IsString()
   title: string;
+
+  @ApiProperty({ example: 'Diretrizes institucionais obrigatórias...' })
+  @IsString()
+  summary: string;
+
+  @ApiProperty({ example: 'Conteúdo completo da política...' })
+  @IsString()
+  content: string;
 
   @ApiProperty({ enum: DocumentCategory, example: DocumentCategory.POLICY })
   @IsEnum(DocumentCategory)
   category: DocumentCategory;
 
-  @ApiProperty({ example: 'Diretrizes obrigatórias de proteção integral nos atendimentos do ISM.' })
-  @IsString()
-  content: string;
-
-  @ApiProperty({ example: 'Dra. Maria Silva (Diretoria Social)' })
-  @IsString()
-  author: string;
-
-  @ApiPropertyOptional({ enum: ConfidentialityLevel, example: ConfidentialityLevel.INTERNAL })
-  @IsOptional()
+  @ApiProperty({ enum: ConfidentialityLevel, example: ConfidentialityLevel.INTERNAL })
   @IsEnum(ConfidentialityLevel)
-  confidentiality?: ConfidentialityLevel;
+  confidentiality: ConfidentialityLevel;
 
-  @ApiPropertyOptional({ example: ['proteção infantil', 'direitos humanos', 'compliance'] })
-  @IsOptional()
+  @ApiProperty({ type: [String], example: ['proteção-infantil', 'lgpd', 'compliance'] })
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  tags: string[];
 
-  @ApiPropertyOptional({ example: ['Assistência Social', 'Atendimento Psicossocial'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  relevantDomains?: string[];
+  @ApiProperty({ example: 'Comitê de Ética e Governança' })
+  @IsString()
+  authorId: string;
 
-  @ApiPropertyOptional({ enum: PreservationPolicyType, example: PreservationPolicyType.PERMANENT_HISTORICAL })
+  @ApiPropertyOptional({ enum: PreservationPolicyType, default: PreservationPolicyType.PERMANENT_HISTORICAL })
   @IsOptional()
   @IsEnum(PreservationPolicyType)
   preservationPolicy?: PreservationPolicyType;
 }
 
 export class UpdateKnowledgeDocumentDto {
-  @ApiPropertyOptional({ example: 'Conteúdo atualizado com novos parâmetros legais' })
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  summary?: string;
+
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   content?: string;
 
-  @ApiPropertyOptional({ example: ['novas diretrizes LGPD'] })
+  @ApiPropertyOptional({ enum: DocumentCategory })
+  @IsOptional()
+  @IsEnum(DocumentCategory)
+  category?: DocumentCategory;
+
+  @ApiPropertyOptional({ enum: KnowledgeStatus })
+  @IsOptional()
+  @IsEnum(KnowledgeStatus)
+  status?: KnowledgeStatus;
+
+  @ApiPropertyOptional({ enum: ConfidentialityLevel })
+  @IsOptional()
+  @IsEnum(ConfidentialityLevel)
+  confidentiality?: ConfidentialityLevel;
+
+  @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
-
-  @ApiProperty({ example: 'Dra. Maria Silva' })
-  @IsString()
-  updatedBy: string;
-
-  @ApiPropertyOptional({ example: 'Revisão anual obrigatória de compliance' })
-  @IsOptional()
-  @IsString()
-  changeSummary?: string;
-}
-
-// ── LESSONS LEARNED DTOs ──────────────────────────────────────────────────────
-
-export class RegisterLessonLearnedDto {
-  @ApiProperty({ example: 'Migração de banco de dados em janela de pico causou degradação' })
-  @IsString()
-  title: string;
-
-  @ApiProperty({ example: 'Infraestrutura / TI' })
-  @IsString()
-  context: string;
-
-  @ApiProperty({ example: 'Execução de DDLs pesados durante horário comercial sem réplica de leitura isolada.' })
-  @IsString()
-  rootCause: string;
-
-  @ApiProperty({ example: 'Agendar migrações estritamente entre 00h e 04h com failover pré-validado.' })
-  @IsString()
-  preventiveAction: string;
-
-  @ApiProperty({ example: 'Engenharia de Software / DevOps' })
-  @IsString()
-  targetProcess: string;
-
-  @ApiProperty({ example: 'Eng. Carlos Souza' })
-  @IsString()
-  author: string;
 }
 
 // ── KNOWLEDGE GRAPH DTOs ──────────────────────────────────────────────────────
@@ -170,7 +176,7 @@ export class CreateKnowledgeRelationDto {
 
   @ApiProperty({ example: 'GOVERNS' })
   @IsString()
-  relationType: string; // e.g. GOVERNS, IMPLEMENTS, MITIGATES, MEASURES, DEPENDS_ON
+  relationType: string;
 }
 
 // ── SEMANTIC SEARCH DTOs ──────────────────────────────────────────────────────
@@ -194,4 +200,45 @@ export class SemanticSearchQueryDto {
   @IsOptional()
   @IsNumber()
   topK?: number;
+}
+
+export class SearchKnowledgeDto extends SemanticSearchQueryDto {}
+
+export class GenerateRecommendationDto {
+  @ApiProperty()
+  @IsString()
+  userId: string;
+
+  @ApiPropertyOptional({ enum: KnowledgeDomain })
+  @IsOptional()
+  @IsEnum(KnowledgeDomain)
+  domain?: KnowledgeDomain;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  limit?: number;
+}
+
+export class RecordOrganizationalMemoryDto {
+  @ApiProperty()
+  @IsString()
+  title: string;
+
+  @ApiProperty()
+  @IsString()
+  description: string;
+
+  @ApiProperty({ enum: MemoryEventType })
+  @IsEnum(MemoryEventType)
+  eventType: MemoryEventType;
+
+  @ApiProperty()
+  @IsString()
+  recordedBy: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
 }
