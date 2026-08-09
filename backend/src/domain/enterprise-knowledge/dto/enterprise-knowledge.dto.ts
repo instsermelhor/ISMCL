@@ -55,6 +55,17 @@ export enum KnowledgeNodeType {
   SYSTEM = 'SYSTEM',
   DECISION = 'DECISION',
   EVIDENCE = 'EVIDENCE',
+  NORM = 'NORM',
+  PROTOCOL = 'PROTOCOL',
+  POP = 'POP',
+  ADR = 'ADR',
+  ARTICLE = 'ARTICLE',
+  RESEARCH = 'RESEARCH',
+  TRAINING = 'TRAINING',
+  FAQ = 'FAQ',
+  LESSON_LEARNED = 'LESSON_LEARNED',
+  TEMPLATE = 'TEMPLATE',
+  MULTIMEDIA = 'MULTIMEDIA',
 }
 
 export type KnowledgeType = KnowledgeNodeType;
@@ -69,6 +80,9 @@ export enum KnowledgeDomain {
   FINANCIAL = 'FINANCIAL',
   TECHNOLOGY = 'TECHNOLOGY',
   OPERATIONAL = 'OPERATIONAL',
+  ASSISTENTIAL = 'ASSISTENTIAL',
+  COMPLIANCE = 'COMPLIANCE',
+  TECHNICAL = 'TECHNICAL',
 }
 
 export enum MemoryEventType {
@@ -77,6 +91,28 @@ export enum MemoryEventType {
   INCIDENT_LESSON = 'INCIDENT_LESSON',
   PROJECT_MILESTONE = 'PROJECT_MILESTONE',
   INNOVATION = 'INNOVATION',
+  ARCHITECTURAL_CHANGE = 'ARCHITECTURAL_CHANGE',
+  LESSON_LEARNED = 'LESSON_LEARNED',
+}
+
+export class RegisterLessonLearnedDto {
+  @ApiProperty()
+  @IsString()
+  title: string;
+
+  @ApiProperty()
+  @IsString()
+  description: string;
+
+  @ApiProperty()
+  @IsString()
+  author: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }
 
 // ── ENTERPRISE KNOWLEDGE DTOs ─────────────────────────────────────────────────
@@ -111,6 +147,17 @@ export class CreateKnowledgeDocumentDto {
   @IsString()
   authorId: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  author?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  relevantDomains?: string[];
+
   @ApiPropertyOptional({ enum: PreservationPolicyType, default: PreservationPolicyType.PERMANENT_HISTORICAL })
   @IsOptional()
   @IsEnum(PreservationPolicyType)
@@ -122,6 +169,26 @@ export class UpdateKnowledgeDocumentDto {
   @IsOptional()
   @IsString()
   title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  summary?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  updatedBy?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  changeSummary?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
