@@ -465,7 +465,7 @@ export function IAMLogin() {
                       type="email"
                       value={email}
                       onChange={setEmail}
-                      placeholder="aurainstitutosermelhor@gmail.com"
+                      placeholder="Seu e-mail"
                       autoComplete="email"
                       icon={Mail}
                       error={!!error}
