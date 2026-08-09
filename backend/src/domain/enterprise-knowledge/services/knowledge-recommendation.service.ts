@@ -57,7 +57,7 @@ export class KnowledgeRecommendationService {
       recommendedAt: new Date().toISOString(),
     };
 
-    await this.audit.recordAudit('GENERATE_RECOMMENDATIONS', recommendationId, 'RECOMMENDATION', dto.userId);
+    await this.audit.recordAudit('GENERATE_RECOMMENDATIONS', recommendationId, dto.userId, { type: 'RECOMMENDATION' });
 
     await this.eventBus.publish(
       'aura.knowledge.recommendation.generated.v1',
