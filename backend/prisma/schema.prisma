@@ -1020,3 +1020,110 @@ model CommunicationTemplate {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+// =========================================================================
+// MÓDULO DE AUTENTICAÇÃO, IAM, RBAC & GOVERNANÇA GLOBAL (PROMPT 189)
+// =========================================================================
+
+model User {
+  id                  String                 @id @default(uuid())
+  email               String                 @unique
+  name                String
+  passwordHash        String
+  role                String                 @default("STAFF") // SUPER_USER_UNIVERSAL | ADMINISTRADOR | GESTOR | COORDENADOR | FINANCEIRO | RH | COMUNICACAO | PROFISSIONAL | AUDITOR | OPERADOR | COLABORADOR
+  scope               String                 @default("TENANT") // GLOBAL | TENANT | PROJECT | SELF
+  status              String                 @default("ACTIVE") // ACTIVE | INACTIVE | BLOCKED
+  mfaEnabled          Boolean                @default(false)
+  mfaSecret           String?
+  lastLoginAt         DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  userRoles           UserRole[]
+  delegationsGiven    UserDelegation[]       @relation("Delegator")
+  delegationsReceived UserDelegation[]       @relation("Delegatee")
+  impersonationsRun   ImpersonationSession[] @relation("ImpersonatorAdmin")
+  impersonatedAs      ImpersonationSession[] @relation("TargetUser")
+}
+
+model Role {
+  id               String           @id @default(uuid())
+  name             String           @unique // SUPER_USER_UNIVERSAL, ADMINISTRADOR, GESTOR, COORDENADOR, FINANCEIRO, RH, COMUNICACAO, PROFISSIONAL, AUDITOR, OPERADOR, COLABORADOR
+  description      String?
+  isSystemRole     Boolean          @default(true)
+  scope            String           @default("TENANT")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  userRoles        UserRole[]
+  rolePermissions  RolePermission[]
+  delegations      UserDelegation[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique // ex: users:create, users:delegate, financial:read, etc.
+  name        String
+  category    String           // USER_MGMT, FINANCIAL, CARE, SYSTEM, SECURITY, INTEGRATIONS
+  description String?
+  createdAt   DateTime         @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+model UserRole {
+  id         String   @id @default(uuid())
+  userId     String
+  roleId     String
+  assignedBy String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserDelegation {
+  id           String    @id @default(uuid())
+  delegatorId  String
+  delegateeId  String
+  roleId       String
+  scope        String    @default("TENANT")
+  status       String    @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
+  reason       String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  delegator    User      @relation("Delegator", fields: [delegatorId], references: [id])
+  delegatee    User      @relation("Delegatee", fields: [delegateeId], references: [id])
+  role         Role      @relation(fields: [roleId], references: [id])
+}
+
+model ImpersonationSession {
+  id           String    @id @default(uuid())
+  adminId      String
+  targetUserId String
+  reason       String
+  token        String    @unique
+  status       String    @default("ACTIVE") // ACTIVE, ENDED, EXPIRED
+  startedAt    DateTime  @default(now())
+  expiresAt    DateTime
+  endedAt      DateTime?
+
+  admin        User      @relation("ImpersonatorAdmin", fields: [adminId], references: [id])
+  targetUser   User      @relation("TargetUser", fields: [targetUserId], references: [id])
+}
+
