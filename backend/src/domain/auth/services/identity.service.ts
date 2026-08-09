@@ -47,7 +47,7 @@ export class IdentityService {
     const cleanCpf = dto.cpf.replace(/\D/g, '');
 
     // 2. Verifica duplicidades no Prisma
-    const existingUser = await this.prisma.user.findFirst({
+    const existingUser = await (this.prisma.user as any).findFirst({
       where: {
         OR: [{ email: dto.email.toLowerCase() }, { cpf: cleanCpf }],
       },
@@ -64,7 +64,7 @@ export class IdentityService {
     const hashedPassword = await hashPassword(dto.password);
 
     // 4. Criação no banco
-    const user = await this.prisma.user.create({
+    const user = await (this.prisma.user as any).create({
       data: {
         email: dto.email.toLowerCase(),
         cpf: cleanCpf,
@@ -107,7 +107,7 @@ export class IdentityService {
    * Busca um usuário pelo ID único (UUID).
    */
   async findById(userId: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma.user as any).findUnique({
       where: { id: userId },
       select: {
         id: true,
