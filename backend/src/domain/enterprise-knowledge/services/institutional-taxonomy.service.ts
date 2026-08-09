@@ -67,6 +67,14 @@ export class InstitutionalTaxonomyService {
       [KnowledgeType.LESSON_LEARNED]: 'MEDIUM',
       [KnowledgeType.TEMPLATE]: 'LOW',
       [KnowledgeType.MULTIMEDIA]: 'LOW',
+      [KnowledgeType.PERSON]: 'LOW',
+      [KnowledgeType.PROJECT]: 'MEDIUM',
+      [KnowledgeType.PROGRAM]: 'MEDIUM',
+      [KnowledgeType.PROCESS]: 'HIGH',
+      [KnowledgeType.INDICATOR]: 'HIGH',
+      [KnowledgeType.RISK]: 'HIGH',
+      [KnowledgeType.SYSTEM]: 'HIGH',
+      [KnowledgeType.EVIDENCE]: 'MEDIUM',
     };
 
     const validityMap: Record<KnowledgeType, number> = {
@@ -84,6 +92,14 @@ export class InstitutionalTaxonomyService {
       [KnowledgeType.LESSON_LEARNED]: 24,
       [KnowledgeType.TEMPLATE]: 12,
       [KnowledgeType.MULTIMEDIA]: 12,
+      [KnowledgeType.PERSON]: 24,
+      [KnowledgeType.PROJECT]: 24,
+      [KnowledgeType.PROGRAM]: 24,
+      [KnowledgeType.PROCESS]: 12,
+      [KnowledgeType.INDICATOR]: 12,
+      [KnowledgeType.RISK]: 6,
+      [KnowledgeType.SYSTEM]: 24,
+      [KnowledgeType.EVIDENCE]: 24,
     };
 
     return {
