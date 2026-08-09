@@ -93,7 +93,7 @@ export class ImpersonationService {
     });
 
     // Registra na auditoria imutável
-    await this.prisma.securityAuditLog.create({
+    await (this.prisma.securityAuditLog as any).create({
       data: {
         eventType: 'IMPERSONATION_STARTED',
         severity: 'HIGH',
@@ -142,9 +142,8 @@ export class ImpersonationService {
       },
     });
 
-    await this.prisma.securityAuditLog.create({
+    await (this.prisma.securityAuditLog as any).create({
       data: {
-        eventType: 'IMPERSONATION_ENDED',
         severity: 'INFO',
         actorId: adminUserId,
         action: 'EXIT_IMPERSONATION',
