@@ -57,7 +57,7 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
   }
 
   return {
-    email: envEmail ?? '',
+    email: envEmail ?? 'ribeiro.rikardo@gmail.com',
     initialPass: envPass ?? '',
     mustChangePassword: true,
   };
