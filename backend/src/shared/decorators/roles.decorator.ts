@@ -34,7 +34,7 @@ export enum AuraRole {
  * listPatients() { ... }
  * ```
  */
-export const Roles = (...roles: AuraRole[]) => SetMetadata(ROLES_KEY, roles);
+export const Roles = (...roles: (AuraRole | string)[]) => SetMetadata(ROLES_KEY, roles);
 
 /**
  * @Permissions — Decorator para controle de acesso baseado em permissões (ABAC).
