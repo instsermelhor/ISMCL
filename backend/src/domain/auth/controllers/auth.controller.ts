@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Param,
   Body,
   Req,
   HttpCode,
@@ -15,6 +17,8 @@ import { AuthenticationService } from '../services/authentication.service';
 import { IdentityService } from '../services/identity.service';
 import { SessionManagementService } from '../services/session-management.service';
 import { MfaService } from '../services/mfa.service';
+import { DelegationService, UpdateUserDto, DelegateRoleDto } from '../services/delegation.service';
+import { ImpersonationService, StartImpersonationDto } from '../services/impersonation.service';
 import { PolicyEngine } from '../policies/policy.engine';
 import {
   LoginDto,
@@ -33,7 +37,7 @@ import { Roles, AuraRole } from '../../../shared/decorators/roles.decorator';
  *
  * Implementa OAuth 2.1, OIDC, MFA, Registro de Usuário e Avaliação de Políticas Zero Trust.
  *
- * Referências: P107 (AEIATP), P125 (AEAP), P132 (AIFI Etapa 11)
+ * Referências: P107 (AEIATP), P125 (AEAP), P132 (AIFI Etapa 11), P189
  */
 @ApiTags('Auth')
 @Controller({ path: 'auth', version: '1' })
@@ -43,6 +47,8 @@ export class AuthController {
     private readonly identityService: IdentityService,
     private readonly sessionService: SessionManagementService,
     private readonly mfaService: MfaService,
+    private readonly delegationService: DelegationService,
+    private readonly impersonationService: ImpersonationService,
     private readonly policyEngine: PolicyEngine,
   ) {}
 
@@ -190,4 +196,103 @@ export class AuthController {
 
     return BaseResponseDto.ok(decision, requestId, undefined, 'Avaliação de política concluída.');
   }
+
+  // ── PROMPT 189: Gestão de Acessos, Delegação & Impersonação ──────────────
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Get('users')
+  @ApiOperation({ summary: 'Lista todos os usuários da plataforma (Governança/Delegacão)' })
+  async listUsers(@Req() req: FastifyRequest) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const users = await this.delegationService.listUsers();
+    return BaseResponseDto.ok(users, requestId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Patch('users/:id')
+  @ApiOperation({ summary: 'Atualiza usuário com trava de proteção contra autoescalação' })
+  async updateUser(
+    @Param('id') targetUserId: string,
+    @Body() dto: UpdateUserDto,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const actorRole = req.user.roles?.[0] ?? 'STAFF';
+    const updated = await this.delegationService.updateUser(targetUserId, dto, actorRole, req.user.sub);
+    return BaseResponseDto.ok(updated, requestId, undefined, 'Usuário atualizado com sucesso.');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Get('roles')
+  @ApiOperation({ summary: 'Lista todos os papéis do sistema' })
+  async listRoles(@Req() req: FastifyRequest) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const roles = await this.delegationService.listRoles();
+    return BaseResponseDto.ok(roles, requestId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Post('delegations')
+  @ApiOperation({ summary: 'Delega uma função/escopo a um usuário' })
+  async delegateRole(
+    @Body() dto: DelegateRoleDto,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const actorRole = req.user.roles?.[0] ?? 'STAFF';
+    const result = await this.delegationService.delegateRole(req.user.sub, actorRole, dto);
+    return BaseResponseDto.created(result, requestId, 'Função delegada com sucesso.');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Get('delegations')
+  @ApiOperation({ summary: 'Lista as delegações ativas' })
+  async listDelegations(@Req() req: FastifyRequest) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const delegations = await this.delegationService.listDelegations();
+    return BaseResponseDto.ok(delegations, requestId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Post('impersonate')
+  @ApiOperation({ summary: 'Inicia sessão de Impersonação Assistida (Super Usuário Universal)' })
+  async startImpersonation(
+    @Body() dto: StartImpersonationDto,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const actorRole = req.user.roles?.[0] ?? 'STAFF';
+    const ipAddress = req.ip ?? '127.0.0.1';
+
+    const session = await this.impersonationService.startImpersonation(
+      req.user.sub,
+      actorRole,
+      dto,
+      ipAddress,
+    );
+
+    return BaseResponseDto.ok(session, requestId, undefined, 'Sessão de impersonação assistida iniciada.');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Post('impersonate/exit')
+  @ApiOperation({ summary: 'Encerra sessão de Impersonação Assistida' })
+  async exitImpersonation(
+    @Body('token') token: string,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const ipAddress = req.ip ?? '127.0.0.1';
+
+    const result = await this.impersonationService.stopImpersonation(token, req.user.sub, ipAddress);
+    return BaseResponseDto.ok(result, requestId, undefined, 'Sessão de impersonação encerrada.');
+  }
 }
+
