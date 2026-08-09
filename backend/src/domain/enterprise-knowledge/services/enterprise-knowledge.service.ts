@@ -40,6 +40,8 @@ export interface KnowledgeDocument {
   updatedAt: string;
 }
 
+export type KnowledgeItem = KnowledgeDocument;
+
 /**
  * EnterpriseKnowledgeService — P170 EKG
  *
@@ -153,6 +155,10 @@ export class EnterpriseKnowledgeService {
     if (status) docs = docs.filter((d) => d.status === status);
     if (tag) docs = docs.filter((d) => d.tags.includes(tag));
     return docs.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  listKnowledgeItems(category?: DocumentCategory, status?: KnowledgeStatus, tag?: string): KnowledgeItem[] {
+    return this.listDocuments(category, status, tag);
   }
 
   private getOrThrow(documentId: string): KnowledgeDocument {
