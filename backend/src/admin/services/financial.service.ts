@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
-import { AuditLogService } from '../../shared/services/audit-log.service.ts';
+import { AuditLogService } from '../../shared/services/audit-log.service';
 
 interface CostCenterRateio {
   costCenterId: string;
