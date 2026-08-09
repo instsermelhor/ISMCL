@@ -48,6 +48,9 @@ export interface ClinicalNoteRecord {
  *
  * Referências: P107 (AEIATP), P123 (AEDA), P136 (AIEHSR Etapa 4)
  */
+import { Optional } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+
 @Injectable()
 export class ClinicalNotesService {
   private readonly logger = new Logger(ClinicalNotesService.name);
@@ -58,6 +61,7 @@ export class ClinicalNotesService {
   constructor(
     private readonly timelineService: ClinicalTimelineService,
     private readonly eventBus: EventBusService,
+    @Optional() private readonly prisma?: PrismaService,
   ) {}
 
   /**
@@ -148,6 +152,31 @@ export class ClinicalNotesService {
       note.caseId,
       { noteId: note.noteId, signatureHash: hashSignature },
     );
+
+    // Persiste na tabela ClinicalEvolution do PostgreSQL se Prisma disponível
+    if (this.prisma) {
+      try {
+        await this.prisma.clinicalEvolution.create({
+          data: {
+            id: note.noteId,
+            caseId: note.caseId || 'case-default-001',
+            beneficiaryId: note.ehrId,
+            professionalId: authorId,
+            clinicalDate: new Date(now),
+            durationMinutes: 50,
+            modality: 'ONLINE',
+            contentEncrypted: note.subjective,
+            summary: note.assessment,
+            formatType: 'SOAP',
+            status: 'SIGNED',
+            digitalSignatureHash: hashSignature,
+            signedAt: new Date(now),
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`[ClinicalNotes DB] Fallback in-memory (Prisma offline: ${(err as Error).message})`);
+      }
+    }
 
     // Emite o evento institucional CloudEvents
     await this.eventBus.publish(
