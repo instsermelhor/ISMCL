@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
-import { EncryptionService } from '../../shared/services/encryption.service.ts'; // Gerencia AWS KMS AES-256
-import { CryptoUtils } from '../../shared/utils/crypto.utils.ts';
-import { AuditLogService } from '../../shared/services/audit-log.service.ts';
+import { EncryptionService } from '../../shared/services/encryption.service'; // Gerencia AWS KMS AES-256
+import { CryptoUtils } from '../../shared/utils/crypto.utils';
+import { AuditLogService } from '../../shared/services/audit-log.service';
 
 /**
  * SERVIÇO CLINICO: GESTÃO DE EVOLUÇÕES E PRONTUÁRIOS (EMR)
