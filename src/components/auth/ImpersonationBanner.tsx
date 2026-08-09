@@ -38,7 +38,7 @@ export const ImpersonationBanner: React.FC = () => {
           </div>
           <span className="flex items-center gap-1">
             <Eye className="w-3.5 h-3.5 text-white/80" />
-            Visualizando como: <strong className="text-white underline underline-offset-2">{impersonationState.targetUser?.name}</strong> ({impersonationState.targetUser?.role})
+            Visualizando como: <strong className="text-white underline underline-offset-2">{impersonationState.targetUser?.name}</strong> ({impersonationState.targetUser?.primaryRole})
           </span>
           <span className="text-white/70 hidden md:inline">|</span>
           <span className="text-white/80 italic hidden md:inline">
