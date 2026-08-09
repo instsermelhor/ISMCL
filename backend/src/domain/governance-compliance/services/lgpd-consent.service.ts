@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../shared/prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { EventBusService } from '../../../events/event-bus.service';
 import { addBusinessDays } from 'date-fns';
 
