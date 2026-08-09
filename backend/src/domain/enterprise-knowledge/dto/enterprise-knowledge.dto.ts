@@ -104,6 +104,26 @@ export class RegisterLessonLearnedDto {
   @IsString()
   description: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  context?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  rootCause?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  preventiveAction?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  targetProcess?: string;
+
   @ApiProperty()
   @IsString()
   author: string;
