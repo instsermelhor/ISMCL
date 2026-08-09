@@ -60,6 +60,9 @@ export enum SecurityLevel {
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
   CRITICAL = 'CRITICAL',
+  MTLS_STRICT = 'MTLS_STRICT',
+  ZERO_TRUST_SIGNED = 'ZERO_TRUST_SIGNED',
+  END_TO_END_ENCRYPTED = 'END_TO_END_ENCRYPTED',
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────────
@@ -88,6 +91,16 @@ export class RegisterAPIDto {
   @ApiProperty({ enum: APILifecycleStage, example: APILifecycleStage.PUBLISHED })
   @IsEnum(APILifecycleStage)
   lifecycleStage: APILifecycleStage;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  owner?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  rateLimitRpm?: number;
 }
 
 export class RegisterConnectorDto {
@@ -114,6 +127,11 @@ export class RegisterConnectorDto {
   @ApiProperty({ example: 'mTLS + OAuth2' })
   @IsString()
   authenticationMethod: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  authMethod?: string;
 }
 
 export class RegisterWebhookDto {
@@ -129,6 +147,12 @@ export class RegisterWebhookDto {
   @IsArray()
   @IsString({ each: true })
   subscribedEvents: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  events?: string[];
 
   @ApiProperty({ example: 'PARTE-NGO-SAUDE' })
   @IsString()
@@ -188,9 +212,19 @@ export class ReviewIntegrationDto {
   @IsEnum(IntegrationStatus)
   status: IntegrationStatus;
 
+  @ApiPropertyOptional({ enum: IntegrationStatus })
+  @IsOptional()
+  @IsEnum(IntegrationStatus)
+  decision?: IntegrationStatus;
+
   @ApiProperty()
   @IsString()
   reviewerId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  reviewedBy?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
