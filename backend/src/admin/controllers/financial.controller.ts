@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Body, Param, Query, UseGuards, Req, SetMetadata } from '@nestjs/common';
-import { PortalAccessGuard } from '../../auth/guards/portal-access.guard.ts';
-import { FinancialService } from '../services/financial.service.ts';
+import { PortalAccessGuard } from '../../auth/guards/portal-access.guard';
+import { FinancialService } from '../services/financial.service';
 import { Request } from 'express';
 
 export const RequirePortal = (portal: 'ADMIN' | 'CLINIC') => SetMetadata('portal', portal);
