@@ -90,7 +90,7 @@ export class EnterpriseSearchService {
       executedAt: new Date().toISOString(),
     };
 
-    await this.audit.recordAudit('SEARCH', searchId, 'SEARCH_QUERY', 'USER');
+    await this.audit.recordAudit('SEARCH', searchId, 'USER', { query: dto.query });
 
     await this.eventBus.publish(
       'aura.knowledge.search.executed.v1',
