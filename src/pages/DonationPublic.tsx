@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { platformProjects, INSTITUTIONAL_PIX, type PlatformProject, type PixDonation } from '../data/financial-mock';
 import { generatePixPayload, generateQRDataUrl, requestCentralizedPixCharge } from '../services/pixService';
+import { financialService } from '../services/financialService';
 
 // ─── Helpers ───────────────────────────────────────────────
 function formatBRL(v: number) {
@@ -65,7 +66,7 @@ function QRModal({ project, onClose }: QRModalProps) {
     setGenerating(true);
 
     try {
-      const charge = await requestCentralizedPixCharge({
+      const charge = await financialService.generatePixDonation({
         amount: effectiveAmount,
         donorName: donorName || undefined,
         donorEmail: donorEmail || undefined,
