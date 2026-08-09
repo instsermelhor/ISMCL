@@ -73,7 +73,7 @@ export class EnterpriseKnowledgeController {
   @ApiOperation({ summary: 'Criar documento no repositório corporativo' })
   @ApiResponse({ status: 201, description: 'Documento criado com metadados estruturados.' })
   createDocument(@Body() dto: CreateKnowledgeDocumentDto) {
-    return this.knowledgeSvc.createDocument(dto, dto.author ?? 'API_USER');
+    return this.knowledgeSvc.createDocument(dto, dto.author ?? dto.authorId ?? 'API_USER');
   }
 
   @Put('documents/:documentId')
