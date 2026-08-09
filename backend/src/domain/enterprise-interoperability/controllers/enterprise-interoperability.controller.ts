@@ -18,9 +18,9 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../shared/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../shared/guards/roles.guard';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import {
   ApiGatewayRouteDto,
   ConfigureConnectorDto,
@@ -91,7 +91,7 @@ export class EnterpriseInteroperabilityController {
   }
 
   @Get('connectors')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CISO', 'CIO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CISO' as AuraRole, 'CIO' as AuraRole)
   @ApiOperation({ summary: 'Lista conectores externos ativos' })
   @ApiQuery({ name: 'type', enum: ConnectorType, required: false })
   listConnectors(@Query('type') type?: ConnectorType) {
@@ -101,7 +101,7 @@ export class EnterpriseInteroperabilityController {
   // ── 3. API Gateway Corporativo ─────────────────────────────────────────────
 
   @Post('gateway/routes')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CISO', 'CIO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CISO' as AuraRole, 'CIO' as AuraRole)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Registra rota no API Gateway corporativo com rate-limiting, cota e mTLS' })
   registerGatewayRoute(@Body() dto: ApiGatewayRouteDto) {
@@ -109,7 +109,7 @@ export class EnterpriseInteroperabilityController {
   }
 
   @Get('gateway/routes')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CISO', 'CIO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CISO' as AuraRole, 'CIO' as AuraRole)
   @ApiOperation({ summary: 'Lista rotas registradas no API Gateway corporativo' })
   listGatewayRoutes() {
     return this.apiGateway.listRoutes();
@@ -118,7 +118,7 @@ export class EnterpriseInteroperabilityController {
   // ── 4. Gestão de Consentimentos (LGPD) ──────────────────────────────────────
 
   @Post('consents')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CASE_MANAGER', 'HEALTH_PROFESSIONAL')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CASE_MANAGER' as AuraRole, 'HEALTH_PROFESSIONAL' as AuraRole)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Registra consentimento LGPD para compartilhamento de dados com parceiro externo' })
   grantConsent(@Body() dto: CreateConsentDto) {
@@ -126,14 +126,14 @@ export class EnterpriseInteroperabilityController {
   }
 
   @Patch('consents/revoke')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CASE_MANAGER', 'HEALTH_PROFESSIONAL')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CASE_MANAGER' as AuraRole, 'HEALTH_PROFESSIONAL' as AuraRole)
   @ApiOperation({ summary: 'Revoga consentimento LGPD de beneficiário' })
   revokeConsent(@Body() dto: RevokeConsentDto) {
     return this.consentManagement.revokeConsent(dto);
   }
 
   @Get('consents')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CASE_MANAGER', 'HEALTH_PROFESSIONAL')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CASE_MANAGER' as AuraRole, 'HEALTH_PROFESSIONAL' as AuraRole)
   @ApiOperation({ summary: 'Lista consentimentos LGPD registrados' })
   @ApiQuery({ name: 'beneficiaryId', required: false })
   listConsents(@Query('beneficiaryId') beneficiaryId?: string) {
@@ -143,7 +143,7 @@ export class EnterpriseInteroperabilityController {
   // ── 5. Intercâmbio de Dados & Fluxo Orquestrado ────────────────────────────
 
   @Post('integration/execute')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CIO', 'CISO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CIO' as AuraRole, 'CISO' as AuraRole)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Executa fluxo orquestrado de integração corporativa com resiliência (Circuit Breaker)' })
   executeIntegrationFlow(
@@ -155,7 +155,7 @@ export class EnterpriseInteroperabilityController {
   }
 
   @Post('data-exchange')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CIO', 'CISO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CIO' as AuraRole, 'CISO' as AuraRole)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Executa transação direta de intercâmbio de dados com validação de consentimento' })
   executeDataExchange(@Body() dto: DataExchangeTransactionDto) {
@@ -165,7 +165,7 @@ export class EnterpriseInteroperabilityController {
   // ── 6. Governança & Conformidade ───────────────────────────────────────────
 
   @Post('governance/validate')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CISO', 'CCO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CISO' as AuraRole, 'CCO' as AuraRole)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Valida conformidade de governança (técnica, jurídica, LGPD e segurança) para integração' })
   validateGovernance(@Body() dto: IntegrationGovernanceCheckDto) {
@@ -175,7 +175,7 @@ export class EnterpriseInteroperabilityController {
   // ── 7. Monitoramento & Alertas ─────────────────────────────────────────────
 
   @Get('monitoring/metrics')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CISO', 'CIO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CISO' as AuraRole, 'CIO' as AuraRole)
   @ApiOperation({ summary: 'Obtém métricas de saúde, latência e disponibilidade das integrações' })
   @ApiQuery({ name: 'partnerCode', required: false })
   getMonitoringMetrics(@Query('partnerCode') partnerCode?: string) {
@@ -183,7 +183,7 @@ export class EnterpriseInteroperabilityController {
   }
 
   @Get('monitoring/alerts')
-  @Roles('SUPER_ADMIN', 'ADMIN', 'CISO', 'CIO')
+  @Roles('SUPER_ADMIN' as AuraRole, 'ADMIN' as AuraRole, 'CISO' as AuraRole, 'CIO' as AuraRole)
   @ApiOperation({ summary: 'Lista alertas de integrações degradadas ou falhas' })
   @ApiQuery({ name: 'partnerCode', required: false })
   getMonitoringAlerts(@Query('partnerCode') partnerCode?: string) {
@@ -193,7 +193,7 @@ export class EnterpriseInteroperabilityController {
   // ── 8. Auditoria Imutável Externa ──────────────────────────────────────────
 
   @Get('audits')
-  @Roles('SUPER_ADMIN', 'CISO', 'AUDITOR')
+  @Roles('SUPER_ADMIN' as AuraRole, 'CISO' as AuraRole, 'AUDITOR' as AuraRole)
   @ApiOperation({ summary: 'Consulta trilha imutável de auditoria externa (assinada com SHA-256)' })
   @ApiQuery({ name: 'partnerCode', required: false })
   getAuditTrail(@Query('partnerCode') partnerCode?: string) {
