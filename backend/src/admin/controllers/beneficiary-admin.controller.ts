@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Post as HttpPost } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
 import { PortalAccessGuard } from '../../auth/guards/portal-access.guard';
 import { SetMetadata } from '@nestjs/common';
 import { Request } from 'express';
@@ -12,8 +12,17 @@ export const RequirePortal = (portal: 'ADMIN' | 'CLINIC') => SetMetadata('portal
 @Controller('admin/beneficiaries')
 @UseGuards(PortalAccessGuard)
 @RequirePortal('ADMIN')
+// Mock services para evitar erros de compilação na demonstração
+class AuditService { async log(_data: unknown) {} }
+class BeneficiaryService {
+  async getFullAdministrativeProfile(_id: string) { return {}; }
+  async createBeneficiary(_data: unknown, _userId: string) { return {}; }
+}
+
 export class BeneficiaryAdminController {
-  
+  private readonly auditService = new AuditService();
+  private readonly beneficiaryService = new BeneficiaryService();
+
   /**
    * Retorna os dados mestre do beneficiário, incluindo dados sociais e documentação administrativa.
    * IMPORTANTE: Esta rota propositalmente NÃO retorna Prontuários (Records).
@@ -22,7 +31,7 @@ export class BeneficiaryAdminController {
   async getBeneficiaryDetails(@Param('id') id: string, @Req() req: Request) {
     // 1. Log de auditoria (Registro de quem do admin acessou o cadastro)
     await this.auditService.log({
-      actorId: req.user['id'],
+      actorId: (req as any).user?.['id'],
       action: 'READ_ADMIN_PROFILE',
       targetEntityId: id,
     });
@@ -36,15 +45,8 @@ export class BeneficiaryAdminController {
    * Cadastro completo de um novo beneficiário (Acolhimento)
    */
   @Post()
-  async registerBeneficiary(@Body() data: any, @Req() req: Request) {
+  async registerBeneficiary(@Body() data: unknown, @Req() req: Request) {
     // Insere no banco utilizando SSOT (Single Source of Truth)
-    return await this.beneficiaryService.createBeneficiary(data, req.user['id']);
+    return await this.beneficiaryService.createBeneficiary(data, (req as any).user?.['id']);
   }
-}
-
-// Mock services para evitar erros de compilação na demonstração
-class AuditService { async log(data: any) {} }
-class BeneficiaryService { 
-  async getFullAdministrativeProfile(id: string) { return {}; }
-  async createBeneficiary(data: any, userId: string) { return {}; }
 }
