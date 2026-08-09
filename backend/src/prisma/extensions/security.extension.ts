@@ -44,7 +44,7 @@ export const securityExtension = Prisma.defineExtension((client) => {
           if (!result) return null;
 
           // Valida acesso individual do registro
-          const isAllowed = await verifyRecordAccess(result.id, context);
+          const isAllowed = await verifyRecordAccess(result.id ?? '', context);
           if (!isAllowed) {
             return null; // Oculta o registro (Pesquisa Segura)
           }
