@@ -7,6 +7,8 @@ import { EmergencyCommunicationService } from './emergency-communication.service
 import { OperationalResilienceService } from './operational-resilience.service';
 import { ContinuityAuditService } from './continuity-audit.service';
 
+import { RecoveryStatus } from '../dto/business-continuity.dto';
+
 export interface CrisisDashboardOverview {
   generatedAt: string;
   overallStatus: 'NORMAL' | 'ELEVATED' | 'CRISIS_ACTIVE' | 'DISASTER_RECOVERY';
@@ -62,8 +64,8 @@ export class CrisisDashboardService {
   async getExecutiveDashboard(): Promise<CrisisDashboardOverview> {
     const activeCrises = this.crisisSvc.getActiveCrises();
     const openP1 = this.incidentSvc.getOpenP1Incidents();
-    const activeDR = this.drSvc.listOperations('IN_PROGRESS');
-    const completedDR = this.drSvc.listOperations('COMPLETED');
+    const activeDR = this.drSvc.listOperations(RecoveryStatus.IN_PROGRESS);
+    const completedDR = this.drSvc.listOperations(RecoveryStatus.COMPLETED);
     const bcpPlan = this.bcpSvc.getDefaultPlan();
     const resilienceReport = await this.resilienceSvc.assessResilience('DASHBOARD');
 
