@@ -37,7 +37,7 @@ LOGIN_RESP=$(curl -s -X POST "$BASE_URL/auth/login" \
 echo "  Resposta: $LOGIN_RESP" | head -c 500
 echo ""
 
-ACCESS_TOKEN=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('accessToken',''))" 2>/dev/null)
+ACCESS_TOKEN=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('accessToken') or d.get('data',{}).get('accessToken',''))" 2>/dev/null)
 if [ -n "$ACCESS_TOKEN" ] && [ "$ACCESS_TOKEN" != "None" ]; then
   echo -e "$PASS Login retornou accessToken"
   echo "  Token (primeiros 40 chars): ${ACCESS_TOKEN:0:40}..."
@@ -55,7 +55,7 @@ ME_RESP=$(curl -s -X GET "$BASE_URL/auth/me" \
 echo "  Resposta: $ME_RESP" | head -c 400
 echo ""
 
-ME_EMAIL=$(echo "$ME_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('email',''))" 2>/dev/null)
+ME_EMAIL=$(echo "$ME_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('email') or d.get('data',{}).get('email',''))" 2>/dev/null)
 if [ -n "$ME_EMAIL" ] && [ "$ME_EMAIL" != "None" ]; then
   echo -e "$PASS GET /me retornou email: $ME_EMAIL"
 else
