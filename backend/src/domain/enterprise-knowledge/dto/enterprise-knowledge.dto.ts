@@ -240,6 +240,12 @@ export class UpdateKnowledgeDocumentDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  relevantDomains?: string[];
 }
 
 // ── KNOWLEDGE GRAPH DTOs ──────────────────────────────────────────────────────
