@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   BookOpen,
 } from 'lucide-react';
+import { realtimeService } from '../services/realtimeService';
 
 const DEMAND_LABELS: Record<PiaraveDemandType, string> = {
   violencia_emocional: 'Violência Emocional',
@@ -56,6 +57,14 @@ export default function PiaraveAcolhimento() {
   const [selectedLineId, setSelectedLineId] = useState<string>('');
   const [fontSizeClass, setFontSizeClass] = useState<'text-normal' | 'text-large' | 'text-xlarge'>('text-normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    realtimeService.connect();
+    const unsub = realtimeService.subscribe('aura.**', (event) => {
+      console.info('[Piarave Acolhimento SSE Realtime]', event.eventType, event.payload);
+    });
+    return () => unsub();
+  }, []);
 
   // --- Classes CSS Emuladas ---
   const sizeMap = {
