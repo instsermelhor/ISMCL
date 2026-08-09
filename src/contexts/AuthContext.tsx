@@ -47,6 +47,7 @@ function mapIAMRoleToLegacy(iamRoles: InstitutionalRole[] = []): UserRole {
 
 function getRoleSubtitle(iamRoles: InstitutionalRole[] = []): string {
   const labels: Record<InstitutionalRole, string> = {
+    super_user_universal: 'Governança Global Aura',
     beneficiary: 'Portal do Beneficiário',
     legal_guardian: 'Área da Família',
     professional: 'Workspace Clínico',
