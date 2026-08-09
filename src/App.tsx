@@ -65,6 +65,9 @@ import DonationPublic from './pages/DonationPublic';
 // Central de Privacidade LGPD — P12
 import PrivacyCenter from './pages/PrivacyCenter';
 
+// Componente PWA & Offline-First Status — P13
+import OfflineBanner from './components/OfflineBanner';
+
 // AEGRC — Governança, Riscos, Compliance e Gestão Estratégica
 import { AEGRC } from './pages/AEGRC';
 
@@ -141,6 +144,7 @@ function RouteSuspenseFallback() {
 export default function App() {
   return (
     <BrowserRouter>
+      <OfflineBanner />
       <Routes>
         {/* Rota pública: Login IAM institucional */}
         <Route
