@@ -32,6 +32,7 @@ import { MasterCertificationModule } from './domain/master-certification/master-
 import { InstitutionalIntelligenceModule } from './domain/institutional-intelligence/institutional-intelligence.module';
 import { CognitiveOrchestrationModule } from './domain/cognitive-orchestration/cognitive-orchestration.module';
 import { ActgModule } from './domain/actg/actg.module';
+import { OfflineSyncModule } from './domain/offline-sync/offline-sync.module';
 
 // ── Foundation Domain Modules ─────────────────────────────────────────────────
 // TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
@@ -226,6 +227,7 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
     InstitutionalIntelligenceModule,
     CognitiveOrchestrationModule,
     ActgModule,
+    OfflineSyncModule,
     AutonomousEvolutionModule,
     EnterpriseInteroperabilityModule,
     UnifiedOperationsModule,
