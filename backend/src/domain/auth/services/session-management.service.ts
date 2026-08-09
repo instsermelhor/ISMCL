@@ -146,7 +146,7 @@ export class SessionManagementService {
       const toRemove = userSessions.slice(0, userSessions.length - maxSessions + 1);
       for (const s of toRemove) {
         this.sessions.delete(s.sessionId);
-        this.logger.info(`[Session] Sessão antiga ${s.sessionId} revogada devido ao limite concorrente.`);
+        this.logger.log(`[Session] Sessão antiga ${s.sessionId} revogada devido ao limite concorrente.`);
       }
     }
   }
