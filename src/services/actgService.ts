@@ -1,18 +1,13 @@
 import type { ActgSession, ProviderHealthStatus, CommunicationPreference, ChannelType, NotificationEventType, NotificationChannel } from '../types/actg.types';
+import { apiClient } from '../shared/lib/api-client';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:3001';
-const ACTG_BASE = `${API_BASE}/api/v1/actg`;
+const ACTG_BASE = '/api/v1/actg';
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('aura_token');
-  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-}
 
 export async function getProviderHealth(): Promise<ProviderHealthStatus[]> {
   try {
-    const res = await fetch(`${ACTG_BASE}/provider-health`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.get<ProviderHealthStatus[]>(`${ACTG_BASE}/provider-health`);
+    return res.data ?? getMockProviderHealth();
   } catch {
     // Retorna dados mock em modo offline/dev
     return getMockProviderHealth();
@@ -24,21 +19,17 @@ export async function createAppointmentChannel(
   channelType: ChannelType,
   options?: { organizerEmail?: string; attendeeEmails?: string[] },
 ): Promise<ActgSession> {
-  const res = await fetch(`${ACTG_BASE}/appointments/${appointmentId}/channels`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ channelType, ...options }),
-  });
-  if (!res.ok) throw new Error(`Falha ao criar canal: HTTP ${res.status}`);
-  return res.json();
+  const res = await apiClient.post<ActgSession>(
+    `${ACTG_BASE}/appointments/${appointmentId}/channels`,
+    { channelType, ...options },
+  );
+  return res.data;
 }
 
 export async function getAppointmentChannel(appointmentId: string): Promise<ActgSession | null> {
   try {
-    const res = await fetch(`${ACTG_BASE}/appointments/${appointmentId}/channels`, { headers: getAuthHeaders() });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.get<ActgSession>(`${ACTG_BASE}/appointments/${appointmentId}/channels`);
+    return res.data ?? null;
   } catch {
     return null;
   }
@@ -49,30 +40,24 @@ export async function getJoinUrl(
   participantId: string,
 ): Promise<{ joinUrl: string | null }> {
   try {
-    const res = await fetch(
+    const res = await apiClient.get<{ joinUrl: string | null }>(
       `${ACTG_BASE}/appointments/${appointmentId}/join-url?participantId=${encodeURIComponent(participantId)}`,
-      { headers: getAuthHeaders() },
     );
-    if (!res.ok) return { joinUrl: null };
-    return res.json();
+    return res.data ?? { joinUrl: null };
   } catch {
     return { joinUrl: null };
   }
 }
 
 export async function cancelAppointmentChannel(appointmentId: string, reason?: string): Promise<void> {
-  await fetch(`${ACTG_BASE}/appointments/${appointmentId}/channels`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ reason }),
-  });
+  await apiClient.delete(`${ACTG_BASE}/appointments/${appointmentId}/channels`).catch(() => {});
+  void reason; // reason passed as query param in future; backend reads DELETE body if needed
 }
 
 export async function getCommunicationPreferences(entityId: string): Promise<CommunicationPreference | null> {
   try {
-    const res = await fetch(`${ACTG_BASE}/communication/preferences/${entityId}`, { headers: getAuthHeaders() });
-    if (!res.ok) return null;
-    return res.json();
+    const res = await apiClient.get<CommunicationPreference>(`${ACTG_BASE}/communication/preferences/${entityId}`);
+    return res.data ?? null;
   } catch {
     return null;
   }
@@ -82,14 +67,13 @@ export async function updateCommunicationPreferences(
   entityId: string,
   prefs: Partial<CommunicationPreference>,
 ): Promise<CommunicationPreference> {
-  const res = await fetch(`${ACTG_BASE}/communication/preferences/${entityId}`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(prefs),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const res = await apiClient.patch<CommunicationPreference>(
+    `${ACTG_BASE}/communication/preferences/${entityId}`,
+    prefs,
+  );
+  return res.data;
 }
+
 
 // ── Mock data for offline/dev mode ────────────────────────────────────────
 
@@ -151,9 +135,8 @@ export interface AdminTemplate {
 
 export async function adminGetProviders(): Promise<AdminProvider[]> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/providers`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.get<AdminProvider[]>(`${ACTG_BASE}/admin/providers`);
+    return res.data ?? getMockAdminProviders();
   } catch {
     return getMockAdminProviders();
   }
@@ -161,13 +144,8 @@ export async function adminGetProviders(): Promise<AdminProvider[]> {
 
 export async function adminUpdateProvider(id: string, patch: Partial<AdminProvider>): Promise<AdminProvider> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/providers/${id}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(patch),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.patch<AdminProvider>(`${ACTG_BASE}/admin/providers/${id}`, patch);
+    return res.data;
   } catch {
     const providers = getMockAdminProviders();
     const found = providers.find((p) => p.id === id);
@@ -177,9 +155,8 @@ export async function adminUpdateProvider(id: string, patch: Partial<AdminProvid
 
 export async function adminGetAccounts(): Promise<AdminAccount[]> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/accounts`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.get<AdminAccount[]>(`${ACTG_BASE}/admin/accounts`);
+    return res.data ?? getMockAdminAccounts();
   } catch {
     return getMockAdminAccounts();
   }
@@ -187,13 +164,8 @@ export async function adminGetAccounts(): Promise<AdminAccount[]> {
 
 export async function adminCreateAccount(data: Omit<AdminAccount, 'id' | 'providerName' | 'createdAt' | 'updatedAt' | 'lastHealthCheck'>): Promise<AdminAccount> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/accounts`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.post<AdminAccount>(`${ACTG_BASE}/admin/accounts`, data);
+    return res.data;
   } catch {
     return { ...data, id: `acc-${Date.now()}`, providerName: data.providerId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   }
@@ -201,13 +173,8 @@ export async function adminCreateAccount(data: Omit<AdminAccount, 'id' | 'provid
 
 export async function adminUpdateAccount(id: string, patch: Partial<AdminAccount>): Promise<AdminAccount> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/accounts/${id}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(patch),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.patch<AdminAccount>(`${ACTG_BASE}/admin/accounts/${id}`, patch);
+    return res.data;
   } catch {
     const accounts = getMockAdminAccounts();
     const found = accounts.find((a) => a.id === id);
@@ -217,9 +184,8 @@ export async function adminUpdateAccount(id: string, patch: Partial<AdminAccount
 
 export async function adminGetTemplates(): Promise<AdminTemplate[]> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/templates`, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.get<AdminTemplate[]>(`${ACTG_BASE}/admin/templates`);
+    return res.data ?? getMockAdminTemplates();
   } catch {
     return getMockAdminTemplates();
   }
@@ -227,13 +193,8 @@ export async function adminGetTemplates(): Promise<AdminTemplate[]> {
 
 export async function adminCreateTemplate(data: Omit<AdminTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<AdminTemplate> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/templates`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.post<AdminTemplate>(`${ACTG_BASE}/admin/templates`, data);
+    return res.data;
   } catch {
     return { ...data, id: `tmpl-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   }
@@ -241,13 +202,8 @@ export async function adminCreateTemplate(data: Omit<AdminTemplate, 'id' | 'crea
 
 export async function adminUpdateTemplate(id: string, patch: Partial<AdminTemplate>): Promise<AdminTemplate> {
   try {
-    const res = await fetch(`${ACTG_BASE}/admin/templates/${id}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(patch),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const res = await apiClient.patch<AdminTemplate>(`${ACTG_BASE}/admin/templates/${id}`, patch);
+    return res.data;
   } catch {
     const templates = getMockAdminTemplates();
     const found = templates.find((t) => t.id === id);
