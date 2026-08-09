@@ -335,6 +335,8 @@ export function IAMProvider({ children }: { children: ReactNode }) {
   const hasPermission = useCallback(
     (module: PlatformModule, action: PermissionAction): boolean => {
       if (!currentUser) return false;
+      const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.primaryRole];
+      if (roles.includes('super_user_universal')) return true;
       const perms = Array.isArray(currentUser.permissions) ? currentUser.permissions : [];
       return perms.some(
         p => p && p.module === module && p.action === action
@@ -347,6 +349,7 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     (role: InstitutionalRole): boolean => {
       if (!currentUser) return false;
       const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.primaryRole];
+      if (roles.includes('super_user_universal')) return true;
       return roles.includes(role);
     },
     [currentUser]
@@ -354,7 +357,7 @@ export function IAMProvider({ children }: { children: ReactNode }) {
 
   function getRedirectPathForUser(user: IAMUser): string {
     const roles = Array.isArray(user?.roles) ? user.roles : (user?.primaryRole ? [user.primaryRole] : []);
-    // Super admin vai para o Painel Supremo Administrativo (Prompt 177 ETAPA 5)
+    if (roles.includes('super_user_universal')) return ROLE_REDIRECT_MAP.super_user_universal;
     if (roles.includes('super_admin')) return '/painel-supremo';
     if (roles.includes('auditor')) return ROLE_REDIRECT_MAP.auditor;
     if (roles.includes('director') || roles.includes('president'))
@@ -595,6 +598,58 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     }));
   }, [currentUser, addAuditLog]);
 
+  const [impersonationState, setImpersonationState] = useState<ImpersonationState | null>(null);
+
+  const startImpersonation = useCallback(async (targetUserId: string, reason: string): Promise<boolean> => {
+    if (!currentUser) return false;
+    const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.primaryRole];
+    const isSuperUser = roles.includes('super_user_universal');
+    if (!isSuperUser) return false;
+
+    const target = users.find(u => u.id === targetUserId);
+    if (!target) return false;
+
+    const state: ImpersonationState = {
+      isImpersonating: true,
+      adminUser: currentUser,
+      targetUser: target,
+      reason,
+      token: `imp_${Date.now()}`,
+    };
+
+    setImpersonationState(state);
+    setCurrentUser(target);
+
+    addAuditLog(generateAuditLog(currentUser, 'access_granted', {
+      eventType: 'access_granted',
+      details: {
+        action: 'IMPERSONATION_STARTED',
+        targetUserId: target.id,
+        targetUserEmail: target.email,
+        reason,
+      },
+      severity: 'warning',
+    }));
+
+    return true;
+  }, [currentUser, users, addAuditLog]);
+
+  const stopImpersonation = useCallback(async (): Promise<void> => {
+    if (!impersonationState?.adminUser) return;
+    const admin = impersonationState.adminUser;
+
+    setCurrentUser(admin);
+    setImpersonationState(null);
+
+    addAuditLog(generateAuditLog(admin, 'session_revoked', {
+      eventType: 'session_revoked',
+      details: {
+        action: 'IMPERSONATION_ENDED',
+      },
+      severity: 'info',
+    }));
+  }, [impersonationState, addAuditLog]);
+
   // ----------------------------------------------------------------
 
   const value: IAMContextType = {
@@ -626,6 +681,9 @@ export function IAMProvider({ children }: { children: ReactNode }) {
     revokeSession,
     trustedDevices,
     revokeDevice,
+    impersonationState,
+    startImpersonation,
+    stopImpersonation,
     mfaPending,
     mfaMethod,
   };
