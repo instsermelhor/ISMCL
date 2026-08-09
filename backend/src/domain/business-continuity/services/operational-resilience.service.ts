@@ -7,7 +7,7 @@ import { EmergencyCommunicationService } from './emergency-communication.service
 import { BusinessImpactAnalysisService } from './business-impact-analysis.service';
 import { ContinuityAuditService } from './continuity-audit.service';
 import { EventBusService } from '../../../events/event-bus.service';
-import { CommunicationChannel, IncidentSeverity } from '../dto/business-continuity.dto';
+import { CommunicationChannel, IncidentSeverity, CriticalityLevel, RecoveryStatus } from '../dto/business-continuity.dto';
 
 export type ResilienceRating = 'EXCELLENT' | 'GOOD' | 'ADEQUATE' | 'AT_RISK' | 'CRITICAL';
 
@@ -60,12 +60,12 @@ export class OperationalResilienceService {
 
   async assessResilience(assessedBy = 'SYSTEM'): Promise<ResilienceReport> {
     const plan = this.bcpSvc.getDefaultPlan();
-    const criticalProcesses = this.bcpSvc.listProcesses('CRITICAL');
-    const vitalProcesses = this.bcpSvc.listProcesses('VITAL');
+    const criticalProcesses = this.bcpSvc.listProcesses(CriticalityLevel.CRITICAL);
+    const vitalProcesses = this.bcpSvc.listProcesses(CriticalityLevel.VITAL);
 
     const openP1 = this.incidentSvc.getOpenP1Incidents();
     const activeCrises = this.crisisSvc.getActiveCrises();
-    const activeRecoveries = this.drSvc.listOperations('IN_PROGRESS');
+    const activeRecoveries = this.drSvc.listOperations(RecoveryStatus.IN_PROGRESS);
 
     // Detectar pontos únicos de falha baseado em processos sem redundância marcada
     const spofs: SinglePointOfFailure[] = this.detectSPOFs(plan.processes);
