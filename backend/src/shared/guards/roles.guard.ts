@@ -6,6 +6,7 @@ import { ROLES_KEY, PERMISSIONS_KEY, AuraRole } from '../decorators/roles.decora
 
 /** Hierarquia de roles: quanto menor o índice, maior o privilégio */
 const ROLE_HIERARCHY: AuraRole[] = [
+  AuraRole.SUPER_USER_UNIVERSAL,
   AuraRole.SUPER_ADMIN,
   AuraRole.ADMIN,
   AuraRole.DIRECTOR,
@@ -28,10 +29,10 @@ const ROLE_HIERARCHY: AuraRole[] = [
  * permissões (@Permissions) necessários para acessar o endpoint.
  *
  * Modelo hierárquico: um role de nível superior herda todas as
- * permissões dos níveis inferiores.
- * Ex: SUPER_ADMIN pode tudo que ADMIN, PROFESSIONAL, BENEFICIARY pode.
+ * permissões dos níveis inferiores. SUPER_USER_UNIVERSAL possui autoridade
+ * total e incondicional em todo a plataforma (GLOBAL).
  *
- * Referências: P107 (AEIATP), P116 (AECRGAP), P128 (AECS), P131 (AFPI)
+ * Referências: P107 (AEIATP), P116 (AECRGAP), P128 (AECS), P131 (AFPI), P189
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -66,6 +67,11 @@ export class RolesGuard implements CanActivate {
 
     const userRoles = user.roles ?? user.realm_access?.roles ?? [];
     const userPermissions = user.permissions ?? [];
+
+    // SUPER_USER_UNIVERSAL tem permissão máxima incondicional sobre tudo
+    if (userRoles.includes('SUPER_USER_UNIVERSAL') || userRoles.includes('SUPER_USER')) {
+      return true;
+    }
 
     // Verificação de roles com hierarquia
     if (requiredRoles?.length) {
