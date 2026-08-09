@@ -23,5 +23,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "exclude": ["backend", "docs", "infra"]
+  "exclude": ["backend", "docs", "infra", "e2e", "playwright.config.ts"]
 }
