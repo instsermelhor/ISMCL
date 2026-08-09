@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Post as HttpPost } from '@nestjs/common';
-import { PortalAccessGuard } from '../../auth/guards/portal-access.guard.ts';
+import { PortalAccessGuard } from '../../auth/guards/portal-access.guard';
 import { SetMetadata } from '@nestjs/common';
 import { Request } from 'express';
 
