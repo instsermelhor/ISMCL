@@ -60,7 +60,7 @@ export class SecurityMiddleware implements NestMiddleware {
     for (const reqObj of activeRequests) {
       if (reqObj.profile && reqObj.profile.beneficiaryId) {
         activeBreakGlassSessions[reqObj.profile.beneficiaryId] = {
-          expiresAt: reqObj.expiresAt.toISOString()
+          expiresAt: reqObj.expiresAt?.toISOString() ?? new Date().toISOString()
         };
       }
     }
