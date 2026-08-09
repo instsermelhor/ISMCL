@@ -1,0 +1,41 @@
+{
+  "short_name": "Aura",
+  "name": "Plataforma Aura — Instituto Ser Melhor",
+  "description": "Sistema Integrado de Saúde Mental, Governança Clínica e Atendimento Humanizado PWA Offline-First",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "br.org.sermelhor.aura",
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["medical", "health", "social"],
+  "shortcuts": [
+    {
+      "name": "Novo Acolhimento",
+      "short_name": "Triagem",
+      "description": "Iniciar acolhimento psicossocial no campo",
+      "url": "/piarave-acolhimento"
+    },
+    {
+      "name": "Prontuário",
+      "short_name": "EHR",
+      "description": "Consultar prontuário de pacientes",
+      "url": "/patients"
+    }
+  ]
+}
