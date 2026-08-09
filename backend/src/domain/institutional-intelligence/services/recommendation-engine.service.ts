@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { EventBusService } from '../../events/event-bus.service';
+import { EventBusService } from '../../../events/event-bus.service';
 import {
   CreateRecommendationDto,
   FeedbackRecommendationDto,
