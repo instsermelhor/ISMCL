@@ -373,6 +373,7 @@ export interface ProjetoSocial {
   objetivos?: string[];
   fontes?: string[];
   resultados?: string;
+  isPublic?: boolean;
 }
 
 export const projetos: ProjetoSocial[] = [
