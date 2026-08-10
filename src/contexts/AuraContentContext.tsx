@@ -111,7 +111,7 @@ export const DEFAULT_AURA_CONTENT: AuraLandingContent = {
       id: 'programs',
       label: 'Conheça os Programas',
       emoji: '🌟',
-      route: '/login',
+      route: '/programas',
       colorClass:
         'bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400',
     },
@@ -144,7 +144,15 @@ const STORAGE_KEY = 'aura_landing_content_v1';
 function loadFromStorage(): AuraLandingContent {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AuraLandingContent;
+    if (raw) {
+      const parsed = JSON.parse(raw) as AuraLandingContent;
+      if (parsed.quickActions) {
+        parsed.quickActions = parsed.quickActions.map(qa =>
+          qa.id === 'programs' ? { ...qa, route: '/programas' } : qa
+        );
+      }
+      return parsed;
+    }
   } catch {
     // fallback
   }
