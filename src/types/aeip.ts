@@ -56,13 +56,15 @@ export interface Connector {
   code: string; // e.g. CON-GOV-01
   name: string;
   category: ConnectorCategory;
-  provider: string; // e.g. "e-Social / CadÚnico", "PIX / Banco Central", "WhatsApp Business"
+  provider: string; // e.g. "e-Social / CadÚnico", "PIX / Banco Central", "WhatsApp Business Platform"
   version: string;
   status: 'healthy' | 'warning' | 'error' | 'maintenance';
   lastSyncAt: string;
   authConfigured: boolean;
   activeIntegrationsCount: number;
   description: string;
+  configParams?: Record<string, string>;
+  commands?: string[];
 }
 
 export interface WebhookEndpoint {
@@ -137,6 +139,7 @@ export interface AEIPContextValue {
   publishEvent: (topic: string, payload: Record<string, unknown>, publisher: string) => void;
   registerWebhook: (webhook: Omit<WebhookEndpoint, 'id' | 'delivered24h' | 'failed24h' | 'createdAt'>) => void;
   installConnector: (connector: Omit<Connector, 'id' | 'code' | 'activeIntegrationsCount'>) => void;
+  updateConnectorConfig: (connectorId: string, configParams: Record<string, string>) => void;
   triggerSyncJob: (jobId: string) => void;
   replayDLQMessage: (messageId: string) => void;
 }
