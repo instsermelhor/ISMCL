@@ -240,7 +240,7 @@ export function AdminSupremeDashboard() {
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
 
   const { users, addRole, startImpersonation } = useIAM();
-  const isSuperUser = currentUser?.roles?.includes('super_user_universal') || currentUser?.primaryRole === 'super_user_universal' || user?.email === 'ribeiro.rikardo@gmail.com';
+  const isSuperUser = currentUser?.roles?.includes('super_user_universal') || currentUser?.roles?.includes('super_admin') || currentUser?.primaryRole === 'super_user_universal' || currentUser?.primaryRole === 'super_admin' || user?.email === 'aurainstitutosermelhor@gmail.com';
 
   const handleStartImpersonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
