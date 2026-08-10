@@ -10,12 +10,14 @@ import {
   Activity as ActivityIcon, TrendingUp, TrendingDown, Wifi,
   WifiOff, AlertTriangle, CheckCircle2, Clock, ShieldCheck,
   Users2, Zap, BarChart2, Database, Globe, Lock, Eye,
-  Layers, RefreshCw, ArrowUpRight, Search,
+  Layers, RefreshCw, ArrowUpRight, Search, Download, AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useIAM } from '../contexts/IAMContext';
 import { useInactivityLogout } from '../hooks/useInactivityLogout';
 import { getAdminSessionTimeoutMs } from '../services/SecureCredentialsService';
+import { dataGovernanceService } from '../services/dataGovernanceService';
+import type { OperationMode } from '../services/dataGovernanceService';
 import type { InstitutionalRole } from '../types/iam';
 
 // ---- Helpers ----
@@ -238,6 +240,46 @@ export function AdminSupremeDashboard() {
   const [delegateUserId, setDelegateUserId] = useState('');
   const [delegateRoleName, setDelegateRoleName] = useState<InstitutionalRole>('manager');
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+
+  // ── Painel de Governança de Dados Reais ──
+  const [govStatus, setGovStatus] = useState(() => dataGovernanceService.getStatus());
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [purgeConfirmText, setPurgeConfirmText] = useState('');
+  const [govLoading, setGovLoading] = useState(false);
+
+  useEffect(() => {
+    const unsub = dataGovernanceService.subscribe(() => {
+      setGovStatus(dataGovernanceService.getStatus());
+    });
+    return unsub;
+  }, []);
+
+  const handlePurgeDemo = async () => {
+    if (purgeConfirmText !== 'CONFIRMAR') return;
+    setGovLoading(true);
+    await dataGovernanceService.purgeDemo();
+    setGovLoading(false);
+    setShowPurgeConfirm(false);
+    setPurgeConfirmText('');
+    setNotificationMsg('✅ Dados fictícios removidos. Plataforma em modo Produção Real.');
+    setTimeout(() => setNotificationMsg(null), 4000);
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGovLoading(true);
+    dataGovernanceService.importBackup(file).then(() => {
+      setGovLoading(false);
+      setNotificationMsg('✅ Backup importado com sucesso.');
+      setTimeout(() => setNotificationMsg(null), 4000);
+    }).catch(() => {
+      setGovLoading(false);
+      setNotificationMsg('❌ Erro ao importar backup. Verifique o arquivo.');
+      setTimeout(() => setNotificationMsg(null), 4000);
+    });
+    e.target.value = '';
+  };
 
   const { users, addRole, startImpersonation } = useIAM();
   const isSuperUser = currentUser?.roles?.includes('super_user_universal') || currentUser?.roles?.includes('super_admin') || currentUser?.primaryRole === 'super_user_universal' || currentUser?.primaryRole === 'super_admin' || user?.email === 'aurainstitutosermelhor@gmail.com';
@@ -869,6 +911,142 @@ export function AdminSupremeDashboard() {
             )}
           </div>
         </motion.div>
+
+        {/* ── Painel de Governança de Dados Reais ─────────────────────── */}
+        {isSuperUser && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="rounded-2xl p-6 mt-6"
+            style={{
+              background: govStatus.mode === 'PRODUCTION'
+                ? 'rgba(16,185,129,0.05)'
+                : 'rgba(245,158,11,0.05)',
+              border: govStatus.mode === 'PRODUCTION'
+                ? '1px solid rgba(16,185,129,0.2)'
+                : '1px solid rgba(245,158,11,0.2)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Database className="w-4 h-4 text-amber-400" />
+                Governança de Dados — Transição para Produção Real
+              </h2>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                govStatus.mode === 'PRODUCTION'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  govStatus.mode === 'PRODUCTION' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                }`} />
+                {govStatus.mode === 'PRODUCTION' ? 'Produção Real' : 'Modo Demonstração'}
+              </span>
+            </div>
+
+            {/* Métricas Atuais */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              {[
+                { label: 'Beneficiários', value: govStatus.patients },
+                { label: 'Profissionais', value: govStatus.professionals },
+                { label: 'Agendamentos', value: govStatus.appointments },
+                { label: 'Programas', value: govStatus.programs },
+              ].map(item => (
+                <div key={item.label} className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="text-2xl font-black text-white">{item.value}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{item.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Ações de Governança */}
+            <div className="flex flex-wrap gap-3">
+              {/* Export Backup */}
+              <button
+                onClick={() => dataGovernanceService.exportBackup()}
+                disabled={govLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:text-white transition-all"
+                style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Exportar Backup JSON
+              </button>
+
+              {/* Import Backup */}
+              <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer"
+                style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)' }}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Importar Backup
+                <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
+              </label>
+
+              {/* Purga de Dados Demo */}
+              {govStatus.mode !== 'PRODUCTION' && (
+                <button
+                  onClick={() => setShowPurgeConfirm(true)}
+                  disabled={govLoading}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-red-300 hover:text-red-200 transition-all"
+                  style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Purgar Dados Fictícios & Ativar Produção Real
+                </button>
+              )}
+
+              {/* Voltar para Demo */}
+              {govStatus.mode === 'PRODUCTION' && (
+                <button
+                  onClick={() => { dataGovernanceService.setMode('DEMO'); setNotificationMsg('Modo Demonstração reativado.'); setTimeout(() => setNotificationMsg(null), 3000); }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-amber-300 hover:text-amber-200 transition-all"
+                  style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Reativar Modo Demo
+                </button>
+              )}
+            </div>
+
+            {/* Modal de Confirmação de Purga */}
+            {showPurgeConfirm && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}>
+                <div className="w-full max-w-md rounded-2xl p-6" style={{ background: '#0f172a', border: '1px solid rgba(239,68,68,0.4)' }}>
+                  <h3 className="text-lg font-black text-red-400 mb-2">⚠️ Ação Irreversível</h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    Esta ação irá <strong className="text-red-300">remover permanentemente</strong> todos os dados fictícios
+                    (beneficiários, profissionais e agendamentos de demonstração).
+                    Programas sociais serão preservados.
+                  </p>
+                  <p className="text-xs text-slate-500 mb-2">Digite <span className="font-mono text-red-300">CONFIRMAR</span> para prosseguir:</p>
+                  <input
+                    type="text"
+                    value={purgeConfirmText}
+                    onChange={e => setPurgeConfirmText(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl text-sm mb-4 font-mono"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#f8fafc' }}
+                    placeholder="CONFIRMAR"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowPurgeConfirm(false); setPurgeConfirmText(''); }}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)' }}
+                    >Cancelar</button>
+                    <button
+                      onClick={handlePurgeDemo}
+                      disabled={purgeConfirmText !== 'CONFIRMAR' || govLoading}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-40"
+                      style={{ background: purgeConfirmText === 'CONFIRMAR' ? '#dc2626' : '#7f1d1d' }}
+                    >
+                      {govLoading ? 'Processando...' : 'Confirmar Purga'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Footer */}
         <div className="pb-6 flex items-center justify-between text-[10px] text-slate-600 flex-wrap gap-2">
