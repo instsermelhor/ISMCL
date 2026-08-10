@@ -12,8 +12,8 @@ import { PrismaService } from '../../../prisma/prisma.service';
 
 const mockUser = {
   id: 'user-uuid-001',
-  email: 'ribeiro.rikardo@gmail.com',
-  name: 'Rikardo Ribeiro',
+  email: 'aurainstitutosermelhor@gmail.com',
+  name: 'Super Administrador Aura',
   passwordHash: '$2b$10$hashedpassword',
   role: 'SUPER_USER_UNIVERSAL',
   status: 'ACTIVE',
@@ -98,7 +98,7 @@ describe('AuthenticationService — P107/P128/P132', () => {
       mockSession.createSession.mockResolvedValue({ sessionId: 'sess-001' });
 
       const result = await service.login(
-        { email: 'ribeiro.rikardo@gmail.com', password: 'Aura@2025!' },
+        { email: 'aurainstitutosermelhor@gmail.com', password: 'Aura@2026!FirstAccess' },
         '127.0.0.1',
         'Mozilla/5.0',
       );
@@ -106,7 +106,7 @@ describe('AuthenticationService — P107/P128/P132', () => {
       expect(result.mfaRequired).toBe(false);
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
-      expect(result.user.email).toBe('ribeiro.rikardo@gmail.com');
+      expect(result.user.email).toBe('aurainstitutosermelhor@gmail.com');
       expect(result.user.primaryRole).toBe('super_user_universal');
       expect(result.user.initials).toBe('RR');
     });
