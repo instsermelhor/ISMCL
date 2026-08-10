@@ -22,6 +22,7 @@ import {
 } from '../data/satai-mock';
 import { useAdaptiveRegistration } from './AdaptiveRegistrationContext';
 import { useBPMS } from './BPMSContext';
+import { patientsService } from '../services/patientsService';
 
 // ============================================================
 // Context Interface
@@ -335,6 +336,30 @@ export const SATAIProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setDossiers(prev => [newDossier, ...prev]);
+
+    // Cadastro automático de Beneficiário Real na fila de Prontuários (/patients)
+    try {
+      const vulnLevelMap: Record<string, 'baixa' | 'media' | 'alta' | 'critica'> = {
+        low: 'baixa',
+        medium: 'media',
+        high: 'alta',
+        critical: 'critica',
+      };
+      patientsService.create({
+        name,
+        phone: (areSession.answers['phone'] as string) || undefined,
+        email: (areSession.answers['email'] as string) || undefined,
+        cpf: (areSession.answers['cpf'] as string) || undefined,
+        status: 'em_triagem',
+        vulnerabilityLevel: vulnLevelMap[priority] || 'media',
+        category: protocol?.name || 'Acolhimento Geral',
+        intakeSource: 'SATAI',
+        notes: `Dossiê ${newDossier.id}: ${aiResult.summary}`,
+      });
+    } catch {
+      /* fallback */
+    }
+
     setActiveSession(prev => (prev ? { ...prev, status: 'completed', currentStep: 8 } : null));
     setIsSubmitting(false);
 
