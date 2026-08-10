@@ -56,10 +56,13 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
     );
   }
 
+  // mustChangePassword = false quando a senha foi configurada explicitamente via .env
+  // (senha já personalizada pelo administrador da instância)
+  const hasCustomPass = !!envPass && envPass.length > 0;
   return {
-    email: envEmail ?? 'ribeiro.rikardo@gmail.com',
+    email: envEmail ?? 'aurainstitutosermelhor@gmail.com',
     initialPass: envPass ?? '',
-    mustChangePassword: true,
+    mustChangePassword: !hasCustomPass, // true apenas se senha ainda não foi configurada
   };
 }
 
