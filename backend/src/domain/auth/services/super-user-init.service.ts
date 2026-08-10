@@ -23,7 +23,7 @@ export const SYSTEM_ROLES = [
  * Responsável por:
  * 1. Inicializar as roles do sistema no banco.
  * 2. Provisionar/garantir a existência da conta do Super Usuário Universal:
- *    - E-mail: ribeiro.rikardo@gmail.com
+ *    - E-mail: aurainstitutosermelhor@gmail.com
  *    - Perfil: SUPER_USER_UNIVERSAL
  *    - Nível: ROOT / PLATFORM_OWNER
  *    - Escopo: GLOBAL
@@ -68,7 +68,7 @@ export class SuperUserInitService implements OnModuleInit {
   }
 
   private async ensureSuperUser(): Promise<void> {
-    const superUserEmail = 'ribeiro.rikardo@gmail.com';
+    const superUserEmail = 'aurainstitutosermelhor@gmail.com';
 
     // Busca hash pronto da variável de ambiente ou senha limpa do ambiente para gerar hash
     const envHash = this.config.get<string>('SUPER_USER_INITIAL_PASSWORD_HASH');
@@ -80,10 +80,9 @@ export class SuperUserInitService implements OnModuleInit {
       passwordHashToUse = await hashPassword(envPassword);
     }
 
-    // Se nenhuma senha foi fornecida via env, usa um hash seguro pré-computado padrão para inicialização segura em dev
+    // Se nenhuma senha foi fornecida via env, usa o padrão provisório de primeiro acesso (troca obrigatória)
     if (!passwordHashToUse) {
-      // Hash seguro pré-gerado para "Aura@SuperUser2026!GlobalRoot" (apenas para fallback de ambiente sem env)
-      passwordHashToUse = await hashPassword('Aura@SuperUser2026!GlobalRoot');
+      passwordHashToUse = await hashPassword('Aura@2026!FirstAccess');
     }
 
     const existingUser = await this.prisma.user.findUnique({
