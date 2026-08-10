@@ -51,6 +51,7 @@ const navigation = [
   { name: 'Prontuários', href: '/records', icon: FileText },
   { name: 'Mensagens', href: '/messages', icon: MessageCircle },
   { name: 'Financeiro', href: '/financial', icon: DollarSign },
+  { name: 'Programas Sociais', href: '/programas', icon: Heart },
 ];
 
 const adminNavigation = [
