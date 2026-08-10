@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Video, MapPin, Plus, Filter, Users, Calendar as CalendarIcon, Clock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSecurity } from '../contexts/SecurityContext';
+import { appointmentsService } from '../services/appointmentsService';
+import { patientsService } from '../services/patientsService';
+import { professionalsService } from '../services/professionalsService';
 
 // =========================================================================
 // MÓDULO 03: AGENDA INTELIGENTE E CENTRAL DE AGENDAMENTOS
 // =========================================================================
-
-
 
 const MOCK_WAITLIST = [
   { id: 1, name: 'Beatriz Almeida', specialty: 'Psicologia', score: 98, waitTime: '15 dias', urgency: 'URGENT' },
@@ -27,29 +28,16 @@ export function Calendar() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // --- CONTROLE DE AGENDAMENTOS INTEGRADOS ---
-  const [appointments, setAppointments] = useState<any[]>(() => {
-    const saved = localStorage.getItem('appointments_list');
-    if (saved) return JSON.parse(saved);
+  const [appointments, setAppointments] = useState<any[]>(() => appointmentsService.getAll());
+  const [patients, setPatients] = useState<any[]>(() => patientsService.getAll());
+  const [professionals, setProfessionals] = useState<any[]>(() => professionalsService.getAll());
 
-    const initial = [
-      { id: '1', time: '09:00', date: '2026-06-28', patientId: '1', patientName: 'Ana Silva Santos', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'completed' },
-      { id: '2', time: '10:00', date: '2026-06-28', patientId: '2', patientName: 'Marcos Santos Oliveira', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'presencial', duration: '50 min', status: 'completed', room: 'Consultório 1' },
-      { id: '3', time: '14:00', date: '2026-06-28', patientId: '3', patientName: 'Júlia Costa', professionalId: '1', professionalName: 'Dra. Elena Silva', type: 'online', duration: '50 min', status: 'upcoming' },
-    ];
-    localStorage.setItem('appointments_list', JSON.stringify(initial));
-    return initial;
-  });
-
-  // Lista de beneficiários e profissionais para o formulário
-  const [patients] = useState<any[]>(() => {
-    const saved = localStorage.getItem('patients_list');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [professionals] = useState<any[]>(() => {
-    const saved = localStorage.getItem('professionals_list');
-    return saved ? JSON.parse(saved) : [];
-  });
+  useEffect(() => {
+    const unsubApt = appointmentsService.subscribe(() => setAppointments(appointmentsService.getAll()));
+    const unsubPat = patientsService.subscribe(() => setPatients(patientsService.getAll()));
+    const unsubProf = professionalsService.subscribe(() => setProfessionals(professionalsService.getAll()));
+    return () => { unsubApt(); unsubPat(); unsubProf(); };
+  }, []);
 
   // Formulário de Novo Agendamento
   const [formPatientId, setFormPatientId] = useState('');
@@ -132,31 +120,27 @@ export function Calendar() {
     const patientObj = patients.find((p: any) => String(p.id) === String(formPatientId));
     const profObj = professionals.find((p: any) => String(p.id) === String(formProfId));
 
-    const newAppt = {
-      id: String(Date.now()),
-      time: formTime,
-      date: formDate,
+    // Usa appointmentsService para persistir o agendamento
+    const created = appointmentsService.create({
       patientId: formPatientId,
       patientName: patientObj ? patientObj.name : 'Beneficiário',
       professionalId: formProfId,
       professionalName: profObj ? profObj.name : 'Profissional',
-      type: formType,
-      duration: '50 min',
-      status: 'upcoming',
-      room: formType === 'presencial' ? 'Consultório 1' : undefined
-    };
-
-    const updated = [...appointments, newAppt];
-    setAppointments(updated);
-    localStorage.setItem('appointments_list', JSON.stringify(updated));
+      date: formDate,
+      time: formTime,
+      durationMinutes: 50,
+      type: formType === 'online' ? 'Teleconsulta' : 'Presencial',
+      status: 'agendado',
+      channelType: formType === 'online' ? 'GOOGLE_MEET' : 'IN_PERSON',
+    });
 
     // Log de Auditoria MCSI
     logAction({
       userId: user?.email ?? 'sistema',
       userName: user?.name ?? 'Coordenador',
       action: 'EDIT',
-      targetCode: `APPT-${newAppt.id}`,
-      description: `[Agenda] Criou novo agendamento para beneficiário: ${newAppt.patientName} com ${newAppt.professionalName}`,
+      targetCode: `APPT-${created.id}`,
+      description: `[Agenda] Criou novo agendamento para beneficiário: ${created.patientName} com ${created.professionalName}`,
       ipAddress: '—',
       device: navigator.userAgent.slice(0, 80),
     });
