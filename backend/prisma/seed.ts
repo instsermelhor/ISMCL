@@ -42,8 +42,8 @@ async function main() {
   console.log('✅ Roles institucionais carregadas');
 
   // 2. Super Usuário
-  const superUserEmail = 'ribeiro.rikardo@gmail.com';
-  const superUserPasswordHash = await hashPassword('Aura@2025!');
+  const superUserEmail = 'aurainstitutosermelhor@gmail.com';
+  const superUserPasswordHash = await hashPassword('Aura@2026!FirstAccess');
 
   const superUser = await prisma.user.upsert({
     where: { email: superUserEmail },
@@ -55,7 +55,7 @@ async function main() {
     },
     create: {
       email: superUserEmail,
-      name: 'Rikardo Ribeiro',
+      name: 'Super Administrador Aura',
       passwordHash: superUserPasswordHash,
       role: 'SUPER_USER_UNIVERSAL',
       scope: 'GLOBAL',
