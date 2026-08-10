@@ -65,13 +65,12 @@ export function getInitialSuperAdminConfig(): SuperAdminConfig {
     );
   }
 
-  // mustChangePassword = false quando a senha foi configurada explicitamente via .env
-  // (senha já personalizada pelo administrador da instância)
-  const hasCustomPass = !!envPass && envPass.length > 0;
+  // Por padrão no primeiro acesso, a troca de senha provisória é OBRIGATÓRIA (mustChangePassword: true).
+  // Ela só se torna false após a execução bem-sucedida de saveSuperAdminPasswordChange.
   return {
     email: envEmail ?? 'aurainstitutosermelhor@gmail.com',
-    initialPass: envPass ?? '',
-    mustChangePassword: !hasCustomPass, // true apenas se senha ainda não foi configurada
+    initialPass: envPass ?? 'Aura@2026!FirstAccess',
+    mustChangePassword: true, // Força troca de senha no primeiro acesso
   };
 }
 
