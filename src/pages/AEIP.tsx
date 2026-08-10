@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import {
   Network, Cpu, Globe, Radio, Webhook, RefreshCw, Activity, Layers,
   Plus, CheckCircle2, AlertTriangle, ShieldCheck, Zap, Lock, Terminal,
-  Server, ArrowRight, Play, Database, Key, HardDrive
+  Server, ArrowRight, Play, Database, Key, HardDrive, Settings, Sliders,
+  MessageSquare, ExternalLink, Shield
 } from 'lucide-react';
 import { cn } from '../utils';
 import { useAEIP } from '../contexts/AEIPContext';
-import type { IntegrationProtocol, APIStatus, ConnectorCategory, WebhookStatus, ManagedAPI, WebhookEndpoint } from '../types/aeip';
+import type { IntegrationProtocol, APIStatus, ConnectorCategory, WebhookStatus, ManagedAPI, WebhookEndpoint, Connector } from '../types/aeip';
 
 const PROTOCOL_CONFIG: Record<IntegrationProtocol, { label: string; color: string; bg: string }> = {
   REST: { label: 'REST OpenAPI', color: 'text-emerald-400', bg: 'bg-emerald-900/30' },
@@ -31,15 +33,20 @@ const CATEGORY_CONFIG: Record<ConnectorCategory, { label: string; color: string 
 };
 
 export function AEIP() {
+  const navigate = useNavigate();
   const {
     apis, eventMessages, dlqMessages, connectors, webhooks, syncJobs, metrics, auditLog,
-    publishAPI, publishEvent, registerWebhook, installConnector, triggerSyncJob, replayDLQMessage
+    publishAPI, publishEvent, registerWebhook, installConnector, updateConnectorConfig, triggerSyncJob, replayDLQMessage
   } = useAEIP();
 
   const [activeTab, setActiveTab] = useState<'hub' | 'api' | 'eventbus' | 'connectors' | 'webhooks' | 'sync' | 'monitoring' | 'audit'>('hub');
   const [showApiModal, setShowApiModal] = useState(false);
   const [showConnectorModal, setShowConnectorModal] = useState(false);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [selectedConnectorForConfig, setSelectedConnectorForConfig] = useState<Connector | null>(null);
+  const [configForm, setConfigForm] = useState<Record<string, string>>({});
+  const [newParamKey, setNewParamKey] = useState('');
+  const [newParamVal, setNewParamVal] = useState('');
 
   // Form API
   const [apiForm, setApiForm] = useState({
@@ -272,22 +279,93 @@ export function AEIP() {
         {/* TAB 4: CONECTORES INSTITUCIONAIS */}
         {activeTab === 'connectors' && (
           <div className="space-y-4">
+            {/* Banner de Comunicação & Omnichannel Gateway */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/40 via-cyan-900/30 to-[#121624] border border-purple-500/30 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">ACTG — Aura Communication & Teleattendance Gateway</h3>
+                  <p className="text-xs text-slate-300">
+                    Gerencie provedores de WhatsApp Business Cloud API, Google Meet, Microsoft Teams e canais omnichannel de atendimento.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/omnichannel-admin')}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all shadow-md"
+              >
+                Painel Canais ACTG <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {connectors.map(con => {
                 const cat = CATEGORY_CONFIG[con.category];
                 return (
-                  <div key={con.id} className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-cyan-400">{con.code}</span>
-                      <span className="px-2 py-0.5 rounded text-xs bg-emerald-900/30 text-emerald-400 border border-emerald-500/30">Saudável ({con.version})</span>
+                  <div key={con.id} className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-cyan-400">{con.code}</span>
+                        <span className="px-2 py-0.5 rounded text-xs bg-emerald-900/30 text-emerald-400 border border-emerald-500/30 font-semibold">
+                          Saudável ({con.version})
+                        </span>
+                      </div>
+
+                      <div>
+                        <div className="text-sm font-bold text-white">{con.name}</div>
+                        <div className={cn('text-xs font-medium mt-0.5', cat.color)}>{cat.label}</div>
+                      </div>
+
+                      <p className="text-xs text-slate-300">{con.description}</p>
+
+                      {/* Lista de Comandos suportados */}
+                      {con.commands && con.commands.length > 0 && (
+                        <div className="space-y-1.5 pt-2 border-t border-white/5">
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <Terminal className="w-3 h-3 text-cyan-400" /> Comandos de Integração API
+                          </span>
+                          <div className="space-y-1">
+                            {con.commands.map((cmd, idx) => (
+                              <div key={idx} className="px-2.5 py-1 rounded-lg bg-black/40 text-[11px] font-mono text-cyan-300 border border-white/5">
+                                {cmd}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Parâmetros e Credenciais Ativas */}
+                      {con.configParams && (
+                        <div className="space-y-1.5 pt-2 border-t border-white/5">
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <Key className="w-3 h-3 text-amber-400" /> Parâmetros de Integração ({Object.keys(con.configParams).length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(con.configParams).map(([key, val]) => (
+                              <span key={key} className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20" title={`${key}: ${val}`}>
+                                {key}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-white">{con.name}</div>
-                      <div className={cn('text-xs font-medium mt-0.5', cat.color)}>{cat.label}</div>
-                    </div>
-                    <p className="text-xs text-slate-300">{con.description}</p>
-                    <div className="text-xs text-slate-400 pt-2 border-t border-white/10">
-                      Provedor: {con.provider} | Integrações Ativas: {con.activeIntegrationsCount}
+
+                    <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 text-xs text-slate-400">
+                      <span className="truncate">Provedor: {con.provider}</span>
+                      <button
+                        onClick={() => {
+                          setSelectedConnectorForConfig(con);
+                          setConfigForm(con.configParams ?? {});
+                          setNewParamKey('');
+                          setNewParamVal('');
+                        }}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all"
+                      >
+                        <Settings className="w-3.5 h-3.5" /> Credenciais & Comandos
+                      </button>
                     </div>
                   </div>
                 );
@@ -440,6 +518,120 @@ export function AEIP() {
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setShowApiModal(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold transition-colors">Cancelar</button>
                   <button type="submit" className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition-colors">Publicar API</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Modal de Configuração de Credenciais do Conector */}
+        {selectedConnectorForConfig && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="bg-[#121624] border border-cyan-500/30 rounded-3xl p-6 max-w-xl w-full space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-cyan-400" />
+                  <div>
+                    <h3 className="text-base font-bold text-white">{selectedConnectorForConfig.name}</h3>
+                    <p className="text-xs text-slate-400 font-mono">{selectedConnectorForConfig.code} · {selectedConnectorForConfig.provider}</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-xs bg-cyan-900/40 text-cyan-300 border border-cyan-500/30 font-mono">
+                  {selectedConnectorForConfig.version}
+                </span>
+              </div>
+
+              {/* Comandos do Conector */}
+              {selectedConnectorForConfig.commands && selectedConnectorForConfig.commands.length > 0 && (
+                <div className="space-y-2 p-3.5 rounded-2xl bg-black/40 border border-white/5">
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5 text-cyan-400" /> Comandos de Integração Registrados
+                  </h4>
+                  <div className="space-y-1">
+                    {selectedConnectorForConfig.commands.map((cmd, idx) => (
+                      <div key={idx} className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/20 text-xs font-mono text-cyan-300">
+                        {cmd}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Formulário de Parâmetros / Credenciais */}
+              <form onSubmit={e => {
+                e.preventDefault();
+                const finalConfig = { ...configForm };
+                if (newParamKey.trim()) {
+                  finalConfig[newParamKey.trim()] = newParamVal.trim();
+                }
+                updateConnectorConfig(selectedConnectorForConfig.id, finalConfig);
+                setSelectedConnectorForConfig(null);
+              }} className="space-y-3 text-xs">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-amber-400" /> Parâmetros de Autenticação & Vault
+                </h4>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {Object.entries(configForm).map(([key, value]) => (
+                    <div key={key} className="p-2.5 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                      <div className="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+                        <span>{key}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const copy = { ...configForm };
+                            delete copy[key];
+                            setConfigForm(copy);
+                          }}
+                          className="text-red-400 hover:text-red-300 text-[10px]"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={e => setConfigForm(prev => ({ ...prev, [key]: e.target.value }))}
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Adicionar Novo Parâmetro */}
+                <div className="p-3 rounded-2xl bg-white/5 border border-dashed border-white/15 space-y-2">
+                  <span className="text-[11px] font-semibold text-slate-400 block">+ Adicionar Novo Parâmetro / Chave Vault</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="CHAVE (ex: API_KEY)"
+                      value={newParamKey}
+                      onChange={e => setNewParamKey(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-cyan-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="VALOR"
+                      value={newParamVal}
+                      onChange={e => setNewParamVal(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-white font-mono text-xs outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConnectorForConfig(null)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Shield className="w-4 h-4" /> Salvar Credenciais
+                  </button>
                 </div>
               </form>
             </div>
