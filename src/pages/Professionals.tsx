@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
@@ -16,61 +16,11 @@ import {
   XCircle
 } from 'lucide-react';
 import { cn } from '../utils';
+import { professionalsService } from '../services/professionalsService';
 
 // =========================================================================
 // MÓDULO DE GESTÃO DE PROFISSIONAIS E VOLUNTÁRIOS
 // =========================================================================
-
-const MOCK_PROFESSIONALS = [
-  {
-    id: '1',
-    name: 'Dra. Elena Silva',
-    profession: 'Psicóloga',
-    specialty: 'Psicologia Clínica',
-    council: 'CRP 06/12345',
-    status: 'ACTIVE',
-    hoursDonated: 120,
-    activePatients: 5,
-    bondType: 'VOLUNTEER',
-    avatar: 'https://i.pravatar.cc/150?u=1'
-  },
-  {
-    id: '2',
-    name: 'Dr. Roberto Almeida',
-    profession: 'Psiquiatra',
-    specialty: 'Psiquiatria Geral',
-    council: 'CRM-SP 98765',
-    status: 'ACTIVE',
-    hoursDonated: 45,
-    activePatients: 8,
-    bondType: 'EMPLOYEE',
-    avatar: 'https://i.pravatar.cc/150?u=2'
-  },
-  {
-    id: '3',
-    name: 'Carla Mendes',
-    profession: 'Assistente Social',
-    specialty: 'Projetos Sociais',
-    council: 'CRESS 54321',
-    status: 'PENDING_APPROVAL',
-    hoursDonated: 0,
-    activePatients: 0,
-    bondType: 'VOLUNTEER',
-    avatar: 'https://i.pravatar.cc/150?u=3'
-  },
-  {
-    id: '4',
-    name: 'Márcio Souza',
-    profession: 'Advogado',
-    specialty: 'Direito da Família',
-    council: 'OAB-SP 112233',
-    status: 'INACTIVE',
-    hoursDonated: 200,
-    activePatients: 0,
-    bondType: 'PARTNER',
-    avatar: 'https://i.pravatar.cc/150?u=4'
-  }
-];
 
 interface CreateProfessionalModalProps {
   isOpen: boolean;
@@ -83,6 +33,7 @@ function CreateProfessionalModal({ isOpen, onClose, onCreate }: CreateProfession
   const [profession, setProfession] = useState('Psicólogo');
   const [specialty, setSpecialty] = useState('');
   const [council, setCouncil] = useState('');
+  const [email, setEmail] = useState('');
   const [bondType, setBondType] = useState<'VOLUNTEER' | 'EMPLOYEE' | 'PARTNER'>('VOLUNTEER');
 
   if (!isOpen) return null;
@@ -91,24 +42,24 @@ function CreateProfessionalModal({ isOpen, onClose, onCreate }: CreateProfession
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newProf = {
-      id: String(Date.now()),
+    const created = professionalsService.create({
       name,
       profession,
       specialty: specialty || 'Geral',
-      council: council || 'N/A',
-      status: 'ACTIVE',
-      hoursDonated: 0,
-      activePatients: 0,
+      councilNumber: council || 'N/A',
+      councilState: 'SP',
+      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@institutosermelhor.org`,
+      status: 'ativo',
       bondType,
-      avatar: `https://i.pravatar.cc/150?u=${Math.floor(Math.random() * 1000)}`
-    };
+      availabilityHours: 10,
+    });
 
-    onCreate(newProf);
+    onCreate(created);
     onClose();
     setName('');
     setSpecialty('');
     setCouncil('');
+    setEmail('');
     setBondType('VOLUNTEER');
   };
 
@@ -118,86 +69,110 @@ function CreateProfessionalModal({ isOpen, onClose, onCreate }: CreateProfession
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">Novo Profissional</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
-            <XCircle className="w-6 h-6" />
+            <XCircle className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Nome Completo</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Nome Completo *
+            </label>
             <input
               type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Nome do profissional"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
               required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Dra. Juliana Costa"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Profissão</label>
-            <select
-              value={profession}
-              onChange={e => setProfession(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all bg-white"
-            >
-              <option value="Psicólogo">Psicólogo(a)</option>
-              <option value="Psiquiatra">Psiquiatra</option>
-              <option value="Assistente Social">Assistente Social</option>
-              <option value="Advogado">Advogado(a)</option>
-              <option value="Médico">Médico(a)</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Profissão
+              </label>
+              <select
+                value={profession}
+                onChange={(e) => setProfession(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="Psicólogo">Psicólogo(a)</option>
+                <option value="Psiquiatra">Psiquiatra</option>
+                <option value="Assistente Social">Assistente Social</option>
+                <option value="Advogado">Advogado(a)</option>
+                <option value="Educador">Educador(a)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Especialidade
+              </label>
+              <input
+                type="text"
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                placeholder="Ex: TCC, Trauma"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Especialidade</label>
-            <input
-              type="text"
-              value={specialty}
-              onChange={e => setSpecialty(e.target.value)}
-              placeholder="Ex: TCC, Infantil, Família"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Registro de Conselho (CRP/CRM/OAB)</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Conselho Profissional (CRP/CRM/CRESS/OAB)
+            </label>
             <input
               type="text"
               value={council}
-              onChange={e => setCouncil(e.target.value)}
-              placeholder="Ex: CRP 06/12345"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+              onChange={(e) => setCouncil(e.target.value)}
+              placeholder="Ex: CRP 06/123456"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Vínculo</label>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              E-mail Institucional
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Ex: juliana@institutosermelhor.org"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Vínculo Institucional
+            </label>
             <select
               value={bondType}
-              onChange={e => setBondType(e.target.value as any)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all bg-white"
+              onChange={(e) => setBondType(e.target.value as any)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               <option value="VOLUNTEER">Voluntário</option>
-              <option value="EMPLOYEE">Colaborador (CLT/PJ)</option>
+              <option value="EMPLOYEE">Contratado / CLT</option>
               <option value="PARTNER">Parceiro Institucional</option>
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-slate-100">
+          <div className="pt-3 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-teal-600 hover:bg-teal-700 text-white transition-colors"
+              className="px-5 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-500 rounded-xl transition-colors shadow-sm"
             >
-              Adicionar
+              Cadastrar Profissional
             </button>
           </div>
         </form>
@@ -210,16 +185,14 @@ export function Professionals() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [professionalsList, setProfessionalsList] = useState(() => {
-    const saved = localStorage.getItem('professionals_list');
-    return saved ? JSON.parse(saved) : MOCK_PROFESSIONALS;
-  });
+  const [professionalsList, setProfessionalsList] = useState(() => professionalsService.getAll());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  React.useEffect(() => {
-    if (!localStorage.getItem('professionals_list')) {
-      localStorage.setItem('professionals_list', JSON.stringify(MOCK_PROFESSIONALS));
-    }
+  useEffect(() => {
+    const unsub = professionalsService.subscribe(() => {
+      setProfessionalsList(professionalsService.getAll());
+    });
+    return unsub;
   }, []);
 
   const getProfessionIcon = (profession: string) => {
@@ -235,23 +208,23 @@ export function Professionals() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
       case 'ACTIVE':
+      case 'ATIVO':
         return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Ativo</span>;
       case 'PENDING_APPROVAL':
+      case 'PENDENTE':
         return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pendente</span>;
-      case 'INACTIVE':
-      case 'SUSPENDED':
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"><span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Inativo</span>;
       default:
-        return null;
+        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"><span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Inativo</span>;
     }
   };
 
   const filteredProfessionals = professionalsList.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           p.profession.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
+    const s = (p.status || '').toUpperCase();
+    const matchesStatus = statusFilter === 'ALL' || s === statusFilter || (statusFilter === 'ACTIVE' && s === 'ATIVO');
     return matchesSearch && matchesStatus;
   });
 
