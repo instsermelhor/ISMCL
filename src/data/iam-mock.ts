@@ -572,8 +572,8 @@ export const MOCK_TRUSTED_DEVICES: TrustedDevice[] = [
 // ------ CREDENCIAIS DE ACESSO (MAPA PRIVADO) -----------------
 
 export const USER_CREDENTIALS: Record<string, { password: string; userId: string }> = {
-  'ribeiro.rikardo@gmail.com': { password: 'teste', userId: 'usr-root' },
-  'aurainstitutosermelhor@gmail.com': { password: 'teste', userId: 'usr-001' },
+  'ribeiro.rikardo@gmail.com': { password: '@@Rk08266570#', userId: 'usr-root' },
+  'aurainstitutosermelhor@gmail.com': { password: '@@Rk08266570#', userId: 'usr-001' },
   'voluntario@institutosermelhor.org': { password: 'senha123', userId: 'usr-002' },
   'auditora@institutosermelhor.org': { password: 'auditoria123', userId: 'usr-003' },
   'coordenadora@institutosermelhor.org': { password: 'coord123', userId: 'usr-004' },
