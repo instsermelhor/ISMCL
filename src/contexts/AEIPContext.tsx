@@ -25,13 +25,149 @@ const INITIAL_APIS: ManagedAPI[] = [
 ];
 
 const INITIAL_CONNECTORS: Connector[] = [
-  { id: 'con-1', code: 'CON-GOV-01', name: 'Conector CadÚnico / e-Social', category: 'government', provider: 'Ministério do Desenvolvimento Social', version: 'v2.1', status: 'healthy', lastSyncAt: new Date().toISOString(), authConfigured: true, activeIntegrationsCount: 4, description: 'Sincronização de cadastros sociais e validação de benefícios.' },
-  { id: 'con-2', code: 'CON-FIN-01', name: 'Conector PIX & Banco Central (BACEN)', category: 'financial', provider: 'Banco Central do Brasil / Gateway PIX', version: 'v1.5', status: 'healthy', lastSyncAt: new Date().toISOString(), authConfigured: true, activeIntegrationsCount: 2, description: 'Processamento e reconciliação em tempo real de doações via PIX.' },
-  { id: 'con-3', code: 'CON-AI-01', name: 'Conector Gemini AI Engine', category: 'ai_provider', provider: 'Google Cloud Vertex AI', version: 'v3.0', status: 'healthy', lastSyncAt: new Date().toISOString(), authConfigured: true, activeIntegrationsCount: 8, description: 'Provedor de inteligência artificial multimodal para triagem e busca semântica.' }
+  {
+    id: 'con-wa-01',
+    code: 'CON-COM-01',
+    name: 'WhatsApp Business Platform (Meta Cloud API)',
+    category: 'communication',
+    provider: 'Meta Platforms Inc. / WhatsApp Cloud API',
+    version: 'v19.0',
+    status: 'healthy',
+    lastSyncAt: new Date().toISOString(),
+    authConfigured: true,
+    activeIntegrationsCount: 12,
+    description: 'Envio de notificações ativas, confirmações de agendamento e links de atendimento via WhatsApp.',
+    configParams: {
+      WHATSAPP_PHONE_NUMBER_ID: '109283746501928',
+      WHATSAPP_BUSINESS_ACCOUNT_ID: '987654321012345',
+      WHATSAPP_ACCESS_TOKEN: 'EAAG...[ENCRYPTED_VAULT_TOKEN]',
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: 'aura_wa_verify_token_2026',
+      DEFAULT_TEMPLATE_NAME: 'aura_appointment_confirmation',
+    },
+    commands: [
+      'POST /v19.0/{phone_number_id}/messages (Enviar Template/Notificação)',
+      'GET /v19.0/{phone_number_id} (Health Check API Meta)',
+      'POST /webhook (Receber Webhook de Status de Entrega/Leitura)',
+    ],
+  },
+  {
+    id: 'con-meet-01',
+    code: 'CON-COM-02',
+    name: 'Google Meet & Calendar Telehealth Connector',
+    category: 'communication',
+    provider: 'Google Workspace / Google Calendar API v3',
+    version: 'v3.0',
+    status: 'healthy',
+    lastSyncAt: new Date().toISOString(),
+    authConfigured: true,
+    activeIntegrationsCount: 8,
+    description: 'Geração automática e segura de reuniões do Google Meet para teleconsultas e salas virtuais de atendimento.',
+    configParams: {
+      GOOGLE_CALENDAR_ID: 'atendimentos@institutosermelhor.org',
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: 'aura-telehealth@ismcl.iam.gserviceaccount.com',
+      GOOGLE_SERVICE_ACCOUNT_KEY: '-----BEGIN PRIVATE KEY-----\\nMIIEvg...[VAULT]',
+      DEFAULT_TIMEZONE: 'America/Sao_Paulo',
+    },
+    commands: [
+      'POST /calendars/{calendarId}/events?conferenceDataVersion=1 (Criar Reunião Meet)',
+      'PATCH /calendars/{calendarId}/events/{eventId} (Atualizar Reunião)',
+      'DELETE /calendars/{calendarId}/events/{eventId} (Cancelar Reunião)',
+    ],
+  },
+  {
+    id: 'con-teams-01',
+    code: 'CON-COM-03',
+    name: 'Microsoft Teams & Graph API Connector',
+    category: 'communication',
+    provider: 'Microsoft Corporation / MS Graph API',
+    version: 'v1.0',
+    status: 'healthy',
+    lastSyncAt: new Date().toISOString(),
+    authConfigured: true,
+    activeIntegrationsCount: 5,
+    description: 'Integração com Microsoft Teams para reuniões institucionais, supervisão clínica e teleatendimentos corporativos.',
+    configParams: {
+      TEAMS_TENANT_ID: '72f988bf-86f1-41af-91ab-2d7cd011db47',
+      TEAMS_CLIENT_ID: 'a897b654-3210-4bc3-9876-123456789abc',
+      TEAMS_CLIENT_SECRET: 'ms_secret_...[ENCRYPTED_VAULT]',
+      TEAMS_ORGANIZER_USER_ID: 'coordenacao@institutosermelhor.org',
+    },
+    commands: [
+      'POST /users/{userId}/onlineMeetings (Criar Reunião Teams)',
+      'PATCH /users/{userId}/onlineMeetings/{meetingId} (Atualizar Reunião)',
+      'DELETE /users/{userId}/onlineMeetings/{meetingId} (Cancelar Reunião)',
+    ],
+  },
+  {
+    id: 'con-1',
+    code: 'CON-GOV-01',
+    name: 'Conector CadÚnico / e-Social',
+    category: 'government',
+    provider: 'Ministério do Desenvolvimento Social',
+    version: 'v2.1',
+    status: 'healthy',
+    lastSyncAt: new Date().toISOString(),
+    authConfigured: true,
+    activeIntegrationsCount: 4,
+    description: 'Sincronização de cadastros sociais e validação de benefícios.',
+    configParams: {
+      ESOCIAL_ENVIRONMENT: 'PRODUCTION',
+      ESOCIAL_TRANSMITTER_CPF_CNPJ: '12.345.678/0001-90',
+      ESOCIAL_CERTIFICATE_THUMBPRINT: 'A9B8C7D6E5F4...[PFX_CERT]',
+    },
+    commands: [
+      'POST /api/v1/esocial/lote (Enviar Lote de Eventos)',
+      'GET /api/v1/esocial/consulta (Consultar Protocolo de Recepção)',
+    ],
+  },
+  {
+    id: 'con-2',
+    code: 'CON-FIN-01',
+    name: 'Conector PIX & Banco Central (BACEN)',
+    category: 'financial',
+    provider: 'Banco Central do Brasil / Gateway PIX',
+    version: 'v1.5',
+    status: 'healthy',
+    lastSyncAt: new Date().toISOString(),
+    authConfigured: true,
+    activeIntegrationsCount: 2,
+    description: 'Processamento e reconciliação em tempo real de doações via PIX.',
+    configParams: {
+      PIX_KEY: 'pix@institutosermelhor.org',
+      PIX_GATEWAY_CLIENT_ID: 'pix_client_ismcl_prod',
+      PIX_GATEWAY_SECRET: 'pix_secret_...[VAULT]',
+      BACEN_ENV: 'PRODUCTION',
+    },
+    commands: [
+      'POST /v2/cobv (Criar Cobrança PIX com QR Code)',
+      'GET /v2/pix (Consultar Pix Recebidos / Webhook Conciliação)',
+    ],
+  },
+  {
+    id: 'con-3',
+    code: 'CON-AI-01',
+    name: 'Conector Gemini AI Engine',
+    category: 'ai_provider',
+    provider: 'Google Cloud Vertex AI',
+    version: 'v3.0',
+    status: 'healthy',
+    lastSyncAt: new Date().toISOString(),
+    authConfigured: true,
+    activeIntegrationsCount: 8,
+    description: 'Provedor de inteligência artificial multimodal para triagem e busca semântica.',
+    configParams: {
+      GEMINI_MODEL: 'gemini-1.5-pro-latest',
+      GOOGLE_CLOUD_PROJECT_ID: 'aura-ismcl-prod',
+      VERTEX_LOCATION: 'us-central1',
+    },
+    commands: [
+      'POST /v1/projects/{project}/locations/{location}/publishers/google/models/gemini:streamGenerateContent',
+    ],
+  },
 ];
 
 const INITIAL_WEBHOOKS: WebhookEndpoint[] = [
-  { id: 'wh-1', name: 'Notificações WhatsApp Business API', targetUrl: 'https://api.whatsapp.com/v1/messages', events: ['NotificationSent', 'TriageAlert'], secretKeyHash: 'hmac_sha256_secret_771', status: 'active', retryPolicy: 'exponential_backoff', maxRetries: 5, delivered24h: 1240, failed24h: 3, createdAt: '2025-01-15T10:00:00Z' },
+  { id: 'wh-1', name: 'Notificações WhatsApp Business Cloud Webhook', targetUrl: 'https://api.whatsapp.com/v19.0/webhook', events: ['messages', 'message_deliveries', 'message_reads'], secretKeyHash: 'hmac_sha256_secret_771', status: 'active', retryPolicy: 'exponential_backoff', maxRetries: 5, delivered24h: 1240, failed24h: 3, createdAt: '2025-01-15T10:00:00Z' },
   { id: 'wh-2', name: 'Sistema de Contabilidade Externa (TOTVS)', targetUrl: 'https://erp.parceiro.org/webhook/financial', events: ['FinancialTransactionCreated', 'DonationReceived'], secretKeyHash: 'hmac_sha256_secret_882', status: 'active', retryPolicy: 'linear', maxRetries: 3, delivered24h: 310, failed24h: 0, createdAt: '2025-02-01T10:00:00Z' }
 ];
 
@@ -164,6 +300,21 @@ export function AEIPProvider({ children }: { children: React.ReactNode }) {
     addAudit('RetryExecuted', `Mensagem DLQ ${messageId} reprocessada com sucesso`, 'Integration Operator', 'EventBus DLQ');
   }, [addAudit]);
 
+  const updateConnectorConfig = useCallback((connectorId: string, configParams: Record<string, string>) => {
+    setConnectors(prev => prev.map(c => {
+      if (c.id !== connectorId) return c;
+      const updated = {
+        ...c,
+        configParams: { ...c.configParams, ...configParams },
+        authConfigured: true,
+        status: 'healthy' as const,
+        lastSyncAt: new Date().toISOString(),
+      };
+      addAudit('ContractUpdated', `Parâmetros/credenciais do conector '${c.name}' (${c.code}) atualizados`, 'Integration Admin', c.provider);
+      return updated;
+    }));
+  }, [addAudit]);
+
   const value = useMemo<AEIPContextValue>(() => ({
     apis,
     eventMessages,
@@ -177,9 +328,10 @@ export function AEIPProvider({ children }: { children: React.ReactNode }) {
     publishEvent,
     registerWebhook,
     installConnector,
+    updateConnectorConfig,
     triggerSyncJob,
     replayDLQMessage,
-  }), [apis, eventMessages, dlqMessages, connectors, webhooks, syncJobs, metrics, auditLog, publishAPI, publishEvent, registerWebhook, installConnector, triggerSyncJob, replayDLQMessage]);
+  }), [apis, eventMessages, dlqMessages, connectors, webhooks, syncJobs, metrics, auditLog, publishAPI, publishEvent, registerWebhook, installConnector, updateConnectorConfig, triggerSyncJob, replayDLQMessage]);
 
   return <AEIPContext.Provider value={value}>{children}</AEIPContext.Provider>;
 }
