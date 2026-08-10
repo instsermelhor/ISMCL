@@ -68,6 +68,9 @@ import PrivacyCenter from './pages/PrivacyCenter';
 // Componente PWA & Offline-First Status — P13
 import OfflineBanner from './components/OfflineBanner';
 
+// Programas Sociais — Página Pública (Integração CGI)
+import PublicPrograms from './pages/PublicPrograms';
+
 // AEGRC — Governança, Riscos, Compliance e Gestão Estratégica
 import { AEGRC } from './pages/AEGRC';
 
@@ -198,6 +201,12 @@ export default function App() {
         <Route
           path="/privacy"
           element={<RouteErrorBoundary><PrivacyCenter /></RouteErrorBoundary>}
+        />
+
+        {/* Rota pública: Programas Sociais do Instituto */}
+        <Route
+          path="/programas"
+          element={<RouteErrorBoundary><PublicPrograms /></RouteErrorBoundary>}
         />
 
         {/* Rotas protegidas — cada rota isolada com RouteErrorBoundary (Prompt 181 Fix #4) */}
