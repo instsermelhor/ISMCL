@@ -1,17 +1,20 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Calendar, Users, Target, DollarSign,
   ChevronDown, ChevronUp, BarChart2, Tag, Clock, CheckCircle2,
   PauseCircle, AlertCircle, Download, X, Save, Kanban, List,
   Settings, Edit3, FileText, TrendingUp, Building2, Receipt,
   Printer, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle,
-  UserCheck, ChevronRight,
+  UserCheck, ChevronRight, Globe, Eye, EyeOff, ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../utils';
 import { projetos as defaultProjetos, type ProjetoSocial } from '../../data/cgi-mock';
 import { profissionais as profissionaisMock } from '../../data/cgi-mock';
 import { voluntarios as voluntariosMock } from '../../data/cgi-mock';
+import { programsService } from '../../services/programsService';
+import type { SocialProgram } from '../../services/programsService';
 
 // ─── Tipo Extendido ───────────────────────────────────────────
 interface Despesa {
@@ -26,6 +29,7 @@ interface ProjetoExtended extends ProjetoSocial {
   centroCusto?: string;
   despesas?: Despesa[];
   notas?: string;
+  isPublic?: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -385,6 +389,7 @@ function ProjectFormModal({ projeto, onClose, onSave }: ProjectFormModalProps) {
   const [nome, setNome] = useState(projeto?.nome ?? '');
   const [descricao, setDescricao] = useState(projeto?.descricao ?? '');
   const [status, setStatus] = useState<ProjetoSocial['status']>(projeto?.status ?? 'planejamento');
+  const [isPublic, setIsPublic] = useState<boolean>(projeto?.isPublic ?? true);
   const [centroCusto, setCentroCusto] = useState(projeto?.centroCusto ?? '');
   const [orcamento, setOrcamento] = useState(projeto?.orcamento?.toString() ?? '');
   const [captado, setCaptado] = useState(projeto?.captado?.toString() ?? '0');
@@ -415,6 +420,7 @@ function ProjectFormModal({ projeto, onClose, onSave }: ProjectFormModalProps) {
       orcamento: parseFloat(orcamento) || 0,
       captado: parseFloat(captado) || 0,
       status,
+      isPublic,
       beneficiariosAlvo: projeto?.beneficiariosAlvo ?? 0,
       beneficiariosAtivos: projeto?.beneficiariosAtivos ?? 0,
       equipe,
@@ -1139,35 +1145,129 @@ type ActiveModal =
   | null;
 
 export function CGIProjetos() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
 
-  // Estado persistente
+  // Estado persistente — inicializado a partir do programsService (fonte canônica)
   const [projetosList, setProjetosList] = useState<ProjetoExtended[]>(() => {
+    const fromService = programsService.getAll();
+    if (fromService.length > 0) {
+      // Converte SocialProgram → ProjetoExtended
+      return fromService.map((sp): ProjetoExtended => ({
+        id: sp.id,
+        nome: sp.title,
+        descricao: sp.description,
+        status: sp.status as ProjetoSocial['status'],
+        coordenador: sp.coordinator,
+        inicio: sp.startDate,
+        fim: sp.endDate,
+        orcamento: sp.budget,
+        captado: sp.raised,
+        beneficiariosAlvo: sp.targetBeneficiaries,
+        beneficiariosAtivos: sp.activeBeneficiaries,
+        equipe: sp.team,
+        tags: sp.tags,
+        progresso: sp.progress,
+        publicoAlvo: sp.targetAudience,
+        objetivos: sp.objectives,
+        fontes: sp.fundingSources,
+        resultados: sp.results,
+        centroCusto: sp.centroCusto,
+        notas: sp.notas,
+        isPublic: sp.isPublic,
+      }));
+    }
     const saved = localStorage.getItem('cgi_projetos');
     return saved ? JSON.parse(saved) : defaultProjetos;
   });
 
-  React.useEffect(() => {
-    if (!localStorage.getItem('cgi_projetos')) {
-      localStorage.setItem('cgi_projetos', JSON.stringify(defaultProjetos));
-    }
+  // Escuta alterações reativas do programsService (ex: edições vindas de outra aba)
+  useEffect(() => {
+    const unsub = programsService.subscribe(() => {
+      const fromService = programsService.getAll();
+      setProjetosList(fromService.map((sp): ProjetoExtended => ({
+        id: sp.id,
+        nome: sp.title,
+        descricao: sp.description,
+        status: sp.status as ProjetoSocial['status'],
+        coordenador: sp.coordinator,
+        inicio: sp.startDate,
+        fim: sp.endDate,
+        orcamento: sp.budget,
+        captado: sp.raised,
+        beneficiariosAlvo: sp.targetBeneficiaries,
+        beneficiariosAtivos: sp.activeBeneficiaries,
+        equipe: sp.team,
+        tags: sp.tags,
+        progresso: sp.progress,
+        publicoAlvo: sp.targetAudience,
+        objetivos: sp.objectives,
+        fontes: sp.fundingSources,
+        resultados: sp.results,
+        centroCusto: sp.centroCusto,
+        notas: sp.notas,
+        isPublic: sp.isPublic,
+      })));
+    });
+    return unsub;
   }, []);
+
+  /** Converte ProjetoExtended → SocialProgram e persiste via programsService */
+  function toSocialProgram(p: ProjetoExtended): Omit<SocialProgram, 'id' | 'createdAt' | 'updatedAt'> {
+    return {
+      title: p.nome,
+      description: p.descricao,
+      fullDescription: p.descricao,
+      category: (p.tags[0] ?? 'Outro') as SocialProgram['category'],
+      status: p.status as SocialProgram['status'],
+      isPublic: (p as any).isPublic ?? false,
+      targetAudience: p.publicoAlvo,
+      objectives: p.objetivos,
+      fundingSources: Array.isArray(p.fontes) ? p.fontes as string[] : [],
+      results: p.resultados,
+      coordinator: p.coordenador,
+      team: p.equipe,
+      tags: p.tags,
+      startDate: p.inicio,
+      endDate: p.fim,
+      budget: p.orcamento,
+      raised: p.captado,
+      targetBeneficiaries: p.beneficiariosAlvo,
+      activeBeneficiaries: p.beneficiariosAtivos,
+      progress: p.progresso,
+      centroCusto: p.centroCusto,
+      notas: p.notas,
+    };
+  }
 
   function persist(list: ProjetoExtended[]) {
     setProjetosList(list);
     localStorage.setItem('cgi_projetos', JSON.stringify(list));
   }
 
-  function handleSaveNewProject(data: ProjetoExtended) {
-    persist([...projetosList, data]);
+  async function handleSaveNewProject(data: ProjetoExtended) {
+    const created = await programsService.create(toSocialProgram(data));
+    const withId = { ...data, id: created.id };
+    persist([...projetosList, withId]);
   }
 
-  function handleUpdateProject(updated: ProjetoExtended) {
+  async function handleUpdateProject(updated: ProjetoExtended) {
+    await programsService.update(updated.id, toSocialProgram(updated));
     persist(projetosList.map(p => p.id === updated.id ? updated : p));
+  }
+
+  async function handleTogglePublic(id: string) {
+    const p = projetosList.find(proj => proj.id === id);
+    if (!p) return;
+    const currentPublic = (p as any).isPublic ?? false;
+    await programsService.update(id, { isPublic: !currentPublic });
+    persist(projetosList.map(proj =>
+      proj.id === id ? { ...proj, isPublic: !currentPublic } as any : proj
+    ));
   }
 
   const filtered = projetosList.filter(p => {
@@ -1263,6 +1363,13 @@ export function CGIProjetos() {
               <Kanban className="w-4 h-4" /> Kanban
             </button>
           </div>
+          {/* Atalho para a página pública */}
+          <button
+            onClick={() => navigate('/programas')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-teal-200 text-teal-700 text-sm font-medium rounded-xl hover:bg-teal-50 transition-colors shadow-sm"
+          >
+            <Globe className="w-4 h-4" /> Página Pública
+          </button>
           <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
             <Download className="w-4 h-4" /> Exportar
           </button>
@@ -1492,6 +1599,26 @@ export function CGIProjetos() {
                             onClick={e => { e.stopPropagation(); setActiveModal({ type: 'edit', projeto: p }); }}
                             className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
                             <Edit3 className="w-4 h-4" /> Editar
+                          </button>
+                          {/* Toggle Visibilidade Pública */}
+                          <button
+                            onClick={e => { e.stopPropagation(); handleTogglePublic(p.id); }}
+                            title={(p as any).isPublic ? 'Despublicar da página pública' : 'Publicar na página pública'}
+                            className={cn(
+                              'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors',
+                              (p as any).isPublic
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                            )}>
+                            {(p as any).isPublic
+                              ? <><Eye className="w-4 h-4" /> Público</>
+                              : <><EyeOff className="w-4 h-4" /> Privado</>
+                            }
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); navigate('/programas'); }}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-teal-200 text-teal-700 text-sm font-medium rounded-xl hover:bg-teal-50 transition-colors">
+                            <ExternalLink className="w-4 h-4" /> Ver no Site
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); setActiveModal({ type: 'accountability', projeto: p }); }}
