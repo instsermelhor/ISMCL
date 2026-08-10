@@ -1257,4 +1257,39 @@ model OfflineSyncLog {
   batch         OfflineSyncBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 }
 
+// =========================================================================
+// MÓDULO ASPS: AURA SOCIAL PROGRAMS SERVICE
+// Integração CGI-Gestão de Projetos ↔ Página Pública de Programas Sociais
+// =========================================================================
 
+model SocialProgram {
+  id                    String   @id @default(uuid())
+  title                 String
+  description           String
+  fullDescription       String?
+  category              String   @default("Outro")
+  status                String   @default("planejamento") // ativo | planejamento | concluido | suspenso
+  isPublic              Boolean  @default(false)
+  targetAudience        String?
+  objectives            Json?    // String[]
+  fundingSources        Json?    // String[]
+  results               String?
+  coordinator           String   @default("")
+  team                  Json     @default("[]") // String[]
+  tags                  Json     @default("[]") // String[]
+  bannerUrl             String?
+  startDate             String   @default("")
+  endDate               String   @default("")
+  budget                Float    @default(0)
+  raised                Float    @default(0)
+  targetBeneficiaries   Int      @default(0)
+  activeBeneficiaries   Int      @default(0)
+  progress              Int      @default(0)
+  centroCusto           String?
+  notas                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([status, isPublic])
+  @@index([createdAt])
+}
