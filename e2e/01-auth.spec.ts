@@ -9,8 +9,8 @@ import { test, expect } from '@playwright/test';
  * Referências: P1, P2, P11
  */
 
-const SUPER_USER_EMAIL = 'ribeiro.rikardo@gmail.com';
-const SUPER_USER_PASSWORD = 'Aura@2025!';
+const SUPER_USER_EMAIL = 'aurainstitutosermelhor@gmail.com';
+const SUPER_USER_PASSWORD = 'Aura@2026!FirstAccess';
 
 test.describe('Fluxo 01 — Autenticação IAM', () => {
   test.beforeEach(async ({ page }) => {
