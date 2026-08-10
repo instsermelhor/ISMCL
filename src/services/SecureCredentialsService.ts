@@ -33,10 +33,19 @@ const IS_DEV = ((import.meta as any).env as Record<string, any>)?.DEV === true;
  */
 export function getInitialSuperAdminConfig(): SuperAdminConfig {
   // 1. Tenta carregar override seguro armazenado localmente (após troca de senha)
+  // Valida que o email salvo bate com o atual do .env para evitar cache desatualizado
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored) as SuperAdminConfig;
+      const parsed = JSON.parse(stored) as SuperAdminConfig;
+      const currentEnvEmail = (((import.meta as any).env as Record<string, any>) || {}).VITE_AURA_SUPERADMIN_EMAIL as string | undefined;
+      // Só usa localStorage se o email armazenado coincidir com o do .env atual
+      if (!currentEnvEmail || parsed.email.toLowerCase() === currentEnvEmail.toLowerCase()) {
+        return parsed;
+      } else {
+        // Email divergente — limpa cache desatualizado
+        localStorage.removeItem(STORAGE_KEY);
+      }
     }
   } catch {
     // ignora erro de parse
