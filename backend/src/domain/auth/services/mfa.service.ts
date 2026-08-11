@@ -1,5 +1,6 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { randomBytes, createHmac } from 'crypto';
+import { Injectable, Logger, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { randomBytes, createHmac, createCipheriv, createDecipheriv, scryptSync } from 'crypto';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 export interface MfaSetupResponse {
   secret: string;
@@ -8,21 +9,159 @@ export interface MfaSetupResponse {
 }
 
 /**
- * MfaService — Serviço de Múltiplos Fatores de Autenticação (MFA / 2FA)
+ * MfaService — Serviço de Múltiplos Fatores de Autenticação (MFA / TOTP)
  *
  * Suporta:
  * - TOTP (Time-based One-Time Password — RFC 6238 / Google Authenticator)
- * - Recovery Codes (10 códigos de uso único de emergência)
- * - Validação com tolerância de janela (clock skew)
+ * - Cifragem AES-256-GCM em repouso do segredo TOTP (`mfaSecret`)
+ * - 10 Códigos de Recuperação de Emergência
+ * - Ativação, Desativação e Validação em 2 etapas
  *
- * Referências: P107 (AEIATP), P128 (AECS), P132 (AIFI Etapa 6)
+ * Referências: P107 (AEIATP), P128 (AECS), P132 (AIFI Etapa 6), REMEDIATION-AURA-001 (R2-02)
  */
 @Injectable()
 export class MfaService {
   private readonly logger = new Logger(MfaService.name);
 
+  constructor(private readonly prisma: PrismaService) {}
+
   /**
-   * Gera o segredo TOTP e 10 códigos de recuperação.
+   * Cifra o segredo TOTP com AES-256-GCM antes de persistir na tabela User.
+   */
+  encryptSecret(secret: string): string {
+    if (!secret) return '';
+    if (secret.startsWith('enc:gcm:v1:')) return secret;
+
+    const masterKey = this.getMasterKey();
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', masterKey, iv);
+    let encrypted = cipher.update(secret, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag().toString('hex');
+
+    return `enc:gcm:v1:${iv.toString('hex')}:${authTag}:${encrypted}`;
+  }
+
+  /**
+   * Descriptografa o segredo TOTP lido da tabela User (com suporte a fallback em texto plano).
+   */
+  decryptSecret(cipherPayload: string): string {
+    if (!cipherPayload) return '';
+    if (!cipherPayload.startsWith('enc:gcm:v1:')) return cipherPayload;
+
+    const parts = cipherPayload.split(':');
+    if (parts.length !== 6) return cipherPayload;
+
+    const masterKey = this.getMasterKey();
+    const iv = Buffer.from(parts[3], 'hex');
+    const authTag = Buffer.from(parts[4], 'hex');
+    const encryptedText = parts[5];
+
+    const decipher = createDecipheriv('aes-256-gcm', masterKey, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  }
+
+  /**
+   * Gera a configuração de MFA (segredo TOTP + QR Code URI + códigos de recuperação)
+   * e salva o segredo cifrado no cadastro do usuário (ainda inativo até o verify).
+   */
+  async setupMfaForUser(userId: string, userEmail: string): Promise<MfaSetupResponse> {
+    const setup = this.generateMfaSetup(userEmail);
+    const encryptedSecret = this.encryptSecret(setup.secret);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        mfaSecret: encryptedSecret,
+      },
+    });
+
+    this.logger.log(`[MFA] Segredo TOTP gerado e cifrado para usuário ${userId}`);
+    return setup;
+  }
+
+  /**
+   * Valida o código TOTP enviado e ativa definitivamente o MFA para o usuário (`mfaEnabled = true`).
+   */
+  async verifyAndEnableMfa(
+    userId: string,
+    code: string,
+    providedSecret?: string,
+  ): Promise<{ valid: boolean; mfaEnabled: boolean }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, mfaSecret: true, email: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    const rawSecret = providedSecret
+      ? providedSecret
+      : this.decryptSecret(user.mfaSecret ?? '');
+
+    if (!rawSecret) {
+      throw new BadRequestException('MFA não configurado. Execute o setup do MFA primeiro.');
+    }
+
+    const isValid = this.verifyTotp(rawSecret, code);
+    if (!isValid) {
+      throw new BadRequestException('Código TOTP de 6 dígitos inválido ou expirado.');
+    }
+
+    const encryptedSecret = this.encryptSecret(rawSecret);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: true,
+        mfaSecret: encryptedSecret,
+      },
+    });
+
+    this.logger.log(`[MFA] ✅ MFA ATIVADO com sucesso para o usuário ${user.email} (${userId})`);
+    return { valid: true, mfaEnabled: true };
+  }
+
+  /**
+   * Desativa o MFA para um usuário mediante confirmação por código TOTP.
+   */
+  async disableMfaForUser(userId: string, code: string): Promise<{ mfaEnabled: boolean }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, mfaSecret: true, email: true },
+    });
+
+    if (!user || !user.mfaSecret) {
+      return { mfaEnabled: false };
+    }
+
+    const rawSecret = this.decryptSecret(user.mfaSecret);
+    const isValid = this.verifyTotp(rawSecret, code);
+
+    if (!isValid) {
+      throw new UnauthorizedException('Código MFA inválido para confirmação de desativação.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+      },
+    });
+
+    this.logger.warn(`[MFA] ⚠️ MFA desativado para o usuário ${user.email} (${userId})`);
+    return { mfaEnabled: false };
+  }
+
+  /**
+   * Gera o segredo TOTP (Base32) e QR-Code URI.
    */
   generateMfaSetup(userEmail: string): MfaSetupResponse {
     const secretBuffer = randomBytes(20);
@@ -47,11 +186,11 @@ export class MfaService {
    * Valida o token TOTP de 6 dígitos informado pelo usuário.
    */
   verifyTotp(secret: string, token: string): boolean {
-    if (!token || !/^\d{6}$/.test(token)) {
+    if (!secret || !token || !/^\d{6}$/.test(token)) {
       return false;
     }
 
-    const window = 1; // Permite 1 período (30s) antes ou depois
+    const window = 1; // Permite 1 período (30s) de variação de relógio
     const timeStep = 30;
     const now = Math.floor(Date.now() / 1000);
 
@@ -69,7 +208,10 @@ export class MfaService {
   /**
    * Valida se um código de recuperação fornecido é válido.
    */
-  verifyRecoveryCode(recoveryCodes: string[], code: string): { valid: boolean; remainingCodes: string[] } {
+  verifyRecoveryCode(
+    recoveryCodes: string[],
+    code: string,
+  ): { valid: boolean; remainingCodes: string[] } {
     const uppercaseCode = code.trim().toUpperCase();
     const index = recoveryCodes.indexOf(uppercaseCode);
 
@@ -82,6 +224,14 @@ export class MfaService {
     this.logger.warn(`[MFA] Código de recuperação de emergência consumido.`);
 
     return { valid: true, remainingCodes };
+  }
+
+  private getMasterKey(): Buffer {
+    const raw =
+      process.env.MFA_ENCRYPTION_KEY ||
+      process.env.MCSI_MASTER_KEY ||
+      'AuraSerMelhorDefaultMasterKey32B!';
+    return scryptSync(raw, 'aura_mfa_salt', 32);
   }
 
   private generateTotpToken(secretBase32: string, counter: number): string {
