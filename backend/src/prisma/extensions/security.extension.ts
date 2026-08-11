@@ -88,14 +88,19 @@ function applyRowLevelSecurity(whereClause: any, context: any): any {
               some: {
                 status: 'ACTIVE',
                 assignedProfessionals: {
-                  some: { professionalId: context.userId }
+                  some: {
+                    OR: [
+                      { professionalId: context.userId },
+                      { professional: { userId: context.userId } }
+                    ]
+                  }
                 }
               }
             }
           }
         }
       },
-      // Qualquer nível caso haja uma sessão excepcional de Break-Glass ativa
+      // Qualquer nível (inclusive 4) caso haja uma sessão excepcional de Break-Glass ativa
       {
         id: { in: breakGlassIds }
       }
@@ -114,7 +119,9 @@ function applyRowLevelSecurity(whereClause: any, context: any): any {
  * Valida de forma estrita o acesso a um ID específico de beneficiário
  */
 async function verifyRecordAccess(beneficiaryId: string, context: any): Promise<boolean> {
-  // Diretoria/DPO tem acesso a tudo sob logs
+  if (!beneficiaryId) return false;
+
+  // Diretoria/DPO/SUPER_USER tem acesso a tudo sob logs
   if (context.sensitivityLevel >= 4) return true;
 
   // Verifica se há sessão de Break-Glass ativa e dentro da validade
@@ -135,7 +142,9 @@ async function verifyRecordAccess(beneficiaryId: string, context: any): Promise<
             where: { status: 'ACTIVE' },
             include: {
               assignedProfessionals: {
-                where: { professionalId: context.userId }
+                include: {
+                  professional: true
+                }
               }
             }
           }
@@ -147,6 +156,11 @@ async function verifyRecordAccess(beneficiaryId: string, context: any): Promise<
   // Se não tem ProtectedProfile, é Nível 0 (Livre)
   if (!profile) return true;
 
+  // Nível 4 bloqueado para todos abaixo do nível 4 (sem break-glass)
+  if (profile.sensitivityLevel >= 4) {
+    return false;
+  }
+
   // Valida níveis 1 e 2
   if (profile.sensitivityLevel <= context.sensitivityLevel) {
     if (profile.sensitivityLevel < 3) return true;
@@ -154,13 +168,15 @@ async function verifyRecordAccess(beneficiaryId: string, context: any): Promise<
 
   // Nível 3 exige vínculo ativo no caso
   if (profile.sensitivityLevel === 3) {
-    const hasActiveCaseBond = profile.beneficiary.cases.some(
-      (c: any) => c.assignedProfessionals.length > 0
+    const hasActiveCaseBond = profile.beneficiary.cases.some((c: any) =>
+      c.assignedProfessionals.some(
+        (ap: any) => ap.professionalId === context.userId || ap.professional?.userId === context.userId
+      )
     );
     if (hasActiveCaseBond) return true;
   }
 
-  // Nível 4 bloqueado para todos abaixo do nível 4
+  // Nível 4 e acessos não autorizados caem aqui
   return false;
 }
 
