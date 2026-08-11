@@ -8,6 +8,7 @@ import { randomUUID, createHash } from 'crypto';
 import {
   CreateClinicalNoteDto,
   SignClinicalNoteDto,
+  UpdateDraftClinicalNoteDto,
   ClinicalSpecialtyCategory,
   RecordSensitivityClassification,
 } from '../dto/ehr.dto';
@@ -62,7 +63,7 @@ export class ClinicalNotesService {
   constructor(
     private readonly timelineService: ClinicalTimelineService,
     private readonly eventBus: EventBusService,
-    private readonly cryptoService: EhrCryptoService,
+    @Optional() private readonly cryptoService?: EhrCryptoService,
     @Optional() private readonly prisma?: PrismaService,
   ) {}
 
@@ -104,6 +105,59 @@ export class ClinicalNotesService {
       `[ClinicalNotes] Rascunho de evolução criado: ${noteId} (${dto.category}) por ${authorName}`,
     );
 
+    return note;
+  }
+
+  /**
+   * Atualiza/Salva rascunho de evolução clínica (Autosave Backend - GAP-P3-07).
+   * Impede alteração se a evolução já se encontrar assinada eletronicamente.
+   */
+  async saveDraft(
+    noteId: string,
+    dto: UpdateDraftClinicalNoteDto,
+    authorId: string,
+    tenantId = 'default',
+  ): Promise<ClinicalNoteRecord> {
+    const note = await this.getNoteById(noteId);
+
+    if (note.isSigned) {
+      throw new BadRequestException('Evoluções clínicas assinadas e bloqueadas não podem ser alteradas em rascunho.');
+    }
+
+    if (dto.soapNote) {
+      if (dto.soapNote.subjective !== undefined) note.subjective = dto.soapNote.subjective;
+      if (dto.soapNote.objective !== undefined) note.objective = dto.soapNote.objective;
+      if (dto.soapNote.assessment !== undefined) note.assessment = dto.soapNote.assessment;
+      if (dto.soapNote.plan !== undefined) note.plan = dto.soapNote.plan;
+    }
+
+    if (dto.icdCode !== undefined) {
+      note.icdCode = dto.icdCode;
+    }
+
+    note.updatedAt = new Date().toISOString();
+    this.notesStore.set(noteId, note);
+
+    if (this.prisma) {
+      try {
+        const encryptedContent = this.cryptoService?.encrypt(note.subjective) || note.subjective;
+        const encryptedSummary = this.cryptoService?.encrypt(note.assessment) || note.assessment;
+
+        await this.prisma.clinicalEvolution.update({
+          where: { id: noteId },
+          data: {
+            contentEncrypted: encryptedContent,
+            summary: encryptedSummary,
+            status: 'DRAFT',
+            updatedAt: new Date(note.updatedAt),
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`[ClinicalNotes DB] Fallback autosave em memória: ${(err as Error).message}`);
+      }
+    }
+
+    this.logger.log(`[ClinicalNotes] 💾 Autosave rascunho de evolução atualizado: ${noteId}`);
     return note;
   }
 
@@ -158,8 +212,8 @@ export class ClinicalNotesService {
     // Persiste na tabela ClinicalEvolution do PostgreSQL se Prisma disponível
     if (this.prisma) {
       try {
-        const encryptedContent = this.cryptoService.encrypt(note.subjective) || note.subjective;
-        const encryptedSummary = this.cryptoService.encrypt(note.assessment) || note.assessment;
+        const encryptedContent = this.cryptoService?.encrypt(note.subjective) || note.subjective;
+        const encryptedSummary = this.cryptoService?.encrypt(note.assessment) || note.assessment;
 
         await this.prisma.clinicalEvolution.create({
           data: {
@@ -212,8 +266,8 @@ export class ClinicalNotesService {
         });
 
         if (dbRecord) {
-          const decryptedContent = this.cryptoService.decrypt(dbRecord.contentEncrypted) || dbRecord.contentEncrypted;
-          const decryptedSummary = this.cryptoService.decrypt(dbRecord.summary) || dbRecord.summary;
+          const decryptedContent = this.cryptoService?.decrypt(dbRecord.contentEncrypted) || dbRecord.contentEncrypted;
+          const decryptedSummary = this.cryptoService?.decrypt(dbRecord.summary) || dbRecord.summary;
 
           return {
             noteId: dbRecord.id,
