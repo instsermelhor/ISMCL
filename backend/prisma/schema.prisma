@@ -103,6 +103,7 @@ model ProfessionalDocument {
   fileUrl             String
   validUntil          DateTime?
   status              String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
   
   professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 }
@@ -114,6 +115,7 @@ model Availability {
   startTime           String   // HH:mm
   endTime             String   // HH:mm
   modality            String   // ONLINE, IN_PERSON, HYBRID
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
   
   professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
 }
@@ -130,6 +132,7 @@ model Project {
   
   // Módulo 08: Gestão Financeira
   transactions        Transaction[]
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 // Relacionamento N:N - Quais voluntários atuam em quais projetos
@@ -302,6 +305,7 @@ model Anamnesis {
   version           Int          @default(1)
   createdAt         DateTime     @default(now())
   finalizedAt       DateTime?
+  deletedAt         DateTime?    // Soft delete — LGPD Art.18
   
   case              Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
   beneficiary       Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
@@ -407,6 +411,7 @@ model ClinicalAttachment {
   visibility     String                 @default("PRIVATE_TO_AUTHOR") // PRIVATE_TO_AUTHOR, SHARED_WITH_CASE_TEAM
   uploadedAt     DateTime               @default(now())
   retentionUntil DateTime?
+  deletedAt      DateTime?              // Soft delete — LGPD Art.18
 
   case           Case                   @relation(fields: [caseId], references: [id], onDelete: Cascade)
   beneficiary    Beneficiary            @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
@@ -453,6 +458,7 @@ model ClinicalScale {
   answers        Json         // Contém as respostas em formato estruturado
   interpretation String
   appliedAt      DateTime     @default(now())
+  deletedAt      DateTime?    // Soft delete — LGPD Art.18
 
   case           Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
   beneficiary    Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
@@ -534,6 +540,7 @@ model CaseMeeting {
   pendingTasks        Json?                // Lista de tarefas estruturadas: { task, responsibleId, deadline }
   
   createdAt           DateTime             @default(now())
+  deletedAt           DateTime?            // Soft delete — LGPD Art.18
 
   case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
   participants        CaseMeetingParticipant[]
@@ -563,6 +570,7 @@ model Referral {
   
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?            // Soft delete — LGPD Art.18
 
   case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
   professional        Professional         @relation(fields: [professionalId], references: [id])
@@ -578,6 +586,7 @@ model CaseAlert {
   
   createdAt           DateTime             @default(now())
   resolvedAt          DateTime?
+  deletedAt           DateTime?            // Soft delete — LGPD Art.18
   
   case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
@@ -666,6 +675,7 @@ model Donor {
   status        String         @default("ACTIVE") // ACTIVE, INACTIVE
   isRecurring   Boolean        @default(false)
   createdAt     DateTime       @default(now())
+  deletedAt     DateTime?      // Soft delete — LGPD Art.18
   
   transactions  Transaction[]
 }
@@ -680,6 +690,7 @@ model Campaign {
   endDate       DateTime
   status        String         @default("PLANNING") // PLANNING, ACTIVE, SUSPENDED, COMPLETED
   createdAt     DateTime       @default(now())
+  deletedAt     DateTime?      // Soft delete — LGPD Art.18
   
   transactions  Transaction[]
 }
@@ -694,6 +705,7 @@ model Agreement {
   endDate       DateTime
   status        String         @default("ACTIVE") // ACTIVE, COMPLETED, AUDITING, SUSPENDED
   createdAt     DateTime       @default(now())
+  deletedAt     DateTime?      // Soft delete — LGPD Art.18
   
   transactions  Transaction[]
   obligations   AgreementObligation[]
@@ -735,6 +747,7 @@ model ProtectedProfile {
   riskHeuristics     Json?                // Metadados que justificam o score de risco
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  deletedAt          DateTime?            // Soft delete — LGPD Art.18
 
   beneficiary        Beneficiary          @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
   secureVault        SecureVault?
@@ -1160,6 +1173,7 @@ model DataConsent {
   withdrawalReason  String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime? // Soft delete — LGPD Art.18
 
   requests          DataSubjectRequest[]
 
@@ -1185,6 +1199,7 @@ model DataSubjectRequest {
   exportUrl       String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime? // Soft delete — LGPD Art.18
 
   consent         DataConsent? @relation(fields: [consentId], references: [id])
 
@@ -1299,6 +1314,7 @@ model SocialProgram {
   notas                 String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+  deletedAt             DateTime? // Soft delete — LGPD Art.18
 
   @@index([status, isPublic])
   @@index([createdAt])
