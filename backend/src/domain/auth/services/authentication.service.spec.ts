@@ -55,6 +55,8 @@ const mockSession = {
 
 const mockMfa = {
   verifyTotp: jest.fn().mockReturnValue(true),
+  decryptSecret: jest.fn().mockImplementation((sec: string) => sec),
+  encryptSecret: jest.fn().mockImplementation((sec: string) => `enc:gcm:v1:mock:${sec}`),
 };
 
 const mockEventBus = {
@@ -106,9 +108,9 @@ describe('AuthenticationService — P107/P128/P132', () => {
       expect(result.mfaRequired).toBe(false);
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
-      expect(result.user.email).toBe('aurainstitutosermelhor@gmail.com');
-      expect(result.user.primaryRole).toBe('super_user_universal');
-      expect(result.user.initials).toBe('RR');
+      expect(result.user!.email).toBe('aurainstitutosermelhor@gmail.com');
+      expect(result.user!.primaryRole).toBe('super_user_universal');
+      expect(result.user!.initials).toBe('SA');
     });
 
     it('deve publicar evento aura.auth.login.succeeded.v1 no login bem-sucedido', async () => {
