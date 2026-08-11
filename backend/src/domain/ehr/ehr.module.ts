@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { EhrController } from './controllers/ehr.controller';
 import { ElectronicHealthRecordService } from './services/electronic-health-record.service';
 import { ClinicalNotesService } from './services/clinical-notes.service';
@@ -21,7 +22,7 @@ import { EventBusModule } from '../../events/event-bus.module';
  * Referências: P110 (AEWBPM), P123 (AEDA), P136 (AIEHSR)
  */
 @Module({
-  imports: [EventBusModule],
+  imports: [EventBusModule, CacheModule],
   controllers: [EhrController],
   providers: [
     ElectronicHealthRecordService,
