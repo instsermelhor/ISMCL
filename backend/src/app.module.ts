@@ -38,13 +38,8 @@ import { CognitiveOrchestrationModule } from './domain/cognitive-orchestration/c
 import { ActgModule } from './domain/actg/actg.module';
 import { OfflineSyncModule } from './domain/offline-sync/offline-sync.module';
 
-// ── Foundation Domain Modules ─────────────────────────────────────────────────
-// TODO(Sprint 2): import { AuthModule } from './domain/auth/auth.module';
-// TODO(Sprint 3): import { BeneficiaryModule } from './domain/beneficiary/beneficiary.module';
-// TODO(Sprint 3): import { ProfessionalModule } from './domain/professional/professional.module';
-// TODO(Sprint 5): import { ClinicalModule } from './domain/clinical/clinical.module';
-// TODO(Sprint 6): import { SocialModule } from './domain/social/social.module';
-
+import { BeneficiaryModule } from './domain/beneficiary/beneficiary.module';
+import { ProfessionalModule } from './domain/professional/professional.module';
 import { AutonomousEvolutionModule } from './domain/autonomous-evolution/autonomous-evolution.module';
 import { EnterpriseInteroperabilityModule } from './domain/enterprise-interoperability/enterprise-interoperability.module';
 import { UnifiedOperationsModule } from './domain/unified-operations/unified-operations.module';
@@ -211,6 +206,8 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
     HealthModule,
     EventBusModule,
     AuthModule,
+    BeneficiaryModule,
+    ProfessionalModule,
     BreakGlassModule,
     RegistrationModule,
     IntakeModule,
