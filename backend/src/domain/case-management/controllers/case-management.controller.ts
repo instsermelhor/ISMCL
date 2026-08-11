@@ -20,6 +20,7 @@ import { CaseManagementService } from '../services/case-management.service';
 import { CaseTimelineService } from '../services/case-timeline.service';
 import { GoalManagementService } from '../services/goal-management.service';
 import { MultidisciplinaryCoordinationService } from '../services/multidisciplinary-coordination.service';
+import { CaseAlertSchedulerService } from '../services/case-alert-scheduler.service';
 import {
   UpdateCaseStatusDto,
   AssignMultidisciplinaryTeamDto,
@@ -33,9 +34,9 @@ import {
  * CaseManagementController — APIs REST da Plataforma Corporativa de Gestão de Casos (AECMP)
  *
  * Expõe endpoints para acompanhamento longitudinal, linha do tempo imutável, metas,
- * equipe multidisciplinar, medição de resolutividade, alta e reabertura de casos.
+ * equipe multidisciplinar, medição de resolutividade, alta, reabertura de casos e alertas automáticos.
  *
- * Referências: P110 (AEWBPM), P125 (AEAP), P135 (AECMP Etapa 11)
+ * Referências: P110 (AEWBPM), P125 (AEAP), P135 (AECMP Etapa 11), GAP-P2-05
  */
 @ApiTags('CaseManagement')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -47,6 +48,7 @@ export class CaseManagementController {
     private readonly timelineService: CaseTimelineService,
     private readonly goalService: GoalManagementService,
     private readonly coordinationService: MultidisciplinaryCoordinationService,
+    private readonly alertScheduler: CaseAlertSchedulerService,
   ) {}
 
   @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL, AuraRole.COORDINATOR)
@@ -133,5 +135,47 @@ export class CaseManagementController {
 
     const result = await this.caseManagementService.reopenCase(caseId, reason ?? 'Reabertura técnica', tenantId);
     return BaseResponseDto.ok(result, requestId, undefined, 'Caso assistencial reaberto.');
+  }
+
+  // ── Alertas Automáticos de Casos (GAP-P2-05) ─────────────────────────────
+
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.COORDINATOR)
+  @Post('alerts/trigger')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Disparar Varredura Manual de Alertas de Casos (GAP-P2-05)',
+    description:
+      'Executa a varredura manual de casos sem movimentação (>15d), metas vencidas, encaminhamentos sem retorno (>30d) e PICs sem revisão (>60d).',
+  })
+  async triggerAlertScan(@Req() req: FastifyRequest) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const tenantId = (req.headers['x-tenant-id'] as string) ?? 'default';
+
+    const summary = await this.alertScheduler.checkAndGenerateAlerts(tenantId);
+    return BaseResponseDto.ok(
+      summary,
+      requestId,
+      undefined,
+      `Varredura concluída. ${summary.totalAlertsGenerated} novos alertas gerados.`,
+    );
+  }
+
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.COORDINATOR, AuraRole.PROFESSIONAL)
+  @Get('cases/:id/alerts')
+  @ApiOperation({ summary: 'Consultar Alertas Ativos de um Caso Assistencial' })
+  async getCaseAlerts(@Param('id') caseId: string, @Req() req: FastifyRequest) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const alerts = await this.alertScheduler.getActiveAlertsForCase(caseId);
+    return BaseResponseDto.ok(alerts, requestId);
+  }
+
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.COORDINATOR, AuraRole.PROFESSIONAL)
+  @Patch('alerts/:id/resolve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Marcar Alerta de Caso como Resolvido' })
+  async resolveAlert(@Param('id') alertId: string, @Req() req: FastifyRequest) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const alert = await this.alertScheduler.resolveAlert(alertId);
+    return BaseResponseDto.ok(alert, requestId, undefined, 'Alerta de caso marcado como resolvido.');
   }
 }
