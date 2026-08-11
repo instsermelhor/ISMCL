@@ -243,9 +243,9 @@ export class BeneficiaryService {
       }),
       this.prisma.appointment.findMany({
         where: { beneficiaryId: id },
-        select: { id: true, scheduledAt: true, status: true, appointmentType: true },
+        select: { id: true, scheduledStart: true, status: true, type: true },
         take: 10,
-        orderBy: { scheduledAt: 'desc' },
+        orderBy: { scheduledStart: 'desc' },
       }),
       this.prisma.clinicalEvolution.findMany({
         where: { beneficiaryId: id },
@@ -270,8 +270,8 @@ export class BeneficiaryService {
       timeline.push({
         type: 'APPOINTMENT',
         id: a.id,
-        title: `Agendamento (${a.appointmentType ?? 'Geral'}) - Status: ${a.status}`,
-        occurredAt: a.scheduledAt instanceof Date ? a.scheduledAt.toISOString() : String(a.scheduledAt),
+        title: `Agendamento (${a.type ?? 'Geral'}) - Status: ${a.status}`,
+        occurredAt: a.scheduledStart instanceof Date ? a.scheduledStart.toISOString() : String(a.scheduledStart),
       });
     });
 
