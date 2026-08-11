@@ -21,6 +21,7 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
+  private extendedClient: any;
 
   constructor() {
     super({
@@ -42,7 +43,18 @@ export class PrismaService
 
   async onModuleInit(): Promise<void> {
     await this.$connect();
-    this.logger.log('✅ Prisma conectado ao PostgreSQL.');
+    
+    // Importa e conecta a extensão de segurança MCSI
+    try {
+      const { securityExtension } = await import('./extensions/security.extension');
+      this.extendedClient = this.$extends(securityExtension);
+      Object.assign(this, {
+        beneficiary: this.extendedClient.beneficiary,
+      });
+      this.logger.log('✅ Prisma conectado ao PostgreSQL com extensão MCSI (Pesquisa Segura Nível 4).');
+    } catch (err: any) {
+      this.logger.warn(`Aviso ao aplicar extensão de segurança Prisma: ${err.message}`);
+    }
 
     // Log de queries lentas (apenas em desenvolvimento)
     if (process.env.NODE_ENV === 'development') {
