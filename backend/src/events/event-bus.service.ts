@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { randomUUID } from 'crypto';
 
 /**
@@ -32,24 +34,54 @@ export interface PublishOptions {
 }
 
 /**
+ * Tópicos de eventos críticos que recebem persistência via Redis Streams (dual-write).
+ * Estes eventos NÃO podem ser perdidos em caso de falha do processo antes de serem
+ * consumidos pelos subscribers in-process.
+ *
+ * Referência: ANO-009, Sprint R4, AURA_ARCHITECTURE_REMEDIATION_PLAN.md
+ */
+const CRITICAL_EVENT_TOPICS: readonly string[] = [
+  'aura.security.breakglass',
+  'aura.audit',
+  'aura.financial.transaction',
+  'aura.ehr.note.signed',
+  'aura.actg.webhook.processed',
+  'aura.identity.user',
+] as const;
+
+/** Chave do Redis Stream para eventos críticos */
+const REDIS_STREAM_KEY = 'stream:aura:events';
+
+/** Máximo de entradas no stream antes de truncar (para controlar tamanho) */
+const STREAM_MAXLEN = 10_000;
+
+/**
  * EventBusService — Barramento de Eventos da Plataforma Aura
  *
- * Implementa o padrão CloudEvents v1.0.3 sobre o EventEmitter2 do NestJS.
- * Em produção, este serviço será estendido para publicar no Apache Kafka 3.7
- * via KafkaProducer (configurado no Sprint 3).
+ * Implementa o padrão CloudEvents v1.0.3 com **dual-write** para eventos críticos:
+ * 1. `EventEmitter2` in-process (todos os eventos — compatibilidade retroativa)
+ * 2. Redis Streams via `XADD` (apenas eventos críticos — durabilidade e replay)
+ *
+ * O dual-write garante que eventos de alta criticidade (BreakGlass, Audit, Financeiro)
+ * sejam persistidos mesmo que o processo caia antes do subscriber in-process os consumir.
+ *
+ * Se o Redis estiver indisponível, o dual-write falha silenciosamente e o evento
+ * continua sendo emitido in-process normalmente (graceful degradation).
  *
  * Funcionalidades:
  * - Publicação de eventos com envelope CloudEvents v1.0.3
- * - Inscrição em tipos de eventos (wildcard support)
+ * - Dual-write automático em Redis Streams para eventos críticos
+ * - Inscrição em tipos de eventos (wildcard support via EventEmitter2)
  * - Dead Letter Queue local para eventos que falham (em memória, dev only)
  * - Logging estruturado de todos os eventos publicados
  * - Correlação de eventos via correlationId
+ * - Replay de eventos do Redis Stream via `consumeStream()`
  *
  * Convenção de tipos de eventos:
  * `aura.<domain>.<entity>.<action>.v<version>`
  * Ex: `aura.clinical.patient.created.v1`
  *
- * Referências: P124 (AEEDA), P131 (AFPI)
+ * Referências: P124 (AEEDA), P131 (AFPI), ANO-009 Sprint R4
  */
 @Injectable()
 export class EventBusService {
@@ -57,10 +89,15 @@ export class EventBusService {
   private readonly dlq: AuraCloudEvent[] = []; // DLQ em memória para dev
   private readonly APP_SOURCE = 'https://api.aura.sermelhor.org.br';
 
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
+  ) {}
 
   /**
    * Publica um evento no barramento interno.
+   *
+   * Para eventos críticos, executa dual-write em Redis Streams além do EventEmitter2.
    *
    * @param eventType - Tipo do evento (convenção: `aura.<domain>.<entity>.<action>.v1`)
    * @param data - Payload tipado do evento
@@ -94,6 +131,12 @@ export class EventBusService {
       message: `[EventBus] Publishing: ${eventType}`,
     });
 
+    // ── Dual-Write: Redis Streams para eventos críticos (ANO-009) ────────────
+    if (this.isCriticalEvent(eventType)) {
+      await this.writeToRedisStream(event);
+    }
+
+    // ── In-Process EventEmitter2 (todos os eventos) ──────────────────────────
     try {
       if (options.delay && options.delay > 0) {
         setTimeout(() => {
@@ -126,6 +169,52 @@ export class EventBusService {
   }
 
   /**
+   * Consome eventos do Redis Stream a partir de um ID de cursor.
+   * Útil para replay de eventos críticos após reinicialização do processo.
+   *
+   * @param lastId - ID do último evento consumido (use '0' para consumir desde o início)
+   * @param count  - Máximo de eventos a retornar (padrão: 100)
+   */
+  async consumeStream(lastId: string = '0', count: number = 100): Promise<AuraCloudEvent[]> {
+    if (!this.cacheManager) {
+      this.logger.warn('[EventBus] consumeStream: Redis não disponível. Retornando array vazio.');
+      return [];
+    }
+
+    try {
+      // Acessa o cliente ioredis subjacente para operações de stream
+      const redisClient = (this.cacheManager as any).store?.client;
+      if (!redisClient || typeof redisClient.xrange !== 'function') {
+        this.logger.warn('[EventBus] consumeStream: cliente Redis sem suporte a XRANGE.');
+        return [];
+      }
+
+      const entries: [string, string[]][] = await redisClient.xrange(
+        REDIS_STREAM_KEY,
+        lastId === '0' ? '-' : lastId,
+        '+',
+        'COUNT',
+        count,
+      );
+
+      return entries
+        .map(([, fields]) => {
+          const payloadIdx = fields.indexOf('payload');
+          if (payloadIdx === -1) return null;
+          try {
+            return JSON.parse(fields[payloadIdx + 1]) as AuraCloudEvent;
+          } catch {
+            return null;
+          }
+        })
+        .filter((e): e is AuraCloudEvent => e !== null);
+    } catch (error) {
+      this.logger.error(`[EventBus] Erro ao consumir Redis Stream: ${error}`);
+      return [];
+    }
+  }
+
+  /**
    * Retorna os eventos na Dead Letter Queue (apenas para dev/debug).
    */
   getDlq(): AuraCloudEvent[] {
@@ -145,5 +234,49 @@ export class EventBusService {
     }
     this.logger.log(`[EventBus] Replayed ${count} events from DLQ.`);
     return count;
+  }
+
+  // ── Helpers Privados ────────────────────────────────────────────────────────
+
+  /**
+   * Verifica se um tipo de evento é crítico e deve ser persistido no Redis Stream.
+   */
+  private isCriticalEvent(eventType: string): boolean {
+    return CRITICAL_EVENT_TOPICS.some((prefix) => eventType.startsWith(prefix));
+  }
+
+  /**
+   * Persiste o evento no Redis Stream com graceful degradation.
+   * Falha silenciosamente se Redis estiver indisponível — o evento continua
+   * sendo emitido in-process normalmente.
+   */
+  private async writeToRedisStream(event: AuraCloudEvent): Promise<void> {
+    if (!this.cacheManager) return;
+
+    try {
+      const redisClient = (this.cacheManager as any).store?.client;
+      if (!redisClient || typeof redisClient.xadd !== 'function') return;
+
+      await redisClient.xadd(
+        REDIS_STREAM_KEY,
+        'MAXLEN',
+        '~',
+        STREAM_MAXLEN,
+        '*', // Auto-generate Stream ID
+        'type', event.type,
+        'tenantId', event.tenantid,
+        'correlationId', event.correlationid ?? '',
+        'payload', JSON.stringify(event),
+      );
+
+      this.logger.debug(
+        `[EventBus] ✅ Dual-write Redis Stream: ${event.type} [${event.id}]`,
+      );
+    } catch (error) {
+      // Graceful degradation — não propaga o erro para não bloquear o fluxo principal
+      this.logger.warn(
+        `[EventBus] ⚠️ Dual-write Redis Stream falhou (graceful): ${event.type} — ${error}`,
+      );
+    }
   }
 }
