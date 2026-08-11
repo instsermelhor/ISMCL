@@ -7,6 +7,7 @@ import { ProviderRegistryService } from './services/provider-registry.service';
 import { ProviderHealthService } from './services/provider-health.service';
 import { FallbackEngineService } from './services/fallback-engine.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
+import { ReminderSchedulerService } from './services/reminder-scheduler.service';
 import { WebhookProcessorService } from './services/webhook-processor.service';
 import { ACTGGatewayService } from './services/actg-gateway.service';
 import { ACTGAdminService } from './services/actg-admin.service';
@@ -15,15 +16,15 @@ import { ACTGController } from './controllers/actg.controller';
 /**
  * ActgModule — Módulo Raiz do Aura Communication & Teleattendance Gateway
  *
- * Registra todos os conectores de provedores, serviços de orquestração
- * e controladores do ACTG.
+ * Registra todos os conectores de provedores, serviços de orquestração,
+ * schedulers de lembretes e controladores do ACTG.
  *
  * Princípio: Provedores externos são plugáveis via ProviderRegistryService.
  * Novos provedores (Zoom, Webex, Jitsi) são adicionados registrando um
  * novo conector que implementa ICommunicationProvider — sem alterar
  * o ACTGGatewayService (Open/Closed Principle).
  *
- * Referência: ADR-188
+ * Referência: ADR-188, GAP-P2-01
  */
 @Module({
   imports: [EventBusModule],
@@ -37,6 +38,7 @@ import { ACTGController } from './controllers/actg.controller';
     ProviderHealthService,
     FallbackEngineService,
     NotificationOrchestratorService,
+    ReminderSchedulerService,
     WebhookProcessorService,
     ACTGGatewayService,
     ACTGAdminService,
@@ -46,6 +48,7 @@ import { ACTGController } from './controllers/actg.controller';
     ACTGGatewayService,
     ACTGAdminService,
     NotificationOrchestratorService,
+    ReminderSchedulerService,
     ProviderHealthService,
     ProviderRegistryService,
   ],
