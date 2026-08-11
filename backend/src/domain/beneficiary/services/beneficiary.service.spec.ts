@@ -189,7 +189,7 @@ describe('BeneficiaryService', () => {
         { id: 'c1', caseNumber: 101, title: 'Atendimento Inicial', createdAt: new Date() },
       ]);
       mockPrisma.appointment.findMany.mockResolvedValue([
-        { id: 'a1', scheduledAt: new Date(), status: 'CONFIRMED', appointmentType: 'PSICOLOGIA' },
+        { id: 'a1', scheduledStart: new Date(), status: 'CONFIRMED', type: 'PSICOLOGIA' },
       ]);
       mockPrisma.clinicalEvolution.findMany.mockResolvedValue([]);
 
