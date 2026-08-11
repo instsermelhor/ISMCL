@@ -50,6 +50,7 @@ export interface ClinicalNoteRecord {
  */
 import { Optional } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { EhrCryptoService } from './ehr-crypto.service';
 
 @Injectable()
 export class ClinicalNotesService {
@@ -61,6 +62,7 @@ export class ClinicalNotesService {
   constructor(
     private readonly timelineService: ClinicalTimelineService,
     private readonly eventBus: EventBusService,
+    private readonly cryptoService: EhrCryptoService,
     @Optional() private readonly prisma?: PrismaService,
   ) {}
 
@@ -156,6 +158,9 @@ export class ClinicalNotesService {
     // Persiste na tabela ClinicalEvolution do PostgreSQL se Prisma disponível
     if (this.prisma) {
       try {
+        const encryptedContent = this.cryptoService.encrypt(note.subjective) || note.subjective;
+        const encryptedSummary = this.cryptoService.encrypt(note.assessment) || note.assessment;
+
         await this.prisma.clinicalEvolution.create({
           data: {
             id: note.noteId,
@@ -165,8 +170,8 @@ export class ClinicalNotesService {
             clinicalDate: new Date(now),
             durationMinutes: 50,
             modality: 'ONLINE',
-            contentEncrypted: note.subjective,
-            summary: note.assessment,
+            contentEncrypted: encryptedContent,
+            summary: encryptedSummary,
             formatType: 'SOAP',
             status: 'SIGNED',
             digitalSignatureHash: hashSignature,
@@ -200,6 +205,41 @@ export class ClinicalNotesService {
    * Busca uma evolução pelo ID.
    */
   async getNoteById(noteId: string): Promise<ClinicalNoteRecord> {
+    if (this.prisma) {
+      try {
+        const dbRecord = await this.prisma.clinicalEvolution.findUnique({
+          where: { id: noteId },
+        });
+
+        if (dbRecord) {
+          const decryptedContent = this.cryptoService.decrypt(dbRecord.contentEncrypted) || dbRecord.contentEncrypted;
+          const decryptedSummary = this.cryptoService.decrypt(dbRecord.summary) || dbRecord.summary;
+
+          return {
+            noteId: dbRecord.id,
+            ehrId: dbRecord.beneficiaryId,
+            caseId: dbRecord.caseId,
+            category: ClinicalSpecialtyCategory.PSYCHOLOGY,
+            sensitivity: RecordSensitivityClassification.HIGHLY_RESTRICTED,
+            version: 1,
+            subjective: decryptedContent,
+            objective: '',
+            assessment: decryptedSummary || '',
+            plan: '',
+            authorId: dbRecord.professionalId,
+            authorName: 'Profissional Responsável',
+            isSigned: dbRecord.status === 'SIGNED',
+            digitalSignature: dbRecord.digitalSignatureHash || undefined,
+            signedAt: dbRecord.signedAt ? dbRecord.signedAt.toISOString() : undefined,
+            createdAt: dbRecord.createdAt.toISOString(),
+            updatedAt: dbRecord.updatedAt.toISOString(),
+          };
+        }
+      } catch {
+        // Se falhar a busca no banco, recorre ao storage em memória
+      }
+    }
+
     const note = this.notesStore.get(noteId);
     if (!note) {
       throw new NotFoundException(`Evolução clínica ${noteId} não encontrada.`);
