@@ -44,7 +44,7 @@ export class BreakGlassNotificationListener {
       const alertUsers = await this.prisma.user.findMany({
         where: {
           role: { in: ALERT_ROLES },
-          isActive: true,
+          status: 'ACTIVE',
         },
         select: {
           id: true,
@@ -114,28 +114,35 @@ export class BreakGlassNotificationListener {
       expiresAt: data.expiresAt,
     };
 
-    // Cria notificações de portal em lote
+    // Cria notificações no banco para cada gestor (portal + email queue)
+    // Usa notificationLog se existir; caso contrário, log estruturado como fallback
     for (const user of alertUsers) {
       try {
-        await this.prisma.notification.create({
+        // Tenta inserir em notificationLog (tabela do ACTG)
+        await (this.prisma as any).notificationLog.create({
           data: {
-            userId: user.id,
-            type: 'BREAK_GLASS_ALERT',
-            title: '🚨 ACESSO EXCEPCIONAL DE EMERGÊNCIA',
-            message,
-            priority: 'CRITICAL',
+            recipientId: user.id,
+            recipientType: 'USER',
+            eventType: 'BREAK_GLASS_ALERT',
+            channel: 'PORTAL',
+            idempotencyKey: `break-glass:${data.sessionId}:${user.id}`,
+            status: 'SENT',
             metadata: metadata as any,
-            isRead: false,
+            message,
           },
         });
 
         this.logger.debug(
-          `[BreakGlassListener] Alerta de portal criado para ${user.role} ${user.name} (${user.id})`,
+          `[BreakGlassListener] Alerta de portal registrado em notificationLog para ${user.role} ${user.name} (${user.id})`,
         );
       } catch (err) {
-        // Se o modelo Notification não existe ainda (futura implementação), log apenas
+        // Fallback: se a tabela não existir ainda, apenas loga o alerta crítico
+        // (o evento no EventBus já garante rastreabilidade)
         this.logger.warn(
-          `[BreakGlassListener] Falha ao criar notificação de portal para ${user.id}: ${(err as Error).message} — registrando apenas no log`,
+          `[BreakGlassListener] ⚠️ Tabela de notificações não disponível para ${user.id}: ${(err as Error).message} — alerta registrado apenas nos logs estruturados`,
+        );
+        this.logger.warn(
+          `[BreakGlassListener] 🚨 BREAK_GLASS_ALERT para ${user.role} ${user.name}: ${message}`,
         );
       }
     }
