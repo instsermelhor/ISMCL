@@ -49,6 +49,55 @@ export class ProgramEvaluationService {
     this.evaluationStore.set(seed.evaluationId, seed);
   }
 
+  /**
+   * Calcula o SROI monetizado (Social Return on Investment) com base em inputs financeiros e sociais reais.
+   *
+   * Fórmula:
+   * 1. Gross Social Value = sum(outcome.count * outcome.unitValueBrl)
+   * 2. Net Social Value = Gross * (1 - deadweight) * (1 - displacement)
+   * 3. SROI Ratio = Net Social Value / totalProgramCostBrl
+   */
+  calculateSroiRatio(params: {
+    totalProgramCostBrl: number;
+    outcomes: { description: string; count: number; unitValueBrl: number }[];
+    deadweightPercentage?: number; // Desconto do que ocorreria de qualquer forma (default: 10%)
+    displacementPercentage?: number; // Desconto de deslocamento de outros impactos (default: 5%)
+  }): {
+    sroiRatio: number;
+    grossSocialValueBrl: number;
+    netSocialValueBrl: number;
+    costPerOutcomeBrl: number;
+    totalOutcomesCount: number;
+  } {
+    const { totalProgramCostBrl, outcomes, deadweightPercentage = 10, displacementPercentage = 5 } = params;
+
+    if (totalProgramCostBrl <= 0) {
+      throw new Error('O custo total do programa deve ser maior que zero.');
+    }
+
+    const grossSocialValueBrl = outcomes.reduce(
+      (sum, outcome) => sum + outcome.count * outcome.unitValueBrl,
+      0,
+    );
+
+    const totalOutcomesCount = outcomes.reduce((sum, outcome) => sum + outcome.count, 0);
+
+    const deadweightFactor = 1 - Math.min(100, Math.max(0, deadweightPercentage)) / 100;
+    const displacementFactor = 1 - Math.min(100, Math.max(0, displacementPercentage)) / 100;
+
+    const netSocialValueBrl = grossSocialValueBrl * deadweightFactor * displacementFactor;
+    const sroiRatio = Number((netSocialValueBrl / totalProgramCostBrl).toFixed(2));
+    const costPerOutcomeBrl = totalOutcomesCount > 0 ? Number((totalProgramCostBrl / totalOutcomesCount).toFixed(2)) : 0;
+
+    return {
+      sroiRatio,
+      grossSocialValueBrl,
+      netSocialValueBrl,
+      costPerOutcomeBrl,
+      totalOutcomesCount,
+    };
+  }
+
   async evaluateProgram(dto: EvaluateProgramDto): Promise<ProgramEvaluationReport> {
     const evaluationId = `PROG-EVAL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
@@ -85,3 +134,4 @@ export class ProgramEvaluationService {
     return Array.from(this.evaluationStore.values());
   }
 }
+
