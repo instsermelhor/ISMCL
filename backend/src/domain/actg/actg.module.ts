@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { EventBusModule } from '../../events/event-bus.module';
 import { WhatsAppBusinessConnector } from './connectors/whatsapp-business.connector';
 import { GoogleMeetConnector } from './connectors/google-meet.connector';
@@ -24,7 +25,7 @@ import { ACTGController } from './controllers/actg.controller';
  * Referência: ADR-188, GAP-P2-01, GAP-P3-04, GAP-P3-05
  */
 @Module({
-  imports: [EventBusModule],
+  imports: [EventBusModule, CacheModule],
   providers: [
     // Conectores de Provedores
     WhatsAppBusinessConnector,
