@@ -3,6 +3,7 @@ import { EventBusModule } from '../../events/event-bus.module';
 import { WhatsAppBusinessConnector } from './connectors/whatsapp-business.connector';
 import { GoogleMeetConnector } from './connectors/google-meet.connector';
 import { TeamsConnector } from './connectors/teams.connector';
+import { WebRtcNativeConnector } from './connectors/webrtc-native.connector';
 import { ProviderRegistryService } from './services/provider-registry.service';
 import { ProviderHealthService } from './services/provider-health.service';
 import { FallbackEngineService } from './services/fallback-engine.service';
@@ -16,15 +17,10 @@ import { ACTGController } from './controllers/actg.controller';
 /**
  * ActgModule — Módulo Raiz do Aura Communication & Teleattendance Gateway
  *
- * Registra todos os conectores de provedores, serviços de orquestração,
+ * Registra todos os conectores de provedores (SaaS + WebRTC Nativo), serviços de orquestração,
  * schedulers de lembretes e controladores do ACTG.
  *
- * Princípio: Provedores externos são plugáveis via ProviderRegistryService.
- * Novos provedores (Zoom, Webex, Jitsi) são adicionados registrando um
- * novo conector que implementa ICommunicationProvider — sem alterar
- * o ACTGGatewayService (Open/Closed Principle).
- *
- * Referência: ADR-188, GAP-P2-01
+ * Referência: ADR-188, GAP-P2-01, GAP-P3-04
  */
 @Module({
   imports: [EventBusModule],
@@ -33,6 +29,7 @@ import { ACTGController } from './controllers/actg.controller';
     WhatsAppBusinessConnector,
     GoogleMeetConnector,
     TeamsConnector,
+    WebRtcNativeConnector,
     // Serviços Core do ACTG
     ProviderRegistryService,
     ProviderHealthService,
@@ -51,7 +48,9 @@ import { ACTGController } from './controllers/actg.controller';
     ReminderSchedulerService,
     ProviderHealthService,
     ProviderRegistryService,
+    WebRtcNativeConnector,
   ],
 })
 export class ActgModule {}
+
 
