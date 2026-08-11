@@ -3,16 +3,17 @@ import { ICommunicationProvider } from '../interfaces/provider.interface';
 import { WhatsAppBusinessConnector } from '../connectors/whatsapp-business.connector';
 import { GoogleMeetConnector } from '../connectors/google-meet.connector';
 import { TeamsConnector } from '../connectors/teams.connector';
+import { WebRtcNativeConnector } from '../connectors/webrtc-native.connector';
 import { ChannelType } from '../dto/actg.dto';
 
 /**
  * ProviderRegistryService — Registro dinâmico de provedores de comunicação
  *
  * Centraliza o mapeamento entre ChannelType e connector concreto.
- * Permite adicionar novos provedores (Zoom, Webex, Jitsi) sem alterar
+ * Permite adicionar novos provedores (Zoom, Webex, Jitsi, WebRTC Native) sem alterar
  * a lógica do ACTGGatewayService (Open/Closed Principle).
  *
- * Referência: ADR-188
+ * Referência: ADR-188, GAP-P3-04
  */
 @Injectable()
 export class ProviderRegistryService {
@@ -23,10 +24,12 @@ export class ProviderRegistryService {
     private readonly whatsapp: WhatsAppBusinessConnector,
     private readonly googleMeet: GoogleMeetConnector,
     private readonly teams: TeamsConnector,
+    private readonly webrtcNative: WebRtcNativeConnector,
   ) {
     this.register(ChannelType.WHATSAPP_BUSINESS, whatsapp);
     this.register(ChannelType.GOOGLE_MEET, googleMeet);
     this.register(ChannelType.TEAMS, teams);
+    this.register(ChannelType.WEBRTC_NATIVE, webrtcNative);
     this.logger.log(`[ProviderRegistry] ${this.registry.size} provedores registrados`);
   }
 
