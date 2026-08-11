@@ -1,29 +1,36 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, Query,
-  HttpCode, HttpStatus, VERSION_NEUTRAL,
+  Controller, Get, Post, Patch, Body, Param, Query, Req,
+  HttpCode, HttpStatus, VERSION_NEUTRAL, UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { FastifyRequest } from 'fastify';
 import { LgpdConsentService } from '../services/lgpd-consent.service';
+import { AnonymizationService } from '../services/anonymization.service';
 
 /**
  * LgpdController — API REST de Privacidade & Direitos do Titular (LGPD)
  *
  * Endpoints:
- * POST   /lgpd/consent              — Registrar consentimento
- * DELETE /lgpd/consent/:entityId    — Revogar consentimento (Art. 8, §5)
- * GET    /lgpd/consent/:entityId    — Consultar consentimento ativo (Art. 9)
- * POST   /lgpd/requests             — Abrir solicitação de direito (Art. 18)
- * GET    /lgpd/requests/:entityId   — Listar solicitações do titular
- * POST   /lgpd/anonymize            — Anonimizar dados pessoais (Art. 18, IV)
- * GET    /lgpd/check-consent        — Verificar consentimento por finalidade
+ * POST   /lgpd/consent                       — Registrar consentimento
+ * DELETE /lgpd/consent/:entityId             — Revogar consentimento (Art. 8, §5)
+ * GET    /lgpd/consent/:entityId             — Consultar consentimento ativo (Art. 9)
+ * POST   /lgpd/requests                      — Abrir solicitação de direito (Art. 18)
+ * GET    /lgpd/requests/:entityId            — Listar solicitações do titular
+ * POST   /lgpd/requests/:id/process-erasure  — Processar solicitação de esquecimento (GAP-P2-06)
+ * POST   /lgpd/anonymize                     — Anonimizar dados pessoais (Art. 18, IV)
+ * GET    /lgpd/check-consent                 — Verificar consentimento por finalidade
+ * GET    /lgpd/deadlines/check               — Verificar solicitações pendentes e prazos
  *
- * Referências: Lei 13.709/2018 (LGPD), P12
+ * Referências: Lei 13.709/2018 (LGPD), REMEDIATION-AURA-001 (R2-06), GAP-P2-06
  */
 @ApiTags('LGPD — Privacidade & Direitos do Titular')
 @ApiBearerAuth()
 @Controller({ path: 'lgpd', version: VERSION_NEUTRAL })
 export class LgpdController {
-  constructor(private readonly lgpdService: LgpdConsentService) {}
+  constructor(
+    private readonly lgpdService: LgpdConsentService,
+    private readonly anonymizationService: AnonymizationService,
+  ) {}
 
   // ─── Consentimento ──────────────────────────────────────────
 
@@ -104,6 +111,31 @@ export class LgpdController {
     return this.lgpdService.getDataSubjectRequests(entityId, tenantId ?? 'default');
   }
 
+  @Post('requests/:id/process-erasure')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Executar processo de anonimização para solicitação de esquecimento (GAP-P2-06)' })
+  @ApiResponse({ status: 200, description: 'Solicitação de exclusão processada e dados anonimizados.' })
+  async processErasureRequest(@Param('id') requestId: string, @Req() req: FastifyRequest) {
+    const tenantId = (req.headers['x-tenant-id'] as string) ?? 'default';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) ?? req.ip ?? '0.0.0.0';
+    const userAgent = req.headers['user-agent'] ?? 'SYSTEM';
+    const performedBy = (req as any).user?.sub ?? 'DPO_SYSTEM';
+
+    return this.anonymizationService.processErasureRequest(
+      requestId,
+      performedBy,
+      tenantId,
+      ipAddress,
+      userAgent,
+    );
+  }
+
+  @Get('deadlines/check')
+  @ApiOperation({ summary: 'Verificar solicitações pendentes e alertas de prazo legal de 15 dias úteis' })
+  async checkDeadlines(@Query('tenantId') tenantId: string) {
+    return this.anonymizationService.checkPendingDeadlines(tenantId ?? 'default');
+  }
+
   // ─── Anonimização (Art. 12 & Art. 18, IV) ───────────────────
 
   @Post('anonymize')
@@ -121,3 +153,4 @@ export class LgpdController {
     return this.lgpdService.anonymizeEntity(body);
   }
 }
+
