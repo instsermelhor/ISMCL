@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditService } from '../../../audit/audit.service';
 import { EventBusService } from '../../../events/event-bus.service';
@@ -217,7 +218,7 @@ export class AnonymizationService {
         where: { beneficiaryId },
         data: {
           specialCategory: 'ANONIMIZADO',
-          riskHeuristics: null,
+          riskHeuristics: Prisma.JsonNull,
         },
       });
     }
