@@ -2,6 +2,21 @@ import { Injectable, Inject, Optional, InternalServerErrorException } from '@nes
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
+export interface AuditLogData {
+  actorId: string;
+  actorName?: string;
+  role?: string;
+  action: string; // VIEW_VAULT, BREAK_GLASS, EXPORT, PRINT, etc.
+  targetEntity: string; // BENEFICIARY, PRONTUARIO, ETC.
+  targetEntityId: string;
+  justification?: string | null;
+  ipAddress?: string;
+  userAgent?: string;
+  correlationId?: string;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  metadata?: Record<string, unknown>;
+}
+
 @Injectable()
 export class AuditService {
   private readonly auditSecret: string;
@@ -17,19 +32,13 @@ export class AuditService {
 
   /**
    * Grava um log na base de dados (SecurityAuditLog) e cria o registro de integridade assinado (AuditLogSignature).
+   * Referência: ANO-005, GAP-P1-03, Sprint R5
    */
-  async log(data: {
-    actorId: string;
-    actorName?: string;
-    role?: string;
-    action: string; // VIEW_VAULT, BREAK_GLASS, EXPORT, PRINT, etc.
-    targetEntity: string; // BENEFICIARY, PRONTUARIO, ETC.
-    targetEntityId: string;
-    justification?: string | null;
-    ipAddress: string;
-    userAgent: string;
-  }): Promise<string> {
+  async log(data: AuditLogData): Promise<string> {
     try {
+      const ipAddress = data.ipAddress || '0.0.0.0';
+      const userAgent = data.userAgent || 'SYSTEM';
+
       // 1. Busca a última assinatura de log para obter o hash anterior
       const lastSignature = await this.db.auditLogSignature.findFirst({
         orderBy: { createdAt: 'desc' }
@@ -49,8 +58,8 @@ export class AuditService {
           targetEntity: data.targetEntity,
           targetEntityId: data.targetEntityId,
           justification: data.justification || null,
-          ipAddress: data.ipAddress,
-          userAgent: data.userAgent,
+          ipAddress,
+          userAgent,
         }
       });
       
