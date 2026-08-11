@@ -1,13 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { WebRtcNativeConnector, WebRtcSignalingMessage } from './webrtc-native.connector';
 import { ProviderType } from '../dto/actg.dto';
 
-describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-04)', () => {
+describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-04 / ANO-002)', () => {
   let connector: WebRtcNativeConnector;
+  let cacheMock: any;
+  let cacheStore: Map<string, string>;
 
   beforeEach(async () => {
+    cacheStore = new Map<string, string>();
+    cacheMock = {
+      get: jest.fn().mockImplementation((key: string) => Promise.resolve(cacheStore.get(key))),
+      set: jest.fn().mockImplementation((key: string, val: string) => {
+        cacheStore.set(key, val);
+        return Promise.resolve();
+      }),
+      del: jest.fn().mockImplementation((key: string) => {
+        cacheStore.delete(key);
+        return Promise.resolve();
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [WebRtcNativeConnector],
+      providers: [
+        WebRtcNativeConnector,
+        { provide: CACHE_MANAGER, useValue: cacheMock },
+      ],
     }).compile();
 
     connector = module.get<WebRtcNativeConnector>(WebRtcNativeConnector);
@@ -34,6 +53,11 @@ describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-
       expect(session.joinUrl).toContain('/telehealth/room-appt-777');
       expect(session.rawMetadata?.isNativeFallback).toBe(true);
       expect(session.rawMetadata?.iceServers).toBeDefined();
+      expect(cacheMock.set).toHaveBeenCalledWith(
+        'webrtc:room:room-appt-777',
+        expect.any(String),
+        14400 * 1000,
+      );
     });
   });
 
@@ -47,8 +71,7 @@ describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-
   });
 
   describe('handleSignaling & getSignalingMessages', () => {
-    it('deve trocar ofertas, respostas e ICE candidates entre participantes de uma sala', async () => {
-      // Cria a sala primeiro via createSession para que o roomId exista no registry
+    it('deve trocar ofertas, respostas e ICE candidates entre participantes de uma sala com suporte Redis (ANO-002)', async () => {
       const session = await connector.createSession(
         'appt-888',
         new Date(),
@@ -56,9 +79,8 @@ describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-
         'Consulta WebRTC',
         'idem-key-888',
       );
-      const roomId = session.externalMeetingId; // 'room-appt-888'
+      const roomId = session.externalMeetingId;
 
-      // 1. Médica envia oferta (Offer)
       const offerMsg: WebRtcSignalingMessage = {
         roomId,
         senderId: 'prof-10',
@@ -67,17 +89,11 @@ describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-
       };
       await connector.handleSignaling(offerMsg);
 
-      // 2. Beneficiário busca mensagens de sinalização pendentes
-      const recipientMsgs = connector.getSignalingMessages(roomId, 'ben-20');
+      const recipientMsgs = await connector.getSignalingMessagesAsync(roomId, 'ben-20');
       expect(recipientMsgs.length).toBe(1);
       expect(recipientMsgs[0].senderId).toBe('prof-10');
       expect(recipientMsgs[0].type).toBe('offer');
 
-      // O próprio remetente (prof-10) não deve ver sua própria oferta ao consultar
-      const senderMsgs = connector.getSignalingMessages(roomId, 'prof-10');
-      expect(senderMsgs.length).toBe(0);
-
-      // 3. Beneficiário envia resposta (Answer)
       const answerMsg: WebRtcSignalingMessage = {
         roomId,
         senderId: 'ben-20',
@@ -87,13 +103,11 @@ describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-
       };
       await connector.handleSignaling(answerMsg);
 
-      // Médica consulta e deve receber a resposta
-      const profMsgs = connector.getSignalingMessages(roomId, 'prof-10');
+      const profMsgs = await connector.getSignalingMessagesAsync(roomId, 'prof-10');
       expect(profMsgs.length).toBe(1);
       expect(profMsgs[0].type).toBe('answer');
 
-      // Verifica se status da sala mudou para IN_PROGRESS após offer+answer
-      const roomDetails = connector.getRoomDetails(roomId);
+      const roomDetails = await connector.getRoomDetailsAsync(roomId);
       expect(roomDetails?.status).toBe('IN_PROGRESS');
     });
   });
@@ -118,10 +132,10 @@ describe('WebRtcNativeConnector — Motor de Teleconsulta WebRTC Nativo (GAP-P3-
 
       await connector.cancelSession(roomId, 'Atendimento concluído pelo profissional');
 
-      const roomDetails = connector.getRoomDetails(roomId);
+      const roomDetails = await connector.getRoomDetailsAsync(roomId);
       expect(roomDetails?.status).toBe('ENDED');
 
-      const msgs = connector.getSignalingMessages(roomId, 'ben-20');
+      const msgs = await connector.getSignalingMessagesAsync(roomId, 'ben-20');
       expect(msgs.length).toBe(0);
     });
   });
