@@ -79,13 +79,22 @@ export class AuthenticationService {
     // Verificação MFA se habilitado na conta
     if (user.mfaEnabled) {
       if (!dto.mfaCode) {
+        // Emite ticket temporário de 5 minutos para a 2ª etapa do fluxo MFA
+        const mfaTicket = await this.jwtService.signAsync(
+          { sub: user.id, email: user.email, purpose: 'mfa_validation' },
+          { expiresIn: '5m' },
+        );
+
         return {
           mfaRequired: true,
+          mfaTicket,
           message: 'Código de autenticação em dois fatores (MFA) é obrigatório.',
         };
       }
 
-      const isMfaValid = this.mfaService.verifyTotp(user.mfaSecret ?? '', dto.mfaCode);
+      const rawSecret = this.mfaService.decryptSecret(user.mfaSecret ?? '');
+      const isMfaValid = this.mfaService.verifyTotp(rawSecret, dto.mfaCode);
+
       if (!isMfaValid) {
         await this.publishLoginFailed(dto.email, 'Código MFA inválido', ipAddress, tenantId);
         throw new UnauthorizedException('Código MFA inválido ou expirado.');
@@ -136,7 +145,80 @@ export class AuthenticationService {
 
     return {
       mfaRequired: false,
-      // Campos na raiz para leitura direta pelo frontend (res.data.accessToken)
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: iamUser,
+      tokens,
+    };
+  }
+
+  /**
+   * Valida a 2ª etapa de autenticação MFA utilizando o mfaTicket temporário.
+   */
+  async validateMfaTicket(
+    mfaTicket: string,
+    code: string,
+    ipAddress: string,
+    userAgent: string,
+    deviceFingerprint?: string,
+    tenantId = 'default',
+  ) {
+    let payload: any;
+    try {
+      payload = await this.jwtService.verifyAsync(mfaTicket, {
+        secret: this.config.get<string>('JWT_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('Ticket MFA inválido ou expirado.');
+    }
+
+    if (payload.purpose !== 'mfa_validation' || !payload.sub) {
+      throw new UnauthorizedException('Ticket MFA inválido.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user || user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Usuário inválido ou inativo.');
+    }
+
+    const rawSecret = this.mfaService.decryptSecret(user.mfaSecret ?? '');
+    const isMfaValid = this.mfaService.verifyTotp(rawSecret, code);
+
+    if (!isMfaValid) {
+      await this.publishLoginFailed(user.email, 'Código MFA de ticket inválido', ipAddress, tenantId);
+      throw new UnauthorizedException('Código MFA inválido ou expirado.');
+    }
+
+    // Criação da Sessão Ativa pós-MFA
+    const session = await this.sessionService.createSession(
+      user.id,
+      tenantId,
+      ipAddress,
+      userAgent,
+      deviceFingerprint,
+    );
+
+    const tokens = await this.generateTokens(user, session.sessionId, tenantId);
+
+    const iamUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      initials: (user.name ?? 'US').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase(),
+      primaryRole: user.role.toLowerCase(),
+      roles: [user.role.toLowerCase()],
+      permissions: [] as string[],
+      status: 'active',
+      mfaEnabled: user.mfaEnabled ?? false,
+      createdAt: user.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString?.() ?? new Date().toISOString(),
+    };
+
+    return {
+      mfaRequired: false,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       user: iamUser,
