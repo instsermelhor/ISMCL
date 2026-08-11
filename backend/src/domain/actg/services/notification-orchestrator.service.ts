@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { NotificationEventType, NotificationChannel } from '../dto/actg.dto';
 import { WhatsAppBusinessConnector } from '../connectors/whatsapp-business.connector';
 import { EventBusService } from '../../../events/event-bus.service';
+import { PushNotificationService } from './push-notification.service';
 
 export interface NotificationContext {
   appointmentId: string;
@@ -13,6 +14,10 @@ export interface NotificationContext {
   recipientName: string;
   recipientPhone?: string;
   recipientEmail?: string;
+  /** Token FCM (Android/Web) ou APNs (iOS) do dispositivo do destinatário */
+  deviceToken?: string;
+  /** Plataforma do dispositivo para push notification */
+  devicePlatform?: 'FCM' | 'APNS';
   appointmentDate: string;
   appointmentTime: string;
   professionalName: string;
@@ -63,6 +68,7 @@ export class NotificationOrchestratorService {
   constructor(
     private readonly whatsapp: WhatsAppBusinessConnector,
     private readonly eventBus: EventBusService,
+    private readonly pushService: PushNotificationService,
     @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
   ) {}
 
@@ -173,10 +179,33 @@ export class NotificationOrchestratorService {
 
       case NotificationChannel.EMAIL:
       case NotificationChannel.SMS:
-      case NotificationChannel.PUSH:
       case NotificationChannel.PORTAL:
         this.logger.log(`[NotificationOrchestrator] Canal ${channel}: notificação orquestrada (${templateName})`);
         break;
+
+      case NotificationChannel.PUSH: {
+        if (!context.deviceToken) {
+          this.logger.warn(`[NotificationOrchestrator] Canal PUSH: deviceToken ausente para ${context.recipientId}`);
+          break;
+        }
+        const pushResult = await this.pushService.send({
+          deviceToken: context.deviceToken,
+          platform: context.devicePlatform ?? 'FCM',
+          title: 'Aura — Lembrete de Consulta',
+          body: `Sua consulta está agendada para ${context.appointmentDate} às ${context.appointmentTime}.`,
+          data: {
+            appointmentId: context.appointmentId,
+            templateName,
+            joinUrl: context.joinUrl ?? '',
+          },
+          collapseKey: `appt:${context.appointmentId}`,
+        });
+        this.logger.log(
+          `[NotificationOrchestrator] PUSH ${pushResult.success ? '✅' : '⚠️ (degradado)'}: ` +
+          `messageId=${pushResult.messageId ?? 'N/A'} — ${context.recipientId}`,
+        );
+        break;
+      }
     }
   }
 
