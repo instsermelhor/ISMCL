@@ -92,6 +92,41 @@ export class SignClinicalNoteDto {
   digitalSignature: string;
 }
 
+export class UpdateSoapNoteDto {
+  @ApiPropertyOptional({ description: 'Subjetivo: Relato do paciente / queixa principal' })
+  @IsOptional()
+  @IsString()
+  subjective?: string;
+
+  @ApiPropertyOptional({ description: 'Objetivo: Exame físico / observações comportamentais / exames' })
+  @IsOptional()
+  @IsString()
+  objective?: string;
+
+  @ApiPropertyOptional({ description: 'Avaliação: Parecer técnico / hipótese diagnóstica' })
+  @IsOptional()
+  @IsString()
+  assessment?: string;
+
+  @ApiPropertyOptional({ description: 'Plano: Conduta assistencial / encaminhamentos / prescrição' })
+  @IsOptional()
+  @IsString()
+  plan?: string;
+}
+
+export class UpdateDraftClinicalNoteDto {
+  @ApiPropertyOptional({ description: 'Conteúdo estruturado no padrão SOAP para autosave' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateSoapNoteDto)
+  soapNote?: UpdateSoapNoteDto;
+
+  @ApiPropertyOptional({ description: 'Código do CID-10 / CID-11 se aplicável', example: 'F41.1' })
+  @IsOptional()
+  @IsString()
+  icdCode?: string;
+}
+
 export class AddAttachmentDto {
   @ApiProperty({ description: 'ID do Prontuário Eletrônico' })
   @IsUUID()
