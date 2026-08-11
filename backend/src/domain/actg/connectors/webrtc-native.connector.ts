@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { randomUUID, createHmac } from 'crypto';
 import {
   ICommunicationProvider,
@@ -29,6 +31,12 @@ export interface WebRtcRoomState {
   createdAt: Date;
 }
 
+/** TTL de chave de sala no Redis: 4 horas (14.400s) */
+const ROOM_TTL_MS = 14400 * 1000;
+
+/** TTL de chave de sinalização no Redis: 2 horas (7.200s) */
+const SIGNAL_TTL_MS = 7200 * 1000;
+
 /**
  * WebRtcNativeConnector — Conector e Motor de Teleconsulta WebRTC Nativo
  *
@@ -36,24 +44,18 @@ export interface WebRtcRoomState {
  * externa (Google Meet, Teams, Zoom, Jitsi). Atua como fallback definitivo
  * quando todos os provedores SaaS terceiros estão fora do ar.
  *
- * Funcionalidades:
- * - Geração de salas WebRTC com URLs internas /telehealth/:roomId
- * - Configuração automática de servidores STUN/TURN públicos e institucionais
- * - Servidor de Sinalização (Signaling Engine) para troca de SDP Offer/Answer e ICE Candidates
- * - Monitoramento de participantes e estado das salas
- * - Disponibilidade 100% garantida (Independente de APIS externas)
+ * Suporta armazenamento de salas e sinalizações em Redis com fallback em memória
+ * para suporte a escala horizontal (multi-pod).
  *
- * Referências: REMEDIATION-AURA-001 (R3-04 / GAP-P3-04), ADR-188
+ * Referências: REMEDIATION-AURA-001 (R3-04 / GAP-P3-04), ANO-002 (Sprint R4), ADR-188
  */
 @Injectable()
 export class WebRtcNativeConnector implements ICommunicationProvider {
   readonly providerType = ProviderType.WEBRTC_NATIVE;
   private readonly logger = new Logger(WebRtcNativeConnector.name);
 
-  // Armazenamento em memória das salas ativas
+  // Armazenamento em memória local (fallback quando Redis indisponível)
   private readonly rooms = new Map<string, WebRtcRoomState>();
-
-  // Armazenamento de sinalizações trocadas (fallback para polling/REST)
   private readonly signalMailbox = new Map<string, WebRtcSignalingMessage[]>();
 
   private readonly secretKey = process.env.WEBRTC_SECRET_KEY || 'AuraNativeWebRtcSecretKey2026';
@@ -66,6 +68,10 @@ export class WebRtcNativeConnector implements ICommunicationProvider {
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun.services.mozilla.com' },
   ];
+
+  constructor(
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
+  ) {}
 
   async createSession(
     appointmentId: string,
@@ -97,7 +103,17 @@ export class WebRtcNativeConnector implements ICommunicationProvider {
       createdAt: new Date(),
     };
 
+    // Salva em memória local
     this.rooms.set(roomId, roomState);
+
+    // Salva no Redis se disponível (ANO-002 multi-pod scaling)
+    if (this.cacheManager) {
+      try {
+        await this.cacheManager.set(`webrtc:room:${roomId}`, JSON.stringify(this.serializeRoom(roomState)), ROOM_TTL_MS);
+      } catch (err: any) {
+        this.logger.warn(`[WebRtcNative] Falha ao salvar sala no Redis (usando fallback local): ${err.message}`);
+      }
+    }
 
     return {
       externalMeetingId: roomId,
@@ -117,11 +133,18 @@ export class WebRtcNativeConnector implements ICommunicationProvider {
     externalMeetingId: string,
     update: ProviderSessionUpdate,
   ): Promise<ProviderSession> {
-    const room = this.rooms.get(externalMeetingId);
+    let room = await this.getRoomDetailsAsync(externalMeetingId);
     if (room) {
       if (update.title) room.title = update.title;
       if (update.scheduledStart) room.scheduledStart = update.scheduledStart;
       if (update.scheduledEnd) room.scheduledEnd = update.scheduledEnd;
+
+      this.rooms.set(externalMeetingId, room);
+      if (this.cacheManager) {
+        try {
+          await this.cacheManager.set(`webrtc:room:${externalMeetingId}`, JSON.stringify(this.serializeRoom(room)), ROOM_TTL_MS);
+        } catch {}
+      }
     }
 
     const token = this.generateRoomToken(externalMeetingId, room?.appointmentId ?? externalMeetingId);
@@ -134,11 +157,22 @@ export class WebRtcNativeConnector implements ICommunicationProvider {
 
   async cancelSession(externalMeetingId: string, reason?: string): Promise<void> {
     this.logger.log(`[WebRtcNative] Encerrando sala ${externalMeetingId}. Motivo: ${reason ?? 'Solicitado'}`);
-    const room = this.rooms.get(externalMeetingId);
+    const room = await this.getRoomDetailsAsync(externalMeetingId);
     if (room) {
       room.status = 'ENDED';
+      this.rooms.set(externalMeetingId, room);
+      if (this.cacheManager) {
+        try {
+          await this.cacheManager.set(`webrtc:room:${externalMeetingId}`, JSON.stringify(this.serializeRoom(room)), ROOM_TTL_MS);
+        } catch {}
+      }
     }
     this.signalMailbox.delete(externalMeetingId);
+    if (this.cacheManager) {
+      try {
+        await this.cacheManager.del(`webrtc:signals:${externalMeetingId}`);
+      } catch {}
+    }
   }
 
   async checkHealth(): Promise<ProviderHealthResult> {
@@ -161,46 +195,98 @@ export class WebRtcNativeConnector implements ICommunicationProvider {
       throw new Error('Sinalização inválida: roomId e senderId são obrigatórios.');
     }
 
+    // 1. Atualiza mailbox local
     let mailbox = this.signalMailbox.get(roomId);
     if (!mailbox) {
       mailbox = [];
       this.signalMailbox.set(roomId, mailbox);
     }
-
-    // Adiciona a mensagem com timestamp
     mailbox.push(message);
-
-    // Mantém no máximo 100 mensagens ativas por sala
     if (mailbox.length > 100) {
       mailbox.shift();
     }
 
+    // 2. Atualiza Redis se disponível (ANO-002 multi-pod)
+    if (this.cacheManager) {
+      try {
+        let redisMailbox: WebRtcSignalingMessage[] = [];
+        const raw = await this.cacheManager.get<string>(`webrtc:signals:${roomId}`);
+        if (raw) {
+          redisMailbox = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        }
+        redisMailbox.push(message);
+        if (redisMailbox.length > 100) {
+          redisMailbox.shift();
+        }
+        await this.cacheManager.set(`webrtc:signals:${roomId}`, JSON.stringify(redisMailbox), SIGNAL_TTL_MS);
+      } catch (err: any) {
+        this.logger.warn(`[WebRtcNative] Falha ao salvar sinal no Redis: ${err.message}`);
+      }
+    }
+
     // Atualiza status da sala para IN_PROGRESS se oferta/resposta enviada
-    const room = this.rooms.get(roomId);
+    const room = await this.getRoomDetailsAsync(roomId);
     if (room && room.status === 'WAITING' && (message.type === 'offer' || message.type === 'answer')) {
       room.status = 'IN_PROGRESS';
+      this.rooms.set(roomId, room);
+      if (this.cacheManager) {
+        try {
+          await this.cacheManager.set(`webrtc:room:${roomId}`, JSON.stringify(this.serializeRoom(room)), ROOM_TTL_MS);
+        } catch {}
+      }
     }
   }
 
   /**
-   * Recupera mensagens de sinalização pendentes para um participante.
+   * Recupera mensagens de sinalização pendentes para um participante (síncrono / local).
    */
   getSignalingMessages(roomId: string, recipientId: string): WebRtcSignalingMessage[] {
     const mailbox = this.signalMailbox.get(roomId);
     if (!mailbox) return [];
 
-    // Retorna mensagens destinadas ao participante ou broadcast (sem recipientId) vindas de outros participantes
-    const messages = mailbox.filter(
+    return mailbox.filter(
       (m) => m.senderId !== recipientId && (!m.recipientId || m.recipientId === recipientId),
     );
-
-    return messages;
   }
 
   /**
-   * Retorna os metadados completos de uma sala WebRTC nativa.
+   * Recupera mensagens de sinalização pendentes via Redis ou local (assíncrono).
+   */
+  async getSignalingMessagesAsync(roomId: string, recipientId: string): Promise<WebRtcSignalingMessage[]> {
+    if (this.cacheManager) {
+      try {
+        const raw = await this.cacheManager.get<string>(`webrtc:signals:${roomId}`);
+        if (raw) {
+          const mailbox: WebRtcSignalingMessage[] = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          return mailbox.filter(
+            (m) => m.senderId !== recipientId && (!m.recipientId || m.recipientId === recipientId),
+          );
+        }
+      } catch {}
+    }
+    return this.getSignalingMessages(roomId, recipientId);
+  }
+
+  /**
+   * Retorna os metadados completos de uma sala WebRTC nativa (síncrono / local).
    */
   getRoomDetails(roomId: string): WebRtcRoomState | undefined {
+    return this.rooms.get(roomId);
+  }
+
+  /**
+   * Retorna os metadados completos de uma sala WebRTC nativa via Redis ou local (assíncrono).
+   */
+  async getRoomDetailsAsync(roomId: string): Promise<WebRtcRoomState | undefined> {
+    if (this.cacheManager) {
+      try {
+        const raw = await this.cacheManager.get<string>(`webrtc:room:${roomId}`);
+        if (raw) {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          return this.deserializeRoom(parsed);
+        }
+      } catch {}
+    }
     return this.rooms.get(roomId);
   }
 
@@ -210,5 +296,22 @@ export class WebRtcNativeConnector implements ICommunicationProvider {
     const hmac = createHmac('sha256', this.secretKey);
     hmac.update(`${roomId}:${appointmentId}`);
     return hmac.digest('hex').slice(0, 16);
+  }
+
+  private serializeRoom(room: WebRtcRoomState): any {
+    return {
+      ...room,
+      participants: Array.from(room.participants.entries()),
+    };
+  }
+
+  private deserializeRoom(data: any): WebRtcRoomState {
+    return {
+      ...data,
+      scheduledStart: new Date(data.scheduledStart),
+      scheduledEnd: new Date(data.scheduledEnd),
+      createdAt: new Date(data.createdAt),
+      participants: new Map(data.participants || []),
+    };
   }
 }
