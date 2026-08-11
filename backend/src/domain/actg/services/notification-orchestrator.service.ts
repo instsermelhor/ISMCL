@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { randomUUID } from 'crypto';
 import { NotificationEventType, NotificationChannel } from '../dto/actg.dto';
 import { WhatsAppBusinessConnector } from '../connectors/whatsapp-business.connector';
@@ -20,12 +22,15 @@ export interface NotificationContext {
   allowedChannels: NotificationChannel[];
 }
 
+// TTL da chave de idempotência de notificação no Redis: 8 dias (691.200 segundos)
+const IDEMPOTENCY_TTL_SECONDS = 691200;
+
 /**
  * NotificationOrchestratorService — Orquestrador de Notificações Multicanal
  *
  * Gerencia o envio de notificações para todos os eventos do ciclo de vida
  * de um atendimento, garantindo:
- * - Idempotência via chave única por (recipientId + appointmentId + eventType + channel)
+ * - Idempotência via chave única no Redis (com TTL 8d) ou Set local fallback
  * - Respeito às preferências do beneficiário
  * - Filtragem de conteúdo sensível por nível MCSI
  * - Sem duplicidade mesmo em retentativas
@@ -33,7 +38,7 @@ export interface NotificationContext {
  * REGRA MCSI: Mensagens externas nunca incluem classificação clínica, diagnóstico
  * ou qualquer informação sensível. Apenas informações operacionais neutras.
  *
- * Referência: ADR-188, Prompt 188 — Item 21, 22, 18
+ * Referência: ADR-188, Prompt 188 — Item 21, 22, 18, GAP-P2-01
  */
 @Injectable()
 export class NotificationOrchestratorService {
@@ -43,6 +48,7 @@ export class NotificationOrchestratorService {
   constructor(
     private readonly whatsapp: WhatsAppBusinessConnector,
     private readonly eventBus: EventBusService,
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
   ) {}
 
   async notify(
@@ -52,14 +58,14 @@ export class NotificationOrchestratorService {
     for (const channel of context.allowedChannels) {
       const idempotencyKey = `${context.recipientId}:${context.appointmentId}:${eventType}:${channel}`;
 
-      if (this.sentNotifications.has(idempotencyKey)) {
+      if (await this.isAlreadySent(idempotencyKey)) {
         this.logger.debug(`[NotificationOrchestrator] Notificação já enviada (idempotência): ${idempotencyKey}`);
         continue;
       }
 
       try {
         await this.sendToChannel(channel, eventType, context);
-        this.sentNotifications.add(idempotencyKey);
+        await this.markAsSent(idempotencyKey);
         this.logger.log(`[NotificationOrchestrator] ✅ Notificação enviada: ${eventType} → ${channel} para ${context.recipientId}`);
 
         await this.eventBus.publish(
@@ -76,6 +82,35 @@ export class NotificationOrchestratorService {
         );
       } catch (err) {
         this.logger.error(`[NotificationOrchestrator] Falha ao enviar via ${channel}: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  /**
+   * Verifica se a notificação já foi enviada (no Redis ou no Set em memória).
+   */
+  async isAlreadySent(key: string): Promise<boolean> {
+    if (this.cacheManager) {
+      try {
+        const val = await this.cacheManager.get(`notif:${key}`);
+        if (val) return true;
+      } catch (e) {
+        // Fallback local se o Redis falhar
+      }
+    }
+    return this.sentNotifications.has(key);
+  }
+
+  /**
+   * Marca a notificação como enviada (no Redis com TTL de 8d e no Set em memória).
+   */
+  async markAsSent(key: string): Promise<void> {
+    this.sentNotifications.add(key);
+    if (this.cacheManager) {
+      try {
+        await this.cacheManager.set(`notif:${key}`, '1', IDEMPOTENCY_TTL_SECONDS * 1000);
+      } catch (e) {
+        // Fallback local se o Redis falhar
       }
     }
   }
