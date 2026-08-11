@@ -26,24 +26,39 @@ export interface NotificationContext {
 const IDEMPOTENCY_TTL_SECONDS = 691200;
 
 /**
+ * Limite máximo de entradas no fallback local.
+ * Evita crescimento ilimitado de memória quando o Redis está indisponível
+ * por períodos prolongados. Ao atingir o limite, entradas mais antigas são
+ * descartadas (FIFO) para prevenir OOM.
+ */
+const MAX_LOCAL_FALLBACK_KEYS = 10_000;
+
+/**
  * NotificationOrchestratorService — Orquestrador de Notificações Multicanal
  *
  * Gerencia o envio de notificações para todos os eventos do ciclo de vida
  * de um atendimento, garantindo:
- * - Idempotência via chave única no Redis (com TTL 8d) ou Set local fallback
+ * - Idempotência via chave única no Redis (com TTL 8d) — fonte primária
+ * - Fallback local em Set limitado (MAX_LOCAL_FALLBACK_KEYS) quando Redis indisponível
  * - Respeito às preferências do beneficiário
  * - Filtragem de conteúdo sensível por nível MCSI
- * - Sem duplicidade mesmo em retentativas
+ * - Sem duplicidade mesmo em retentativas e reinicializações (via Redis)
  *
  * REGRA MCSI: Mensagens externas nunca incluem classificação clínica, diagnóstico
  * ou qualquer informação sensível. Apenas informações operacionais neutras.
  *
- * Referência: ADR-188, Prompt 188 — Item 21, 22, 18, GAP-P2-01
+ * Referência: ADR-188, Prompt 188 — Item 21, 22, 18, GAP-P2-01, GAP-P3-02
  */
 @Injectable()
 export class NotificationOrchestratorService {
   private readonly logger = new Logger(NotificationOrchestratorService.name);
-  private readonly sentNotifications = new Set<string>();
+
+  /**
+   * Fallback local de idempotência — usado APENAS quando o Redis está indisponível.
+   * É limitado a MAX_LOCAL_FALLBACK_KEYS entradas para prevenir crescimento ilimitado.
+   * NÃO persiste entre reinicializações do processo — use Redis para durabilidade real.
+   */
+  private readonly localFallback = new Set<string>();
 
   constructor(
     private readonly whatsapp: WhatsAppBusinessConnector,
@@ -87,32 +102,51 @@ export class NotificationOrchestratorService {
   }
 
   /**
-   * Verifica se a notificação já foi enviada (no Redis ou no Set em memória).
+   * Verifica se a notificação já foi enviada.
+   *
+   * Estratégia: Redis primário → fallback local (somente se Redis falhar).
    */
   async isAlreadySent(key: string): Promise<boolean> {
     if (this.cacheManager) {
       try {
         const val = await this.cacheManager.get(`notif:${key}`);
-        if (val) return true;
+        if (val !== null && val !== undefined) return true;
+        // Redis respondeu e não encontrou a chave — definitivamente não enviado
+        return false;
       } catch (e) {
-        // Fallback local se o Redis falhar
+        this.logger.warn(
+          `[NotificationOrchestrator] Redis indisponível ao verificar idempotência (${key}). Usando fallback local.`,
+        );
       }
     }
-    return this.sentNotifications.has(key);
+    // Fallback: consulta o Set local (somente quando Redis está fora)
+    return this.localFallback.has(key);
   }
 
   /**
-   * Marca a notificação como enviada (no Redis com TTL de 8d e no Set em memória).
+   * Marca a notificação como enviada.
+   *
+   * Estratégia: Redis primário com TTL de 8 dias.
+   * Se Redis falhar, registra no fallback local com limite de tamanho.
    */
   async markAsSent(key: string): Promise<void> {
-    this.sentNotifications.add(key);
     if (this.cacheManager) {
       try {
         await this.cacheManager.set(`notif:${key}`, '1', IDEMPOTENCY_TTL_SECONDS * 1000);
+        // Redis bem-sucedido — NÃO popula o fallback local (evita duplo consumo de memória)
+        return;
       } catch (e) {
-        // Fallback local se o Redis falhar
+        this.logger.warn(
+          `[NotificationOrchestrator] Redis indisponível ao marcar idempotência (${key}). Usando fallback local.`,
+        );
       }
     }
+    // Fallback local: limita o tamanho para evitar OOM
+    if (this.localFallback.size >= MAX_LOCAL_FALLBACK_KEYS) {
+      const oldest = this.localFallback.values().next().value;
+      if (oldest) this.localFallback.delete(oldest);
+    }
+    this.localFallback.add(key);
   }
 
   private async sendToChannel(
