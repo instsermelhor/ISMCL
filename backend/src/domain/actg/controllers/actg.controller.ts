@@ -23,12 +23,14 @@ import {
 } from '../dto/actg.dto';
 import { FallbackPolicy } from '../services/fallback-engine.service';
 
+import { WebRtcNativeConnector } from '../connectors/webrtc-native.connector';
+
 /**
  * ACTGController — API REST do Aura Communication & Teleattendance Gateway
  *
  * Rotas versionadas sob /api/v1/actg
  *
- * Referência: ADR-188, Prompt 188 — Item 38
+ * Referência: ADR-188, Prompt 188 — Item 38, GAP-P3-04
  */
 @ApiTags('ACTG — Communication & Teleattendance Gateway')
 @ApiBearerAuth()
@@ -42,6 +44,7 @@ export class ACTGController {
     private readonly providerHealth: ProviderHealthService,
     private readonly webhookProcessor: WebhookProcessorService,
     private readonly notificationOrchestrator: NotificationOrchestratorService,
+    private readonly webrtcConnector: WebRtcNativeConnector,
   ) {}
 
   // ── Provider Health ────────────────────────────────────────────────────────
@@ -207,4 +210,40 @@ export class ACTGController {
   ) {
     return this.webhookProcessor.process(providerType, dto.payload, dto.signature);
   }
+
+  // ── WebRTC Nativo Engine (GAP-P3-04) ───────────────────────────────────────
+
+  @Post('webrtc/signal')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enviar sinalização WebRTC Nativa (Offer, Answer, ICE Candidate)' })
+  async sendWebRtcSignal(@Body() message: any) {
+    await this.webrtcConnector.handleSignaling(message);
+    return { status: 'signaled', roomId: message.roomId };
+  }
+
+  @Get('webrtc/signals/:roomId')
+  @ApiOperation({ summary: 'Recuperar mensagens de sinalização pendentes para um participante' })
+  getWebRtcSignals(
+    @Param('roomId') roomId: string,
+    @Query('participantId') participantId: string,
+  ) {
+    return this.webrtcConnector.getSignalingMessages(roomId, participantId ?? 'anonymous');
+  }
+
+  @Get('webrtc/rooms/:roomId')
+  @ApiOperation({ summary: 'Recuperar detalhes da sala de teleconsulta nativa e servidores STUN/TURN' })
+  getWebRtcRoomDetails(@Param('roomId') roomId: string) {
+    const details = this.webrtcConnector.getRoomDetails(roomId);
+    if (!details) {
+      return { roomId, status: 'NOT_FOUND', iceServers: [] };
+    }
+    return {
+      roomId: details.roomId,
+      appointmentId: details.appointmentId,
+      title: details.title,
+      status: details.status,
+      iceServers: details.iceServers,
+    };
+  }
 }
+
