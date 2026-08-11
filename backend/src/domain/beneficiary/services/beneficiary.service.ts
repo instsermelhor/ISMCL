@@ -237,7 +237,7 @@ export class BeneficiaryService {
     const [cases, appointments, evolutions] = await Promise.all([
       this.prisma.case.findMany({
         where: { beneficiaryId: id },
-        select: { id: true, caseNumber: true, title: true, createdAt: true },
+        select: { id: true, classification: true, reason: true, createdAt: true },
         take: 10,
         orderBy: { createdAt: 'desc' },
       }),
@@ -261,7 +261,7 @@ export class BeneficiaryService {
       timeline.push({
         type: 'CASE',
         id: c.id,
-        title: `Caso #${c.caseNumber ?? c.id}: ${c.title ?? 'Atendimento'}`,
+        title: `Caso ${c.classification ?? 'Geral'}: ${c.reason ?? 'Atendimento'}`,
         occurredAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
       });
     });
