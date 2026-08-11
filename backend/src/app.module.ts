@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PrismaModule } from './prisma/prisma.module';
+import { BreakGlassModule } from './domain/break-glass/break-glass.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import { LoggerModule } from 'nestjs-pino';
@@ -204,10 +206,12 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
     // ── Scheduled Tasks ────────────────────────────────────────────────────────
     ScheduleModule.forRoot(),
 
-    // ── Foundation Modules ─────────────────────────────────────────────────────
+    // ── Foundation Modules ─────────────────────────────────────────────────
+    PrismaModule,
     HealthModule,
     EventBusModule,
     AuthModule,
+    BreakGlassModule,
     RegistrationModule,
     IntakeModule,
     CaseManagementModule,
