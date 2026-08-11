@@ -148,6 +148,22 @@ describe('AuditService — GAP-P1-03 (Log Imutável com Hash Chain)', () => {
       expect(integrity.message).toContain('Adulteração detectada');
     });
 
+    it('deve utilizar valores padrão para ipAddress e userAgent quando omitidos (ANO-005)', async () => {
+      const logId = await service.log({
+        actorId: 'user-009',
+        action: 'UPDATE_PROFILE',
+        targetEntity: 'BENEFICIARY',
+        targetEntityId: 'ben-999',
+        correlationId: 'corr-12345',
+        severity: 'HIGH',
+        metadata: { fieldChanged: 'address' },
+      });
+
+      expect(logId).toEqual('log-1');
+      expect(auditLogs[0].ipAddress).toEqual('0.0.0.0');
+      expect(auditLogs[0].userAgent).toEqual('SYSTEM');
+    });
+
     it('deve detectar deleção de log na cadeia de auditoria', async () => {
       await service.log({
         actorId: 'user-001',
@@ -169,3 +185,4 @@ describe('AuditService — GAP-P1-03 (Log Imutável com Hash Chain)', () => {
     });
   });
 });
+
