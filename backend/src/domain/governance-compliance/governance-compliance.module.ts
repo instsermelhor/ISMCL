@@ -17,12 +17,14 @@ import { GovernanceDashboardService } from './services/governance-dashboard.serv
 import { GovernanceComplianceController } from './controllers/governance-compliance.controller';
 import { LgpdController } from './controllers/lgpd.controller';
 
-// LGPD — P12
+// LGPD — P12 & GAP-P2-06
 import { LgpdConsentService } from './services/lgpd-consent.service';
+import { AnonymizationService } from './services/anonymization.service';
+import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
- * GovernanceComplianceModule — Prompt 161 (AGCC)
+ * GovernanceComplianceModule — Prompt 161 (AGCC) & GAP-P2-06
  *
  * Plataforma de Governança Autônoma, Conformidade Contínua e Garantia Institucional
  * da Plataforma Aura (Fase XI — Instituto Ser Melhor).
@@ -46,6 +48,8 @@ import { PrismaService } from '../../prisma/prisma.service';
     GovernanceRecommendationService,
     GovernanceDashboardService,
     LgpdConsentService,
+    AnonymizationService,
+    AuditService,
     PrismaService,
   ],
   exports: [
@@ -55,6 +59,7 @@ import { PrismaService } from '../../prisma/prisma.service';
     EnterpriseRiskValidationService,
     GovernanceDashboardService,
     LgpdConsentService,
+    AnonymizationService,
   ],
 })
 export class GovernanceComplianceModule {}
