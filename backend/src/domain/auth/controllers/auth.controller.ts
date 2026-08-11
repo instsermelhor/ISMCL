@@ -25,6 +25,7 @@ import {
   RegisterUserDto,
   RefreshTokenDto,
   VerifyMfaDto,
+  ValidateMfaTicketDto,
   EvaluatePolicyDto,
 } from '../dto/auth.dto';
 import { BaseResponseDto } from '../../../shared/dto/base-response.dto';
@@ -166,26 +167,74 @@ export class AuthController {
   @ApiBearerAuth('access-token')
   @Get('mfa/setup')
   @ApiOperation({ summary: 'Geração de Segredo TOTP / QR-Code para Configuração de MFA' })
-  async setupMfa(@Req() req: FastifyRequest & { user: AuraJwtPayload }) {
+  async setupMfaGet(@Req() req: FastifyRequest & { user: AuraJwtPayload }) {
     const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
-    const result = this.mfaService.generateMfaSetup(req.user.email);
-    return BaseResponseDto.ok(result, requestId, undefined, 'Configuração MFA gerada.');
+    const result = await this.mfaService.setupMfaForUser(req.user.sub, req.user.email);
+    return BaseResponseDto.ok(result, requestId, undefined, 'Configuração MFA gerada e segredo cifrado.');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Post('mfa/setup')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Geração e Persistência Cifrada de Segredo TOTP para MFA' })
+  async setupMfaPost(@Req() req: FastifyRequest & { user: AuraJwtPayload }) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const result = await this.mfaService.setupMfaForUser(req.user.sub, req.user.email);
+    return BaseResponseDto.ok(result, requestId, undefined, 'Configuração MFA gerada e segredo cifrado com sucesso.');
   }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Post('mfa/verify')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validação de Token MFA TOTP' })
+  @ApiOperation({ summary: 'Validação de Token MFA TOTP e Ativação Definitiva' })
   async verifyMfa(
     @Body() dto: VerifyMfaDto,
     @Req() req: FastifyRequest & { user: AuraJwtPayload },
   ) {
     const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
-    const user = await this.identityService.findById(req.user.sub);
+    const result = await this.mfaService.verifyAndEnableMfa(req.user.sub, dto.code, dto.secret);
+    return BaseResponseDto.ok(result, requestId, undefined, 'MFA ativado com sucesso.');
+  }
 
-    const isValid = this.mfaService.verifyTotp(user.mfaSecret ?? '', dto.code);
-    return BaseResponseDto.ok({ valid: isValid }, requestId);
+  @Public()
+  @Post('mfa/validate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validação de Ticket MFA (2ª Etapa de Login)' })
+  async validateMfaTicket(
+    @Body() dto: ValidateMfaTicketDto,
+    @Req() req: FastifyRequest,
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const ipAddress = req.ip ?? '127.0.0.1';
+    const userAgent = req.headers['user-agent'] ?? 'unknown';
+    const tenantId = (req.headers['x-tenant-id'] as string) ?? 'default';
+
+    const result = await this.authService.validateMfaTicket(
+      dto.mfaTicket,
+      dto.code,
+      ipAddress,
+      userAgent,
+      dto.deviceFingerprint,
+      tenantId,
+    );
+
+    return BaseResponseDto.ok(result, requestId, undefined, 'Validação de MFA concluída com sucesso.');
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Post('mfa/disable')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desativação do MFA com confirmação por código TOTP' })
+  async disableMfa(
+    @Body() dto: VerifyMfaDto,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const result = await this.mfaService.disableMfaForUser(req.user.sub, dto.code);
+    return BaseResponseDto.ok(result, requestId, undefined, 'MFA desativado.');
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
