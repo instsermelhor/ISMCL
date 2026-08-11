@@ -73,18 +73,20 @@ export class AiAssistantService {
     let sourcesUsed: string[] = [];
     let ragContext = '';
 
+    const sanitizedPrompt = this.sanitizePii(dto.userPrompt);
+
     if (dto.enableRag !== false) {
-      const ragResult = await this.ragService.queryRag({ query: dto.userPrompt, topK: 2 }, tenantId);
+      const ragResult = await this.ragService.queryRag({ query: sanitizedPrompt, topK: 2 }, tenantId);
       sourcesUsed = ragResult.sourcesUsed;
       if (sourcesUsed.length > 0) {
         ragContext = `\n\n[CONTEXTO DA BASE DE CONHECIMENTO INSTITUCIONAL]:\n${ragResult.synthesizedAnswer}`;
       }
     }
 
-    // 3. Invoca AI Gateway
+    // 3. Invoca AI Gateway com prompt sanitizado
     const llmResp = await this.aiGateway.generateCompletion({
       systemPrompt: `${systemPrompt}${ragContext}`,
-      userPrompt: dto.userPrompt,
+      userPrompt: sanitizedPrompt,
     });
 
     // 4. Classificação de Risco e IA Responsável
@@ -128,4 +130,17 @@ export class AiAssistantService {
 
     return response;
   }
+
+  /**
+   * Desidentifica informações pessoais sensíveis (PII / PHI) antes de enviar ao gateway LLM.
+   * Mascara CPFs, E-mails e Telefones.
+   */
+  sanitizePii(text: string): string {
+    if (!text) return text;
+    return text
+      .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[CPF_DESIDENTIFICADO]')
+      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, '[EMAIL_DESIDENTIFICADO]')
+      .replace(/\b(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b/g, '[TELEFONE_DESIDENTIFICADO]');
+  }
 }
+
