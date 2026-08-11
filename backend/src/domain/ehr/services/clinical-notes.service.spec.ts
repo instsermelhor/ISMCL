@@ -80,4 +80,92 @@ describe('ClinicalNotesService', () => {
       expect.anything(),
     );
   });
+
+  describe('Autosave Backend de Evoluções Clínicas (GAP-P3-07)', () => {
+    it('deve atualizar rascunho de evolução SOAP via saveDraft com sucesso', async () => {
+      const draft = await service.createNote(
+        {
+          ehrId: 'ehr-999',
+          caseId: 'case-888',
+          category: ClinicalSpecialtyCategory.PSYCHIATRY,
+          sensitivity: RecordSensitivityClassification.HIGHLY_SENSITIVE,
+          soapNote: {
+            subjective: 'Relato inicial',
+            objective: 'Exame inicial',
+            assessment: 'Avaliação inicial',
+            plan: 'Plano inicial',
+          },
+        },
+        'prof-001',
+        'Dr. Marcos',
+        'PSYCHIATRIST',
+      );
+
+      const updated = await service.saveDraft(
+        draft.noteId,
+        {
+          soapNote: {
+            subjective: 'Relato atualizado via autosave',
+            assessment: 'Avaliação atualizada via autosave',
+          },
+          icdCode: 'F32.1',
+        },
+        'prof-001',
+      );
+
+      expect(updated.subjective).toBe('Relato atualizado via autosave');
+      expect(updated.objective).toBe('Exame inicial'); // Mantido
+      expect(updated.assessment).toBe('Avaliação atualizada via autosave');
+      expect(updated.plan).toBe('Plano inicial'); // Mantido
+      expect(updated.icdCode).toBe('F32.1');
+      expect(updated.isSigned).toBe(false);
+    });
+
+    it('deve rejeitar saveDraft se a evolução clínica já estiver assinada', async () => {
+      const draft = await service.createNote(
+        {
+          ehrId: 'ehr-777',
+          caseId: 'case-777',
+          category: ClinicalSpecialtyCategory.PSYCHOLOGY,
+          sensitivity: RecordSensitivityClassification.STANDARD,
+          soapNote: {
+            subjective: 'A',
+            objective: 'B',
+            assessment: 'C',
+            plan: 'D',
+          },
+        },
+        'prof-002',
+        'Dra. Helena',
+        'PSYCHOLOGIST',
+      );
+
+      // Assina a evolução
+      await service.signNote(
+        { noteId: draft.noteId, digitalSignature: 'HASH_IMUTAVEL' },
+        'prof-002',
+        'Dra. Helena',
+        'PSYCHOLOGIST',
+      );
+
+      // Tentativa de alterar a evolução assinada via saveDraft deve falhar
+      await expect(
+        service.saveDraft(
+          draft.noteId,
+          { soapNote: { subjective: 'Tentativa de alteração pós-assinatura' } },
+          'prof-002',
+        ),
+      ).rejects.toThrow('Evoluções clínicas assinadas e bloqueadas não podem ser alteradas em rascunho.');
+    });
+
+    it('deve lançar NotFoundException se a evolução não existir', async () => {
+      await expect(
+        service.saveDraft(
+          'id-inexistente',
+          { soapNote: { subjective: 'Teste' } },
+          'prof-001',
+        ),
+      ).rejects.toThrow('não encontrada');
+    });
+  });
 });
