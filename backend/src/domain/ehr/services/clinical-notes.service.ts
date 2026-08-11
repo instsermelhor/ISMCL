@@ -274,7 +274,7 @@ export class ClinicalNotesService {
             ehrId: dbRecord.beneficiaryId,
             caseId: dbRecord.caseId,
             category: ClinicalSpecialtyCategory.PSYCHOLOGY,
-            sensitivity: RecordSensitivityClassification.HIGHLY_RESTRICTED,
+            sensitivity: RecordSensitivityClassification.HIGHLY_SENSITIVE,
             version: 1,
             subjective: decryptedContent,
             objective: '',
