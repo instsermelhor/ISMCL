@@ -168,4 +168,84 @@ describe('ClinicalNotesService', () => {
       ).rejects.toThrow('não encontrada');
     });
   });
+
+  describe('Redis Draft Caching (ANO-001)', () => {
+    let cacheMock: any;
+    let cacheStore: Map<string, string>;
+    let serviceWithCache: ClinicalNotesService;
+
+    beforeEach(() => {
+      cacheStore = new Map<string, string>();
+      cacheMock = {
+        get: jest.fn().mockImplementation((key: string) => Promise.resolve(cacheStore.get(key))),
+        set: jest.fn().mockImplementation((key: string, val: string) => {
+          cacheStore.set(key, val);
+          return Promise.resolve();
+        }),
+        del: jest.fn().mockImplementation((key: string) => {
+          cacheStore.delete(key);
+          return Promise.resolve();
+        }),
+      };
+
+      serviceWithCache = new ClinicalNotesService(
+        timelineMock as ClinicalTimelineService,
+        eventBusMock as EventBusService,
+        undefined,
+        undefined,
+        cacheMock,
+      );
+    });
+
+    it('deve salvar rascunho no Redis com TTL de 24h ao criar nota', async () => {
+      const draft = await serviceWithCache.createNote(
+        {
+          ehrId: 'ehr-cache-1',
+          caseId: 'case-cache-1',
+          category: ClinicalSpecialtyCategory.PSYCHOLOGY,
+          sensitivity: RecordSensitivityClassification.STANDARD,
+          soapNote: {
+            subjective: 'Rascunho no Redis',
+            objective: 'Objetivo',
+            assessment: 'Avaliação',
+            plan: 'Plano',
+          },
+        },
+        'prof-cache-1',
+        'Dr. Cache',
+        'PSYCHOLOGIST',
+      );
+
+      expect(cacheMock.set).toHaveBeenCalledWith(
+        `draft:note:${draft.noteId}`,
+        expect.any(String),
+        86400 * 1000,
+      );
+    });
+
+    it('deve remover chave de rascunho do Redis ao assinar eletronicamente', async () => {
+      const draft = await serviceWithCache.createNote(
+        {
+          ehrId: 'ehr-cache-2',
+          caseId: 'case-cache-2',
+          category: ClinicalSpecialtyCategory.PSYCHOLOGY,
+          sensitivity: RecordSensitivityClassification.STANDARD,
+          soapNote: { subjective: 'A', objective: 'B', assessment: 'C', plan: 'D' },
+        },
+        'prof-cache-1',
+        'Dr. Cache',
+        'PSYCHOLOGIST',
+      );
+
+      await serviceWithCache.signNote(
+        { noteId: draft.noteId, digitalSignature: 'SIG_REDIS' },
+        'prof-cache-1',
+        'Dr. Cache',
+        'PSYCHOLOGIST',
+      );
+
+      expect(cacheMock.del).toHaveBeenCalledWith(`draft:note:${draft.noteId}`);
+    });
+  });
 });
+
