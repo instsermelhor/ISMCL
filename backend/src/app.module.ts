@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -7,6 +7,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import { LoggerModule } from 'nestjs-pino';
 import * as Joi from 'joi';
+
+import { SecurityMiddleware } from './middleware/security.middleware';
 
 import { HealthModule } from './health/health.module';
 import { EventBusModule } from './events/event-bus.module';
@@ -251,4 +253,10 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
     EnterpriseAIGovernanceModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SecurityMiddleware)
+      .forRoutes('*');
+  }
+}
