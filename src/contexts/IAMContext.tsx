@@ -416,20 +416,39 @@ export function IAMProvider({ children }: { children: ReactNode }) {
   );
 
   function getRedirectPathForUser(user: IAMUser): string {
-    const roles = Array.isArray(user?.roles) ? user.roles : (user?.primaryRole ? [user.primaryRole] : []);
-    if (roles.includes('super_user_universal')) return ROLE_REDIRECT_MAP.super_user_universal;
-    if (roles.includes('super_admin')) return '/painel-supremo';
-    if (roles.includes('auditor')) return ROLE_REDIRECT_MAP.auditor;
-    if (roles.includes('director') || roles.includes('president'))
-      return ROLE_REDIRECT_MAP.director;
-    if (roles.includes('manager')) return ROLE_REDIRECT_MAP.manager;
-    if (roles.includes('coordinator')) return ROLE_REDIRECT_MAP.coordinator;
-    if (roles.includes('volunteer_professional') || roles.includes('professional'))
-      return ROLE_REDIRECT_MAP.professional;
-    if (roles.includes('admin_collaborator')) return ROLE_REDIRECT_MAP.admin_collaborator;
-    if (roles.includes('admin_volunteer')) return ROLE_REDIRECT_MAP.admin_volunteer;
-    if (roles.includes('legal_guardian')) return ROLE_REDIRECT_MAP.legal_guardian;
-    if (roles.includes('beneficiary')) return ROLE_REDIRECT_MAP.beneficiary;
+    const userRoles = Array.isArray(user?.roles)
+      ? user.roles
+      : (user?.primaryRole ? [user.primaryRole] : []);
+
+    /**
+     * GAP-P3-01 — Redirecionamento por papel pós-login (REMEDIATION-AURA-001, R3-01)
+     *
+     * Prioridade decrescente: papéis com maior privilege redirecionam primeiro.
+     * Toda a lógica de destino está centralizada em ROLE_REDIRECT_MAP (iam.ts).
+     * NÃO adicione hardcodes aqui — atualize apenas o ROLE_REDIRECT_MAP.
+     */
+    const ROLE_PRIORITY: InstitutionalRole[] = [
+      'super_user_universal',
+      'super_admin',
+      'auditor',
+      'president',
+      'director',
+      'manager',
+      'coordinator',
+      'professional',
+      'volunteer_professional',
+      'admin_collaborator',
+      'admin_volunteer',
+      'legal_guardian',
+      'beneficiary',
+    ];
+
+    for (const role of ROLE_PRIORITY) {
+      if (userRoles.includes(role)) {
+        return ROLE_REDIRECT_MAP[role] ?? '/dashboard';
+      }
+    }
+
     return '/dashboard';
   }
 
