@@ -31,6 +31,32 @@ export class OfflineSyncService {
   ) {}
 
   /**
+   * Resolve conflitos de sincronização offline utilizando a estratégia LWW (Last-Write-Wins).
+   *
+   * @param incomingClientTime ISO string do momento em que o dado foi alterado offline no cliente.
+   * @param existingServerTime ISO string (ou null) do registro existente no servidor.
+   */
+  resolveConflictLww(
+    incomingClientTime: string,
+    existingServerTime: string | null | undefined,
+  ): { winner: 'CLIENT' | 'SERVER'; isConflict: boolean } {
+    if (!existingServerTime) {
+      return { winner: 'CLIENT', isConflict: false };
+    }
+
+    const clientMs = new Date(incomingClientTime).getTime();
+    const serverMs = new Date(existingServerTime).getTime();
+
+    // Se o carimbo de data do cliente for estritamente mais recente, o cliente vence
+    if (clientMs > serverMs) {
+      return { winner: 'CLIENT', isConflict: true };
+    }
+
+    // Se a versão do servidor for mais recente ou idêntica, o servidor vence e descarta a escrita antiga
+    return { winner: 'SERVER', isConflict: true };
+  }
+
+  /**
    * Processa lote de itens capturados offline por agentes de campo.
    */
   async processBatch(payload: SyncBatchPayload) {
@@ -105,3 +131,4 @@ export class OfflineSyncService {
     return updatedBatch;
   }
 }
+
