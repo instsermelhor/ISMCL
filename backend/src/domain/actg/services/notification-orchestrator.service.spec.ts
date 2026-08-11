@@ -107,7 +107,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
       whatsappMock,
       eventBusMock,
       pushMock,
-      undefined,
+      undefined as unknown as any,
     );
 
     await serviceWithoutCache.notify(NotificationEventType.REMINDER_2H, mockContext);
@@ -188,7 +188,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
       whatsappMock,
       eventBusMock,
       pushMock,
-      undefined, // Sem Redis — usa apenas fallback local
+      undefined as unknown as any, // Sem Redis — usa apenas fallback local
     );
 
     const fallback = (serviceNoCache as any).localFallback as Set<string>;
