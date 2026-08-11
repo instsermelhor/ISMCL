@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, Headers,
   HttpCode, HttpStatus, Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -207,8 +207,11 @@ export class ACTGController {
   async processWebhook(
     @Param('providerType') providerType: string,
     @Body() dto: WebhookPayloadDto,
+    @Headers('x-signature') headerSignature?: string,
+    @Headers('x-external-event-id') externalEventId?: string,
   ) {
-    return this.webhookProcessor.process(providerType, dto.payload, dto.signature);
+    const sig = dto.signature || headerSignature || '';
+    return this.webhookProcessor.process(providerType, dto.payload, sig, externalEventId);
   }
 
   // ── WebRTC Nativo Engine (GAP-P3-04) ───────────────────────────────────────
