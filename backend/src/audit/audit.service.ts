@@ -1,12 +1,18 @@
-import { Injectable, Inject, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Inject, Optional, InternalServerErrorException } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AuditService {
   private readonly auditSecret: string;
+  private readonly db: any;
 
-  constructor(@Inject('db') private readonly db: any) {
+  constructor(
+    @Optional() @Inject('db') dbToken?: any,
+    @Optional() prismaService?: PrismaService,
+  ) {
     this.auditSecret = process.env.MCSI_AUDIT_SECRET || 'AuraSerMelhorDefaultAuditSecretKey';
+    this.db = dbToken || prismaService;
   }
 
   /**
