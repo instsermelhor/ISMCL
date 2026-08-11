@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationOrchestratorService, NotificationContext } from './notification-orchestrator.service';
 import { WhatsAppBusinessConnector } from '../connectors/whatsapp-business.connector';
 import { EventBusService } from '../../../events/event-bus.service';
+import { PushNotificationService } from './push-notification.service';
 import { NotificationEventType, NotificationChannel } from '../dto/actg.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
@@ -9,6 +10,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
   let service: NotificationOrchestratorService;
   let whatsappMock: any;
   let eventBusMock: any;
+  let pushMock: any;
   let cacheMock: any;
   let cacheStore: Map<string, string>;
 
@@ -34,6 +36,10 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
       publish: jest.fn().mockResolvedValue({ id: 'evt-001' }),
     };
 
+    pushMock = {
+      send: jest.fn().mockResolvedValue({ success: true, platform: 'FCM', messageId: 'push-mock-001' }),
+    };
+
     cacheStore = new Map<string, string>();
     cacheMock = {
       get: jest.fn().mockImplementation((key: string) => Promise.resolve(cacheStore.get(key))),
@@ -57,6 +63,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
           new NotificationOrchestratorService(
             whatsappMock,
             eventBusMock,
+            pushMock,
             cacheMock,
           ),
       })
