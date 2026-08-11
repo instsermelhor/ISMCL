@@ -3,6 +3,7 @@ import { EhrController } from './controllers/ehr.controller';
 import { ElectronicHealthRecordService } from './services/electronic-health-record.service';
 import { ClinicalNotesService } from './services/clinical-notes.service';
 import { ClinicalTimelineService } from './services/clinical-timeline.service';
+import { EhrCryptoService } from './services/ehr-crypto.service';
 import { FhirAdapter } from './fhir/fhir.adapter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventBusModule } from '../../events/event-bus.module';
@@ -14,6 +15,7 @@ import { EventBusModule } from '../../events/event-bus.module';
  * - ElectronicHealthRecordService
  * - ClinicalNotesService
  * - ClinicalTimelineService
+ * - EhrCryptoService (Criptografia AES-256-GCM em Repouso)
  * - FhirAdapter (HL7 FHIR R4)
  *
  * Referências: P110 (AEWBPM), P123 (AEDA), P136 (AIEHSR)
@@ -25,6 +27,7 @@ import { EventBusModule } from '../../events/event-bus.module';
     ElectronicHealthRecordService,
     ClinicalNotesService,
     ClinicalTimelineService,
+    EhrCryptoService,
     FhirAdapter,
     PrismaService,
   ],
@@ -32,6 +35,7 @@ import { EventBusModule } from '../../events/event-bus.module';
     ElectronicHealthRecordService,
     ClinicalNotesService,
     ClinicalTimelineService,
+    EhrCryptoService,
     FhirAdapter,
   ],
 })
