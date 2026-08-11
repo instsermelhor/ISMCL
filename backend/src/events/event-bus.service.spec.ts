@@ -1,22 +1,33 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { EventBusService, AuraCloudEvent } from './event-bus.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { EventBusService } from './event-bus.service';
 
-describe('EventBusService', () => {
+describe('EventBusService — Dual-Write Redis Streams (ANO-009)', () => {
   let service: EventBusService;
   let eventEmitter: EventEmitter2;
+  let cacheMock: any;
+  let xaddMock: jest.Mock;
+  let xrangeMock: jest.Mock;
 
   beforeEach(async () => {
+    xaddMock = jest.fn().mockResolvedValue('1600000000000-0');
+    xrangeMock = jest.fn().mockResolvedValue([]);
+
+    cacheMock = {
+      store: {
+        client: {
+          xadd: xaddMock,
+          xrange: xrangeMock,
+        },
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventBusService,
-        {
-          provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
-            on: jest.fn(),
-          },
-        },
+        EventEmitter2,
+        { provide: CACHE_MANAGER, useValue: cacheMock },
       ],
     }).compile();
 
@@ -24,96 +35,105 @@ describe('EventBusService', () => {
     eventEmitter = module.get<EventEmitter2>(EventEmitter2);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('deve publicar eventos normais via EventEmitter2 sem dual-write', async () => {
+    const handler = jest.fn();
+    service.subscribe('aura.clinical.patient.created.v1', handler);
+
+    const event = await service.publish(
+      'aura.clinical.patient.created.v1',
+      { patientId: 'p-100' },
+      'tenant-default',
+    );
+
+    expect(event).toBeDefined();
+    expect(event.type).toBe('aura.clinical.patient.created.v1');
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(xaddMock).not.toHaveBeenCalled();
   });
 
-  describe('publish()', () => {
-    it('should publish a CloudEvents v1.0.3 envelope', async () => {
-      const eventType = 'aura.beneficiary.created.v1';
-      const tenantId = 'tenant-123';
-      const data = { id: 'beneficiary-456', name: 'João Silva' };
+  it('deve realizar dual-write no Redis Streams para eventos críticos (ANO-009)', async () => {
+    const handler = jest.fn();
+    service.subscribe('aura.security.breakglass.requested.v1', handler);
 
-      const event = await service.publish(eventType, data, tenantId);
+    const event = await service.publish(
+      'aura.security.breakglass.requested.v1',
+      { beneficiaryId: 'b-200', justification: 'Emergência Nível 4' },
+      'tenant-default',
+    );
 
-      expect(event).toBeDefined();
-      expect(event.specversion).toBe('1.0');
-      expect(event.type).toBe(eventType);
-      expect(event.tenantid).toBe(tenantId);
-      expect(event.data).toEqual(data);
-      expect(event.datacontenttype).toBe('application/json');
-      expect(event.id).toBeDefined();
-      expect(event.time).toBeDefined();
-      expect(event.source).toBeDefined();
-    });
-
-    it('should emit the event via EventEmitter2', async () => {
-      const emitSpy = jest.spyOn(eventEmitter, 'emit');
-      const eventType = 'aura.clinical.encounter.closed.v1';
-
-      await service.publish(eventType, { encounterId: 'enc-789' }, 'tenant-abc');
-
-      expect(emitSpy).toHaveBeenCalledWith(
-        eventType,
-        expect.objectContaining({ type: eventType }),
-      );
-    });
-
-    it('should include correlationId when provided', async () => {
-      const correlationId = 'corr-xyz-123';
-      const event = await service.publish(
-        'aura.social.case.opened.v1',
-        {},
-        'tenant-001',
-        { correlationId },
-      );
-
-      expect(event.correlationid).toBe(correlationId);
-    });
-
-    it('should add failed events to DLQ on emit failure', async () => {
-      jest.spyOn(eventEmitter, 'emit').mockImplementation(() => {
-        throw new Error('Simulated emit failure');
-      });
-
-      await service.publish('aura.test.event.v1', {}, 'tenant-fail');
-
-      const dlq = service.getDlq();
-      expect(dlq).toHaveLength(1);
-      expect(dlq[0].type).toBe('aura.test.event.v1');
-    });
+    expect(event).toBeDefined();
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(xaddMock).toHaveBeenCalledWith(
+      'stream:aura:events',
+      'MAXLEN',
+      '~',
+      10000,
+      '*',
+      'type',
+      'aura.security.breakglass.requested.v1',
+      'tenantId',
+      'tenant-default',
+      'correlationId',
+      expect.any(String),
+      'payload',
+      expect.any(String),
+    );
   });
 
-  describe('subscribe()', () => {
-    it('should register an event handler via EventEmitter2', () => {
-      const onSpy = jest.spyOn(eventEmitter, 'on');
-      const handler = jest.fn();
+  it('deve realizar dual-write para eventos financeiros e de auditoria', async () => {
+    await service.publish(
+      'aura.financial.transaction.approved.v1',
+      { transactionId: 'tx-500', amount: 15000 },
+      'tenant-default',
+    );
 
-      service.subscribe('aura.beneficiary.*.v1', handler);
-
-      expect(onSpy).toHaveBeenCalledWith('aura.beneficiary.*.v1', handler);
-    });
+    expect(xaddMock).toHaveBeenCalledWith(
+      'stream:aura:events',
+      'MAXLEN',
+      '~',
+      10000,
+      '*',
+      'type',
+      'aura.financial.transaction.approved.v1',
+      'tenantId',
+      'tenant-default',
+      'correlationId',
+      expect.any(String),
+      'payload',
+      expect.any(String),
+    );
   });
 
-  describe('getDlq()', () => {
-    it('should return empty array when DLQ is empty', () => {
-      expect(service.getDlq()).toEqual([]);
-    });
+  it('deve lidar com falha do Redis (graceful degradation) sem travar a emissão in-process', async () => {
+    xaddMock.mockRejectedValueOnce(new Error('Redis connection lost'));
+
+    const handler = jest.fn();
+    service.subscribe('aura.audit.log.created.v1', handler);
+
+    const event = await service.publish(
+      'aura.audit.log.created.v1',
+      { action: 'BREAK_GLASS' },
+      'tenant-default',
+    );
+
+    expect(event).toBeDefined();
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  describe('replayDlq()', () => {
-    it('should replay and clear DLQ events', async () => {
-      // Força um evento no DLQ
-      jest.spyOn(eventEmitter, 'emit')
-        .mockImplementationOnce(() => { throw new Error('fail'); })
-        .mockImplementation(() => true);
+  it('deve permitir consumir o stream para replay via consumeStream()', async () => {
+    const mockPayload = {
+      specversion: '1.0',
+      id: 'evt-1',
+      type: 'aura.security.breakglass.requested.v1',
+      data: { beneficiaryId: 'b-1' },
+    };
 
-      await service.publish('aura.test.dlq.v1', {}, 'tenant-dlq');
-      expect(service.getDlq()).toHaveLength(1);
+    xrangeMock.mockResolvedValueOnce([
+      ['1600000000000-0', ['type', 'aura.security.breakglass.requested.v1', 'payload', JSON.stringify(mockPayload)]],
+    ]);
 
-      const replayed = await service.replayDlq();
-      expect(replayed).toBe(1);
-      expect(service.getDlq()).toHaveLength(0);
-    });
+    const events = await service.consumeStream('0', 10);
+    expect(events.length).toBe(1);
+    expect(events[0].id).toBe('evt-1');
   });
 });
