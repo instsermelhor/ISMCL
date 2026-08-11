@@ -49,15 +49,20 @@ export interface ClinicalNoteRecord {
  *
  * Referências: P107 (AEIATP), P123 (AEDA), P136 (AIEHSR Etapa 4)
  */
-import { Optional } from '@nestjs/common';
+import { Optional, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EhrCryptoService } from './ehr-crypto.service';
+
+/** TTL dos rascunhos no Redis: 24 horas (86.400 segundos) */
+const DRAFT_TTL_MS = 86400 * 1000;
 
 @Injectable()
 export class ClinicalNotesService {
   private readonly logger = new Logger(ClinicalNotesService.name);
 
-  // Storage de evoluções médicas/sociais (no Prisma/PostgreSQL em produção)
+  // Storage de evoluções médicas/sociais em memória (fallback local)
   private readonly notesStore = new Map<string, ClinicalNoteRecord>();
 
   constructor(
@@ -65,6 +70,7 @@ export class ClinicalNotesService {
     private readonly eventBus: EventBusService,
     @Optional() private readonly cryptoService?: EhrCryptoService,
     @Optional() private readonly prisma?: PrismaService,
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
   ) {}
 
   /**
@@ -101,6 +107,14 @@ export class ClinicalNotesService {
 
     this.notesStore.set(noteId, note);
 
+    if (this.cacheManager) {
+      try {
+        await this.cacheManager.set(`draft:note:${noteId}`, JSON.stringify(note), DRAFT_TTL_MS);
+      } catch (err) {
+        this.logger.warn(`[ClinicalNotes Redis] Falha ao salvar rascunho no Redis: ${(err as Error).message}`);
+      }
+    }
+
     this.logger.log(
       `[ClinicalNotes] Rascunho de evolução criado: ${noteId} (${dto.category}) por ${authorName}`,
     );
@@ -109,7 +123,7 @@ export class ClinicalNotesService {
   }
 
   /**
-   * Atualiza/Salva rascunho de evolução clínica (Autosave Backend - GAP-P3-07).
+   * Atualiza/Salva rascunho de evolução clínica (Autosave Backend - GAP-P3-07 / ANO-001).
    * Impede alteração se a evolução já se encontrar assinada eletronicamente.
    */
   async saveDraft(
@@ -137,6 +151,14 @@ export class ClinicalNotesService {
 
     note.updatedAt = new Date().toISOString();
     this.notesStore.set(noteId, note);
+
+    if (this.cacheManager) {
+      try {
+        await this.cacheManager.set(`draft:note:${noteId}`, JSON.stringify(note), DRAFT_TTL_MS);
+      } catch (err) {
+        this.logger.warn(`[ClinicalNotes Redis] Falha ao atualizar rascunho no Redis: ${(err as Error).message}`);
+      }
+    }
 
     if (this.prisma) {
       try {
@@ -171,10 +193,7 @@ export class ClinicalNotesService {
     authorRole: string,
     tenantId = 'default',
   ): Promise<ClinicalNoteRecord> {
-    const note = this.notesStore.get(dto.noteId);
-    if (!note) {
-      throw new NotFoundException(`Evolução clínica ${dto.noteId} não encontrada.`);
-    }
+    const note = await this.getNoteById(dto.noteId);
 
     if (note.isSigned) {
       throw new BadRequestException('Esta evolução clínica já se encontra assinada e bloqueada.');
@@ -190,6 +209,15 @@ export class ClinicalNotesService {
     note.digitalSignature = hashSignature;
     note.signedAt = now;
     note.updatedAt = now;
+
+    this.notesStore.set(note.noteId, note);
+
+    // Remove do Redis o rascunho pois agora a evolução está assinada e bloqueada
+    if (this.cacheManager) {
+      try {
+        await this.cacheManager.del(`draft:note:${dto.noteId}`);
+      } catch {}
+    }
 
     this.logger.log(
       `[ClinicalNotes] 🔒 Evolução ${note.noteId} ASSINADA ELETRONICAMENTE e bloqueada! Hash: ${hashSignature}`,
@@ -256,7 +284,7 @@ export class ClinicalNotesService {
   }
 
   /**
-   * Busca uma evolução pelo ID.
+   * Busca uma evolução pelo ID (DB → Redis → Memory).
    */
   async getNoteById(noteId: string): Promise<ClinicalNoteRecord> {
     if (this.prisma) {
@@ -290,10 +318,23 @@ export class ClinicalNotesService {
           };
         }
       } catch {
-        // Se falhar a busca no banco, recorre ao storage em memória
+        // Se falhar a busca no banco, recorre ao Redis / memória
       }
     }
 
+    // 2. Busca no Redis (ANO-001)
+    if (this.cacheManager) {
+      try {
+        const raw = await this.cacheManager.get<string>(`draft:note:${noteId}`);
+        if (raw) {
+          const note: ClinicalNoteRecord = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          this.notesStore.set(noteId, note);
+          return note;
+        }
+      } catch {}
+    }
+
+    // 3. Fallback em memória local
     const note = this.notesStore.get(noteId);
     if (!note) {
       throw new NotFoundException(`Evolução clínica ${noteId} não encontrada.`);
