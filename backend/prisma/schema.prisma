@@ -1293,3 +1293,56 @@ model SocialProgram {
   @@index([status, isPublic])
   @@index([createdAt])
 }
+
+// =========================================================================
+// MÓDULO BREAK-GLASS: ACESSO EXCEPCIONAL DE EMERGÊNCIA (MCSI Nível 4)
+// GAP-P1-04 — Notificação em Tempo Real para Acessos de Emergência
+// =========================================================================
+
+model BreakGlassSession {
+  id                  String    @id @default(uuid())
+
+  // Quem solicitou
+  professionalId      String    // Professional.id (solicitante)
+  professionalName    String    // Nome para log imutável
+
+  // Para qual beneficiário
+  beneficiaryId       String    // Beneficiary.id
+  beneficiaryName     String    // Nome para log imutável
+
+  // Justificativa clínica obrigatória
+  justification       String    // Texto completo da justificativa
+  emergencyType       String    // RISCO_VIDA, SURTO_AGUDO, DESAPARECIMENTO, CRISE_SUICIDA, OUTRO
+
+  // Status do fluxo
+  status              String    @default("PENDING")
+  // PENDING     — aguardando aprovação automática (< 30s) ou manual
+  // ACTIVE      — acesso liberado, dentro da janela de validade
+  // EXPIRED     — janela expirada automaticamente
+  // REVOKED     — revogado manualmente por gestor/DPO
+  // DENIED      — negado
+
+  // Controle de tempo
+  requestedAt         DateTime  @default(now())
+  approvedAt          DateTime?
+  expiresAt           DateTime? // Padrão: requestedAt + 4h
+  revokedAt           DateTime?
+  revokedById         String?   // User.id que revogou
+
+  // Contexto técnico para forensics
+  ipAddress           String
+  userAgent           String
+  tenantId            String    @default("default")
+
+  // Auditoria
+  auditLogId          String?   // SecurityAuditLog.id gerado no momento do break-glass
+  notificationSentAt  DateTime? // Quando a notificação de alerta foi disparada
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([beneficiaryId, status])
+  @@index([professionalId, requestedAt])
+  @@index([status, expiresAt])
+  @@index([tenantId, requestedAt])
+}
