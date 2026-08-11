@@ -87,6 +87,26 @@ export class VerifyMfaDto {
   @IsString()
   @Matches(/^\d{6}$/, { message: 'code|Código MFA inválido.' })
   code: string;
+
+  @ApiPropertyOptional({ description: 'Segredo TOTP em Base32 gerado no setup (se aplicável)' })
+  @IsOptional()
+  @IsString()
+  secret?: string;
+}
+
+export class ValidateMfaTicketDto {
+  @ApiProperty({ description: 'Ticket JWT temporário emitido na primeira etapa do login' })
+  @IsString()
+  mfaTicket: string;
+
+  @ApiProperty({ description: 'Código TOTP de 6 dígitos ou código de recuperação de emergência' })
+  @IsString()
+  code: string;
+
+  @ApiPropertyOptional({ description: 'Fingerprint do dispositivo' })
+  @IsOptional()
+  @IsString()
+  deviceFingerprint?: string;
 }
 
 export class CreateRoleDto {
