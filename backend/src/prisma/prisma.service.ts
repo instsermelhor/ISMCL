@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { softDeleteMiddleware } from './extensions/soft-delete.middleware';
 
 /**
  * PrismaService — Serviço de acesso ao banco de dados via ORM Prisma.
@@ -13,7 +14,7 @@ import { PrismaClient } from '@prisma/client';
  * - Logging de queries lentas (> 1s) em desenvolvimento
  * - Graceful shutdown via $disconnect()
  *
- * Referências: P123 (AEDA), P131 (AFPI)
+ * Referências: P123 (AEDA), P131 (AFPI), ANO-008 (Sprint R4)
  */
 @Injectable()
 export class PrismaService
@@ -39,6 +40,9 @@ export class PrismaService
             ],
       errorFormat: 'colorless',
     });
+
+    // Registra o middleware de Soft Delete LGPD (ANO-008)
+    this.$use(softDeleteMiddleware);
   }
 
   async onModuleInit(): Promise<void> {
