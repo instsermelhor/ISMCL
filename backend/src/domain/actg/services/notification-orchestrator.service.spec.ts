@@ -106,6 +106,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
     const serviceWithoutCache = new NotificationOrchestratorService(
       whatsappMock,
       eventBusMock,
+      pushMock,
       undefined,
     );
 
@@ -148,6 +149,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
     const serviceWithFallback = new NotificationOrchestratorService(
       whatsappMock,
       eventBusMock,
+      pushMock,
       cacheMock,
     );
 
@@ -165,6 +167,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
     const serviceWithFallback = new NotificationOrchestratorService(
       whatsappMock,
       eventBusMock,
+      pushMock,
       cacheMock,
     );
 
@@ -184,6 +187,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
     const serviceNoCache = new NotificationOrchestratorService(
       whatsappMock,
       eventBusMock,
+      pushMock,
       undefined, // Sem Redis — usa apenas fallback local
     );
 
