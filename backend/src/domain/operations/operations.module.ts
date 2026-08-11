@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { OperationsController } from './controllers/operations.controller';
 import { FinancialController } from './controllers/financial.controller';
 import { SocialProgramsController } from './controllers/social-programs.controller';
+import { DonationController } from './controllers/donation.controller';
 import { CloudPlatformService } from './services/cloud-platform.service';
 import { DevSecOpsPipelineService } from './services/devsecops-pipeline.service';
 import { DisasterRecoveryService } from './services/disaster-recovery.service';
 import { FinOpsManagementService } from './services/finops-management.service';
 import { SocialProgramsService } from './services/social-programs.service';
 import { FinancialApprovalService } from './services/financial-approval.service';
+import { RecurringDonationGatewayService } from './services/recurring-donation-gateway.service';
 import { AuditService } from '../../audit/audit.service';
 import { EventBusModule } from '../../events/event-bus.module';
 
@@ -21,12 +23,18 @@ import { EventBusModule } from '../../events/event-bus.module';
  * - FinOpsManagementService (Gestão de Custos e Otimização de Infraestrutura)
  * - SocialProgramsService (ASPS — Programas Sociais: CGI ↔ Página Pública)
  * - FinancialApprovalService (Motor de Alçada Financeira — GAP-P2-03)
+ * - RecurringDonationGatewayService (Motor de Doações Recorrentes & Gateway de Pagamentos — GAP-P3-03)
  *
- * Referências: P105 AECN, P106 AEDSO, P127 AECC, P143 ACNPDREO, P189 ASPS
+ * Referências: P105 AECN, P106 AEDSO, P127 AECC, P143 ACNPDREO, P189 ASPS, GAP-P3-03
  */
 @Module({
   imports: [EventBusModule],
-  controllers: [OperationsController, FinancialController, SocialProgramsController],
+  controllers: [
+    OperationsController,
+    FinancialController,
+    SocialProgramsController,
+    DonationController,
+  ],
   providers: [
     CloudPlatformService,
     DevSecOpsPipelineService,
@@ -34,6 +42,7 @@ import { EventBusModule } from '../../events/event-bus.module';
     FinOpsManagementService,
     SocialProgramsService,
     FinancialApprovalService,
+    RecurringDonationGatewayService,
     AuditService,
   ],
   exports: [
@@ -43,6 +52,8 @@ import { EventBusModule } from '../../events/event-bus.module';
     FinOpsManagementService,
     SocialProgramsService,
     FinancialApprovalService,
+    RecurringDonationGatewayService,
   ],
 })
 export class OperationsModule {}
+
