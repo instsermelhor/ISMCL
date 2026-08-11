@@ -1,113 +1,165 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { createHmac } from 'crypto';
 import { WebhookProcessorService } from './webhook-processor.service';
 import { ProviderRegistryService } from './provider-registry.service';
 import { EventBusService } from '../../../events/event-bus.service';
-import { createHmac } from 'crypto';
 
-const WEBHOOK_SECRET = 'test-secret-key-for-unit-tests';
-
-const mockEventBus = { publish: jest.fn().mockResolvedValue(undefined) };
-const mockConfig = {
-  get: jest.fn((key: string, def?: string) => {
-    if (key === 'ACTG_WEBHOOK_SECRET') return WEBHOOK_SECRET;
-    if (key === 'NODE_ENV') return 'test';
-    return def;
-  }),
-};
-const mockWhatsAppProvider = {
-  providerType: 'WHATSAPP_BUSINESS',
-  processWebhook: jest.fn().mockResolvedValue({
-    eventType: 'delivered',
-    externalMeetingId: 'wa-msg-001',
-    status: 'delivered',
-  }),
-};
-const mockRegistry = {
-  getProvider: jest.fn().mockReturnValue(mockWhatsAppProvider),
-};
-
-function makeSignature(payload: Record<string, unknown>, secret: string): string {
-  const hash = createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex');
-  return `sha256=${hash}`;
-}
-
-describe('WebhookProcessorService', () => {
+describe('WebhookProcessorService — Processamento Completo de Webhooks (GAP-P3-06)', () => {
   let service: WebhookProcessorService;
+  let registryMock: any;
+  let eventBusMock: any;
+  let configMock: any;
+  let cacheMock: any;
+  let cacheStore: Map<string, string>;
+
+  const SECRET = 'test-secret-key-12345';
+  const payload = { meetingId: 'meet-999', event: 'MEETING_ENDED' };
+  const validSignature = `sha256=${createHmac('sha256', SECRET).update(JSON.stringify(payload)).digest('hex')}`;
+
+  const mockProvider = {
+    processWebhook: jest.fn().mockResolvedValue({
+      eventType: 'MEETING_ENDED',
+      externalMeetingId: 'meet-999',
+      status: 'ENDED',
+    }),
+  };
 
   beforeEach(async () => {
+    registryMock = {
+      getProvider: jest.fn().mockImplementation((type: string) => {
+        if (type === 'GOOGLE_MEET' || type === 'TEAMS' || type === 'WHATSAPP_BUSINESS') return mockProvider;
+        return undefined;
+      }),
+    };
+
+    eventBusMock = {
+      publish: jest.fn().mockResolvedValue({ id: 'evt-bus-1' }),
+    };
+
+    configMock = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'ACTG_WEBHOOK_SECRET') return SECRET;
+        if (key === 'NODE_ENV') return 'test';
+        return defaultValue;
+      }),
+    };
+
+    cacheStore = new Map<string, string>();
+    cacheMock = {
+      get: jest.fn().mockImplementation((key: string) => Promise.resolve(cacheStore.get(key))),
+      set: jest.fn().mockImplementation((key: string, val: string) => {
+        cacheStore.set(key, val);
+        return Promise.resolve();
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhookProcessorService,
-        { provide: ProviderRegistryService, useValue: mockRegistry },
-        { provide: EventBusService, useValue: mockEventBus },
-        { provide: ConfigService, useValue: mockConfig },
+        { provide: ProviderRegistryService, useValue: registryMock },
+        { provide: EventBusService, useValue: eventBusMock },
+        { provide: ConfigService, useValue: configMock },
+        { provide: CACHE_MANAGER, useValue: cacheMock },
       ],
     }).compile();
+
     service = module.get<WebhookProcessorService>(WebhookProcessorService);
     jest.clearAllMocks();
-    mockConfig.get.mockImplementation((key: string, def?: string) => {
-      if (key === 'ACTG_WEBHOOK_SECRET') return WEBHOOK_SECRET;
-      if (key === 'NODE_ENV') return 'test';
-      return def;
+    cacheStore.clear();
+  });
+
+  describe('Assinatura e Processamento de Webhook com Provedor Registrado', () => {
+    it('deve processar webhook válido com sucesso e publicar no EventBus', async () => {
+      const result = await service.process('GOOGLE_MEET', payload, validSignature, 'evt-001');
+
+      expect(result.processed).toBe(true);
+      expect(result.eventType).toBe('MEETING_ENDED');
+      expect(result.externalMeetingId).toBe('meet-999');
+
+      expect(eventBusMock.publish).toHaveBeenCalledWith(
+        'aura.actg.webhook.processed.v1',
+        expect.objectContaining({
+          providerType: 'GOOGLE_MEET',
+          externalEventId: 'evt-001',
+          eventType: 'MEETING_ENDED',
+          externalMeetingId: 'meet-999',
+          status: 'ENDED',
+        }),
+        'default',
+        { subject: 'meet-999' },
+      );
+    });
+
+    it('deve validar assinatura hex pura sem o prefixo sha256=', async () => {
+      const plainHexSignature = createHmac('sha256', SECRET).update(JSON.stringify(payload)).digest('hex');
+
+      const result = await service.process('TEAMS', payload, plainHexSignature, 'evt-002');
+
+      expect(result.processed).toBe(true);
+    });
+
+    it('deve rejeitar webhook com assinatura inválida', async () => {
+      const invalidSignature = 'sha256=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+
+      const result = await service.process('GOOGLE_MEET', payload, invalidSignature, 'evt-003');
+
+      expect(result.processed).toBe(false);
+      expect(result.reason).toBe('INVALID_SIGNATURE');
+      expect(eventBusMock.publish).not.toHaveBeenCalled();
     });
   });
 
-  it('deve processar webhook com assinatura válida', async () => {
-    const payload = { entry: [{ changes: [{ value: { statuses: [{ id: 'msg-001', status: 'delivered' }] } }] }] };
-    const signature = makeSignature(payload, WEBHOOK_SECRET);
+  describe('Idempotência de Webhook (Redis & Fallback Local)', () => {
+    it('deve bloquear webhook duplicado usando Redis como fonte primária', async () => {
+      // Primeira execução
+      const result1 = await service.process('GOOGLE_MEET', payload, validSignature, 'evt-dup-100');
+      expect(result1.processed).toBe(true);
 
-    const result = await service.process('WHATSAPP_BUSINESS', payload, signature, 'evt-001');
+      // Segunda execução com o mesmo externalEventId
+      const result2 = await service.process('GOOGLE_MEET', payload, validSignature, 'evt-dup-100');
+      expect(result2.processed).toBe(false);
+      expect(result2.reason).toBe('IDEMPOTENT_DUPLICATE');
+    });
 
-    expect(result.processed).toBe(true);
-    expect(result.eventType).toBe('delivered');
-    expect(mockEventBus.publish).toHaveBeenCalledWith(
-      'aura.actg.webhook.processed.v1',
-      expect.objectContaining({ providerType: 'WHATSAPP_BUSINESS', eventType: 'delivered' }),
-      'default',
-      expect.any(Object),
-    );
+    it('deve usar fallback local quando Redis estiver indisponível', async () => {
+      cacheMock.get.mockRejectedValue(new Error('Redis ECONNREFUSED'));
+      cacheMock.set.mockRejectedValue(new Error('Redis ECONNREFUSED'));
+
+      const serviceNoRedis = new WebhookProcessorService(
+        registryMock,
+        eventBusMock,
+        configMock,
+        cacheMock,
+      );
+
+      // Primeira execução em fallback
+      const result1 = await serviceNoRedis.process('GOOGLE_MEET', payload, validSignature, 'evt-fallback-01');
+      expect(result1.processed).toBe(true);
+
+      // Segunda execução em fallback (bloqueado pelo Set local)
+      const result2 = await serviceNoRedis.process('GOOGLE_MEET', payload, validSignature, 'evt-fallback-01');
+      expect(result2.processed).toBe(false);
+      expect(result2.reason).toBe('IDEMPOTENT_DUPLICATE');
+    });
   });
 
-  it('deve rejeitar webhook com assinatura inválida', async () => {
-    const payload = { entry: [] };
-    const result = await service.process('WHATSAPP_BUSINESS', payload, 'sha256=invalidsignature', 'evt-002');
-    expect(result.processed).toBe(false);
-    expect(mockEventBus.publish).not.toHaveBeenCalled();
-  });
+  describe('Tratamento de Exceções e Provedores Não Suportados', () => {
+    it('deve rejeitar webhook para provedor não registrado', async () => {
+      const result = await service.process('UNKNOWN_PROVIDER', payload, validSignature, 'evt-unsupported');
 
-  it('deve garantir idempotência — não reprocessar evento com mesmo ID', async () => {
-    const payload = { entry: [{ changes: [{ value: { statuses: [{ id: 'msg-002', status: 'read' }] } }] }] };
-    const signature = makeSignature(payload, WEBHOOK_SECRET);
+      expect(result.processed).toBe(false);
+      expect(result.reason).toBe('UNSUPPORTED_PROVIDER');
+    });
 
-    await service.process('WHATSAPP_BUSINESS', payload, signature, 'evt-003');
-    const result2 = await service.process('WHATSAPP_BUSINESS', payload, signature, 'evt-003');
+    it('deve capturar erro lançado pelo provedor ao processar webhook', async () => {
+      mockProvider.processWebhook.mockRejectedValueOnce(new Error('Erro de parsing do payload de terceiros'));
 
-    expect(result2.processed).toBe(false);
-    // Provider deve ter sido chamado apenas uma vez
-    expect(mockWhatsAppProvider.processWebhook).toHaveBeenCalledTimes(1);
-  });
+      const result = await service.process('GOOGLE_MEET', payload, validSignature, 'evt-err-01');
 
-  it('deve retornar false para provedor sem suporte a webhooks', async () => {
-    const providerSemWebhook = { providerType: 'ZOOM' }; // Sem processWebhook
-    mockRegistry.getProvider.mockReturnValueOnce(providerSemWebhook);
-
-    const payload = {};
-    const signature = makeSignature(payload, WEBHOOK_SECRET);
-    const result = await service.process('ZOOM', payload, signature);
-
-    expect(result.processed).toBe(false);
-  });
-
-  it('deve processar sem externalEventId (sem idempotência)', async () => {
-    const payload = { entry: [{ changes: [{ value: { statuses: [{ id: 'msg-003', status: 'failed' }] } }] }] };
-    const signature = makeSignature(payload, WEBHOOK_SECRET);
-
-    // Sem externalEventId — pode ser processado múltiplas vezes
-    const r1 = await service.process('WHATSAPP_BUSINESS', payload, signature);
-    const r2 = await service.process('WHATSAPP_BUSINESS', payload, signature);
-
-    expect(r1.processed).toBe(true);
-    expect(r2.processed).toBe(true);
+      expect(result.processed).toBe(false);
+      expect(result.reason).toContain('PROVIDER_ERROR: Erro de parsing do payload de terceiros');
+    });
   });
 });
