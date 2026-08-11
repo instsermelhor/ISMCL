@@ -10,6 +10,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
   let whatsappMock: any;
   let eventBusMock: any;
   let cacheMock: any;
+  let cacheStore: Map<string, string>;
 
   const mockContext: NotificationContext = {
     appointmentId: 'appt-100',
@@ -33,7 +34,7 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
       publish: jest.fn().mockResolvedValue({ id: 'evt-001' }),
     };
 
-    const cacheStore = new Map<string, string>();
+    cacheStore = new Map<string, string>();
     cacheMock = {
       get: jest.fn().mockImplementation((key: string) => Promise.resolve(cacheStore.get(key))),
       set: jest.fn().mockImplementation((key: string, val: string) => {
@@ -63,7 +64,10 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
 
     service = module.get<NotificationOrchestratorService>(NotificationOrchestratorService);
     jest.clearAllMocks();
+    cacheStore.clear();
   });
+
+  // ─── Testes originais ────────────────────────────────────────────────────────
 
   it('deve enviar notificação na primeira chamada e armazenar chave no Redis', async () => {
     await service.notify(NotificationEventType.REMINDER_24H, mockContext);
@@ -105,4 +109,99 @@ describe('NotificationOrchestratorService — Idempotência Redis & Multicanal',
     await serviceWithoutCache.notify(NotificationEventType.REMINDER_2H, mockContext);
     expect(whatsappMock.sendNotification).toHaveBeenCalledTimes(1); // Bloqueado pelo Set local
   });
+
+  // ─── GAP-P3-02: Comportamento Redis primário / Fallback limitado ─────────────
+
+  it('GAP-P3-02: markAsSent com Redis disponível NÃO deve popular o fallback local', async () => {
+    await service.markAsSent('rec-001:appt-001:REMINDER_24H:WHATSAPP');
+
+    // Redis deve ser chamado
+    expect(cacheMock.set).toHaveBeenCalledWith(
+      'notif:rec-001:appt-001:REMINDER_24H:WHATSAPP',
+      '1',
+      691200 * 1000,
+    );
+
+    // O fallback local NÃO deve conter a chave (evitar duplo consumo de memória)
+    const fallbackHas = await (service as any).localFallback.has(
+      'rec-001:appt-001:REMINDER_24H:WHATSAPP',
+    );
+    expect(fallbackHas).toBe(false);
+  });
+
+  it('GAP-P3-02: isAlreadySent deve retornar false quando Redis retorna undefined (chave ausente)', async () => {
+    cacheMock.get.mockResolvedValueOnce(undefined);
+    const result = await service.isAlreadySent('chave-nao-existente');
+    expect(result).toBe(false);
+  });
+
+  it('GAP-P3-02: quando Redis falha em get, deve usar fallback local sem lançar exceção', async () => {
+    cacheMock.get.mockRejectedValueOnce(new Error('Redis ECONNREFUSED'));
+
+    const serviceWithFallback = new NotificationOrchestratorService(
+      whatsappMock,
+      eventBusMock,
+      cacheMock,
+    );
+
+    // Pré-popula o fallback local
+    (serviceWithFallback as any).localFallback.add('rec-X:appt-X:REMINDER_7D:EMAIL');
+
+    // Deve consultar o Set local como fallback sem lançar
+    const result = await serviceWithFallback.isAlreadySent('rec-X:appt-X:REMINDER_7D:EMAIL');
+    expect(result).toBe(true);
+  });
+
+  it('GAP-P3-02: quando Redis falha em set, deve registrar no fallback local e não lançar', async () => {
+    cacheMock.set.mockRejectedValueOnce(new Error('Redis ECONNREFUSED'));
+
+    const serviceWithFallback = new NotificationOrchestratorService(
+      whatsappMock,
+      eventBusMock,
+      cacheMock,
+    );
+
+    // Não deve lançar
+    await expect(
+      serviceWithFallback.markAsSent('rec-Y:appt-Y:REMINDER_30MIN:PORTAL'),
+    ).resolves.not.toThrow();
+
+    // Deve estar no fallback local
+    const inFallback = (serviceWithFallback as any).localFallback.has(
+      'rec-Y:appt-Y:REMINDER_30MIN:PORTAL',
+    );
+    expect(inFallback).toBe(true);
+  });
+
+  it('GAP-P3-02: fallback local deve respeitar limite máximo (evicção FIFO ao atingir 10.000)', async () => {
+    const serviceNoCache = new NotificationOrchestratorService(
+      whatsappMock,
+      eventBusMock,
+      undefined, // Sem Redis — usa apenas fallback local
+    );
+
+    const fallback = (serviceNoCache as any).localFallback as Set<string>;
+
+    // Pré-preenche até o limite máximo
+    for (let i = 0; i < 10_000; i++) {
+      fallback.add(`key-${i}`);
+    }
+    expect(fallback.size).toBe(10_000);
+
+    // A primeira chave adicionada deve ser a mais antiga
+    expect(fallback.has('key-0')).toBe(true);
+
+    // Adicionar mais uma deve evocar evicção da mais antiga
+    await serviceNoCache.markAsSent('key-overflow');
+
+    // Tamanho não deve exceder o limite
+    expect(fallback.size).toBe(10_000);
+
+    // A chave mais antiga (key-0) deve ter sido removida
+    expect(fallback.has('key-0')).toBe(false);
+
+    // A nova chave deve estar presente
+    expect(fallback.has('key-overflow')).toBe(true);
+  });
 });
+
