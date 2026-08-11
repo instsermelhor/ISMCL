@@ -2,8 +2,12 @@ import { Prisma } from '@prisma/client';
 
 /**
  * Modelos Prisma que possuem suporte ao campo `deletedAt` (Soft Delete LGPD Art.18).
+ *
+ * Sprint R4 (10 modelos originais) + Sprint R5 (16 modelos adicionados) = 26 modelos protegidos.
+ * Referência: ANO-008, LGPD Art.18 — direito ao esquecimento e minimização de dados.
  */
 const SOFT_DELETE_MODELS = new Set<string>([
+  // ── Sprint R4 — Modelos Raiz Primários (10) ────────────────────────────────
   'User',
   'Beneficiary',
   'Professional',
@@ -14,6 +18,31 @@ const SOFT_DELETE_MODELS = new Set<string>([
   'ClinicalDocument',
   'IndividualCarePlan',
   'Transaction',
+
+  // ── Sprint R5 — Expansão LGPD Completa (16) ───────────────────────────────
+  // Módulo 02: Projetos e Disponibilidade
+  'Project',
+  'ProfessionalDocument',
+  'Availability',
+  // Módulo 04/05: Clínico e Prontuário
+  'Anamnesis',
+  'ClinicalScale',
+  'ClinicalAttachment',
+  // Módulo 06: Gestão de Casos
+  'CaseMeeting',
+  'Referral',
+  'CaseAlert',
+  // Módulo 08: Financeiro e Captação
+  'Donor',
+  'Campaign',
+  'Agreement',
+  // Módulo 09: Proteção de Vulneráveis
+  'ProtectedProfile',
+  // Módulo LGPD: Consentimento e Requisições de Titulares
+  'DataConsent',
+  'DataSubjectRequest',
+  // Módulo 12: Impacto Social
+  'SocialProgram',
 ]);
 
 /**
