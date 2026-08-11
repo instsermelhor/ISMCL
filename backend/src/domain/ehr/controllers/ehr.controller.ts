@@ -23,6 +23,7 @@ import { FhirAdapter } from '../fhir/fhir.adapter';
 import {
   CreateClinicalNoteDto,
   SignClinicalNoteDto,
+  UpdateDraftClinicalNoteDto,
   BreakGlassEmergencyAccessDto,
   ClinicalSpecialtyCategory,
 } from '../dto/ehr.dto';
@@ -78,6 +79,40 @@ export class EhrController {
     );
 
     return BaseResponseDto.created(note, requestId, 'Rascunho de evolução registrado.');
+  }
+
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL)
+  @Patch('notes/:id/draft')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Autosave / Salvar Rascunho de Evolução Clínica (GAP-P3-07)' })
+  async saveDraft(
+    @Param('id') noteId: string,
+    @Body() dto: UpdateDraftClinicalNoteDto,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    const requestId = (req as FastifyRequest & { requestId?: string }).requestId ?? 'unknown';
+    const tenantId = (req.headers['x-tenant-id'] as string) ?? 'default';
+
+    const note = await this.notesService.saveDraft(
+      noteId,
+      dto,
+      req.user.sub,
+      tenantId,
+    );
+
+    return BaseResponseDto.ok(note, requestId, undefined, 'Rascunho de evolução salvo com sucesso.');
+  }
+
+  @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL)
+  @Patch('evolutions/:id/draft')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Autosave / Salvar Rascunho de Evolução Clínica — Rota de Rascunho (GAP-P3-07)' })
+  async saveEvolutionDraft(
+    @Param('id') noteId: string,
+    @Body() dto: UpdateDraftClinicalNoteDto,
+    @Req() req: FastifyRequest & { user: AuraJwtPayload },
+  ) {
+    return this.saveDraft(noteId, dto, req);
   }
 
   @Roles(AuraRole.SUPER_ADMIN, AuraRole.ADMIN, AuraRole.PROFESSIONAL)
