@@ -32,6 +32,7 @@ model Beneficiary {
   protectedProfile    ProtectedProfile?
 
   createdAt           DateTime @default(now())
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 model Professional {
@@ -92,6 +93,7 @@ model Professional {
   alertsResolved      BehaviorAlert[]        @relation("AlertResolver")
   
   createdAt           DateTime @default(now())
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 model ProfessionalDocument {
@@ -199,6 +201,7 @@ model Case {
   caseMeetings        CaseMeeting[]
   referrals           Referral[]
   caseAlerts          CaseAlert[]
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 // Relacionamento N:N - Quais profissionais estão alocados num caso
@@ -255,6 +258,7 @@ model Appointment {
   
   // Módulo 05: Prontuário Eletrônico
   evolutions          ClinicalEvolution[]
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 model ResourceRoom {
@@ -330,6 +334,7 @@ model ClinicalEvolution {
   appointment         Appointment?       @relation(fields: [appointmentId], references: [id])
   erratas             EvolutionErrata[]
   documents           ClinicalDocument[]
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 model EvolutionErrata {
@@ -361,6 +366,7 @@ model Diagnosis {
   case                 Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
   beneficiary          Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
   professional         Professional @relation(fields: [professionalId], references: [id])
+  deletedAt            DateTime? // Soft delete — LGPD Art.18
 }
 
 model ClinicalDocument {
@@ -385,6 +391,7 @@ model ClinicalDocument {
   professional         Professional        @relation(fields: [professionalId], references: [id])
   evolution            ClinicalEvolution?  @relation(fields: [evolutionId], references: [id])
   accessLogs           DocumentAccessLog[]
+  deletedAt            DateTime? // Soft delete — LGPD Art.18
 }
 
 model ClinicalAttachment {
@@ -484,6 +491,7 @@ model IndividualCarePlan {
   signedBy            Professional         @relation(fields: [signedById], references: [id])
   goals               PicGoal[]
   history             PicVersion[]
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 model PicGoal {
@@ -631,6 +639,7 @@ model Transaction {
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?      // Soft delete — LGPD Art.18
 
   costCenters   TransactionCostCenter[]
   reconciliations FinancialReconciliation[]
@@ -1044,6 +1053,7 @@ model User {
   delegationsReceived UserDelegation[]       @relation("Delegatee")
   impersonationsRun   ImpersonationSession[] @relation("ImpersonatorAdmin")
   impersonatedAs      ImpersonationSession[] @relation("TargetUser")
+  deletedAt           DateTime? // Soft delete — LGPD Art.18
 }
 
 model Role {
