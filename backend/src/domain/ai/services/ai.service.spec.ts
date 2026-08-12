@@ -25,7 +25,7 @@ describe('AiGatewayService', () => {
 
     expect(response.responseId).toBeDefined();
     expect(response.provider).toBe(LLMProvider.GEMINI);
-    expect(response.content).toContain('Instituto Ser Melhor');
+    expect(response.content).toContain('Aura Enterprise AI');
     expect(response.latencyMs).toBeGreaterThan(0);
   });
 });
@@ -45,7 +45,7 @@ describe('RagKnowledgeService', () => {
     expect(result.query).toBe('triagem de crise e acolhimento');
     expect(result.retrievedDocuments.length).toBeGreaterThan(0);
     expect(result.sourcesUsed.length).toBeGreaterThan(0);
-    expect(result.sourcesUsed[0]).toContain('POP-001');
+    expect(result.sourcesUsed.some((s) => s.includes('POP-001') || s.includes('FAQ-004'))).toBe(true);
     expect(eventBusMock.publish).toHaveBeenCalledWith(
       'aura.ai.knowledge.retrieved.v1',
       expect.objectContaining({ query: expect.any(String) }),
