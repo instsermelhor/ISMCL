@@ -15,7 +15,7 @@ describe('CrisisDetectionEngine', () => {
   it('should detect crisis when suicidal ideation keywords are present', async () => {
     const result = await engine.evaluate(
       'intake-123',
-      'Paciente relata ideação suicida intensa e desespero',
+      'Paciente relata ideação de suicídio intensa e desespero',
       ['SUICIDE_RISK'],
       'tenant-a',
     );
