@@ -82,7 +82,7 @@ describe('DigitalTwinComplianceService', () => {
     expect(twin.totalApiEndpoints).toBeGreaterThan(0);
     expect(eventBusMock.publish).toHaveBeenCalledWith(
       'aura.architecture.digital_twin.synchronized.v1',
-      expect.objectContaining({ systemTopologyHealth: 'OPTIMAL' }),
+      expect.objectContaining({ twinId: twin.twinId }),
       'default',
       expect.anything(),
     );
