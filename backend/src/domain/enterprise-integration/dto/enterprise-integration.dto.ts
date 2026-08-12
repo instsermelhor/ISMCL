@@ -84,13 +84,15 @@ export class RegisterAPIDto {
   @IsString()
   basePath: string;
 
-  @ApiProperty({ example: 'Permite consulta e solicitação de benefícios sociais.' })
+  @ApiPropertyOptional({ example: 'Permite consulta e solicitação de benefícios sociais.' })
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
-  @ApiProperty({ enum: APILifecycleStage, example: APILifecycleStage.PUBLISHED })
+  @ApiPropertyOptional({ enum: APILifecycleStage, example: APILifecycleStage.PUBLISHED })
+  @IsOptional()
   @IsEnum(APILifecycleStage)
-  lifecycleStage: APILifecycleStage;
+  lifecycleStage?: APILifecycleStage;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -116,17 +118,19 @@ export class RegisterConnectorDto {
   @IsEnum(ConnectorType)
   type: ConnectorType;
 
-  @ApiProperty({ example: 'Conecta ao sistema do Cadastro Único para validação de dados sociais.' })
+  @ApiPropertyOptional({ example: 'Conecta ao sistema do Cadastro Único para validação de dados sociais.' })
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
   @ApiProperty({ example: 'https://cadunico.gov.br/api/v1' })
   @IsString()
   endpointUrl: string;
 
-  @ApiProperty({ example: 'mTLS + OAuth2' })
+  @ApiPropertyOptional({ example: 'mTLS + OAuth2' })
+  @IsOptional()
   @IsString()
-  authenticationMethod: string;
+  authenticationMethod?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -143,10 +147,11 @@ export class RegisterWebhookDto {
   @IsString()
   targetUrl: string;
 
-  @ApiProperty({ type: [String], example: ['aura.benefits.approved.v1', 'aura.benefits.cancelled.v1'] })
+  @ApiPropertyOptional({ type: [String], example: ['aura.benefits.approved.v1', 'aura.benefits.cancelled.v1'] })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  subscribedEvents: string[];
+  subscribedEvents?: string[];
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
