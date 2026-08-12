@@ -77,7 +77,7 @@ export class EnterpriseKnowledgeService {
     const doc: KnowledgeDocument = {
       documentId,
       title: dto.title,
-      summary: dto.summary,
+      summary: dto.summary || dto.title,
       category: dto.category,
       content: dto.content,
       author: dto.author ?? dto.authorId ?? author,
