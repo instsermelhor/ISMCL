@@ -361,6 +361,7 @@ describe('FinancialApprovalService', () => {
 
     it('deve retornar múltiplas transações em ordem cronológica inversa', async () => {
       await service.createTransaction(makeTxDto(1000), 'u1', 'User1', 't1');
+      await new Promise((r) => setTimeout(r, 5));
       await service.createTransaction(makeTxDto(2000), 'u2', 'User2', 't1');
 
       const list = await service.listTransactions();
