@@ -67,8 +67,9 @@ export class ExecutiveKpiIntelligenceService {
     const dev = Math.round(((dto.currentValue - dto.targetValue) / dto.targetValue) * 1000) / 10;
 
     let status = KpiStatus.ON_TRACK;
-    if (dev < -15) status = KpiStatus.CRITICAL_DEVIATION;
-    else if (dev < -5) status = KpiStatus.NEEDS_ATTENTION;
+    const absDev = Math.abs(dev);
+    if (absDev > 15) status = KpiStatus.CRITICAL_DEVIATION;
+    else if (absDev > 5) status = KpiStatus.NEEDS_ATTENTION;
 
     const record: KpiRecord = {
       kpiId,
