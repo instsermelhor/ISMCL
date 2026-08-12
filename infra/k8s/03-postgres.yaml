@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aura-postgres
+  namespace: aura-system
+  labels:
+    app: aura-postgres
+spec:
+  serviceName: aura-postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aura-postgres
+  template:
+    metadata:
+      labels:
+        app: aura-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
+          envFrom:
+            - secretRef:
+                name: aura-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "aura", "-d", "aura_prod"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "aura", "-d", "aura_prod"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aura-postgres-service
+  namespace: aura-system
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: aura-postgres
