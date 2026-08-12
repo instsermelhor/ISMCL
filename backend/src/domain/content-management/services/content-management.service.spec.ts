@@ -82,7 +82,7 @@ describe('RetentionSearchService', () => {
     expect(searchResult.results[0].relevanceScore).toBeGreaterThan(0.7);
     expect(eventBusMock.publish).toHaveBeenCalledWith(
       'aura.ecm.search.executed.v1',
-      expect.objectContaining({ query: 'Estatuto' }),
+      expect.objectContaining({ query: 'estatuto' }),
       'default',
       expect.anything(),
     );
