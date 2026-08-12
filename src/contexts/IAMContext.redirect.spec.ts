@@ -8,6 +8,7 @@
  * Ref: REMEDIATION-AURA-001 (R3-01), GAP-P3-01
  */
 
+import { describe, it, expect } from 'vitest';
 import { ROLE_REDIRECT_MAP, InstitutionalRole } from '../types/iam';
 
 // ---------------------------------------------------------------------------
