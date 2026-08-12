@@ -100,9 +100,10 @@ export class RegisterLessonLearnedDto {
   @IsString()
   title: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -142,9 +143,10 @@ export class CreateKnowledgeDocumentDto {
   @IsString()
   title: string;
 
-  @ApiProperty({ example: 'Diretrizes institucionais obrigatórias...' })
+  @ApiPropertyOptional({ example: 'Diretrizes institucionais obrigatórias...' })
+  @IsOptional()
   @IsString()
-  summary: string;
+  summary?: string;
 
   @ApiProperty({ example: 'Conteúdo completo da política...' })
   @IsString()
@@ -154,18 +156,21 @@ export class CreateKnowledgeDocumentDto {
   @IsEnum(DocumentCategory)
   category: DocumentCategory;
 
-  @ApiProperty({ enum: ConfidentialityLevel, example: ConfidentialityLevel.INTERNAL })
+  @ApiPropertyOptional({ enum: ConfidentialityLevel, example: ConfidentialityLevel.INTERNAL })
+  @IsOptional()
   @IsEnum(ConfidentialityLevel)
-  confidentiality: ConfidentialityLevel;
+  confidentiality?: ConfidentialityLevel;
 
-  @ApiProperty({ type: [String], example: ['proteção-infantil', 'lgpd', 'compliance'] })
+  @ApiPropertyOptional({ type: [String], example: ['proteção-infantil', 'lgpd', 'compliance'] })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags: string[];
+  tags?: string[];
 
-  @ApiProperty({ example: 'Comitê de Ética e Governança' })
+  @ApiPropertyOptional({ example: 'Comitê de Ética e Governança' })
+  @IsOptional()
   @IsString()
-  authorId: string;
+  authorId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
