@@ -218,7 +218,7 @@ describe('P169 BCORP — Business Continuity, Crisis Management & Operational Re
   // ── RecoveryOrchestrationService ──────────────────────────────────────────
   describe('RecoveryOrchestrationService', () => {
     it('deve orquestrar passos e respeitar aprovação humana', async () => {
-      const orch = await orchSvc.startOrchestratedRecovery('BCP-001', 'INC-001');
+      const orch = await orchSvc.startOrchestratedRecovery('BCP-ISM-MASTER', 'INC-001');
       expect(orch.executionId).toMatch(/^ORCH-/);
 
       const approved = await orchSvc.approveStep(orch.executionId, 'STEP-1-ACTIVATE-BCP', 'CEO');
