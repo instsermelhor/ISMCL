@@ -6,7 +6,7 @@ import { RecommendationEngineService } from './recommendation-engine.service';
 import { InstitutionalKnowledgeGraphService } from './institutional-knowledge-graph.service';
 import { AIGovernanceService } from './ai-governance.service';
 import { ContinuousOptimizationService } from './continuous-optimization.service';
-import { EventBusService } from '../../events/event-bus.service';
+import { EventBusService } from '../../../events/event-bus.service';
 import {
   RiskCategory,
   RecommendationType,
