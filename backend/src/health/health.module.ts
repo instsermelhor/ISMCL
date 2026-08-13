@@ -3,9 +3,15 @@ import { TerminusModule } from '@nestjs/terminus';
 import { PrismaClient } from '@prisma/client';
 import { HealthController } from './health.controller';
 
+import { MetricCollectorService } from './metric-collector.service';
+
 @Module({
   imports: [TerminusModule],
   controllers: [HealthController],
-  providers: [{ provide: PrismaClient, useValue: new PrismaClient() }],
+  providers: [
+    MetricCollectorService,
+    { provide: PrismaClient, useValue: new PrismaClient() },
+  ],
+  exports: [MetricCollectorService],
 })
 export class HealthModule {}
