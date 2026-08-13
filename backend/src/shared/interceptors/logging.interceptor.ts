@@ -9,6 +9,7 @@ import { tap, catchError } from 'rxjs/operators';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { MetricCollectorService } from '../../health/metric-collector.service';
 
 /**
  * Campos cujos valores devem ser mascarados nos logs por questões de privacidade LGPD.
@@ -77,6 +78,8 @@ export class LoggingInterceptor implements NestInterceptor {
         const duration = Date.now() - startTime;
         const statusCode = response.statusCode;
 
+        MetricCollectorService.getInstance().recordRequest(method, statusCode, duration);
+
         this.logger.log({
           requestId,
           tenantId,
@@ -101,6 +104,7 @@ export class LoggingInterceptor implements NestInterceptor {
       }),
       catchError((error: unknown) => {
         const duration = Date.now() - startTime;
+        MetricCollectorService.getInstance().recordRequest(method, 500, duration);
         this.logger.error({
           requestId,
           tenantId,
