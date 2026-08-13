@@ -7,9 +7,11 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import compression from '@fastify/compress';
+import helmet from '@fastify/helmet';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
+import { SanitizationPipe } from './shared/pipes/sanitization.pipe';
 
 /**
  * Aura Platform — Foundation Backend Bootstrap
@@ -18,7 +20,7 @@ import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
  * GlobalExceptionFilter, LoggingInterceptor e configurações de segurança.
  *
  * Arquitetura: Clean Architecture + DDD + CQRS
- * Referências: P102 (AEBPF), P125 (AEAP), P128 (AECS), P131 (AFPI)
+ * Referências: P102 (AEBPF), P125 (AEAP), P128 (AECS), P131 (AFPI), OWASP Top 10
  */
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
@@ -42,6 +44,31 @@ async function bootstrap(): Promise<void> {
   const port = configService.get<number>('PORT', 3001);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api');
   const nodeEnv = configService.get<string>('NODE_ENV', 'development');
+
+  // ── Security Headers & CSP (@fastify/helmet) ──────────────────────────────────
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: [`'self'`],
+        scriptSrc: [`'self'`, `'unsafe-inline'`, `'unsafe-eval'`],
+        styleSrc: [`'self'`, `'unsafe-inline'`],
+        imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
+        connectSrc: [`'self'`],
+        fontSrc: [`'self'`, 'data:'],
+        objectSrc: [`'none'`],
+        mediaSrc: [`'self'`],
+        frameSrc: [`'none'`],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    frameguard: { action: 'deny' },
+    noSniff: true,
+  });
 
   // ── Compression ──────────────────────────────────────────────────────────────
   await app.register(compression, { encodings: ['gzip', 'br'] });
@@ -68,7 +95,7 @@ async function bootstrap(): Promise<void> {
     maxAge: 86400,
   });
 
-  // ── Global Validation Pipe ────────────────────────────────────────────────────
+  // ── Global Validation & Sanitization Pipes ────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -77,6 +104,7 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
       stopAtFirstError: false,
     }),
+    new SanitizationPipe(),
   );
 
   // ── Global Filters & Interceptors ─────────────────────────────────────────────
