@@ -67,6 +67,7 @@ describe('Advanced Product & Innovation Test Suite (PROMPT 200 — FASE E)', () 
           userId: 'user-prof-1',
         }),
         'tenant-aura',
+        expect.any(Object),
       );
     });
 
