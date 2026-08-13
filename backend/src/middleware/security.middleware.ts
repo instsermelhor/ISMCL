@@ -25,6 +25,7 @@ export class SecurityMiddleware implements NestMiddleware {
             const roles = (decoded.roles as string[]) || (decoded.realm_access?.roles as string[]) || [];
             user = {
               id: decoded.sub || (decoded as any).id,
+              tenantId: (decoded as any).tenantId || (decoded as any).tenant_id || 'default',
               role: (decoded as any).role || roles[0] || 'VOLUNTEER',
               roles,
             };
@@ -36,6 +37,7 @@ export class SecurityMiddleware implements NestMiddleware {
     }
 
     const userId = user?.id || 'anonymous';
+    const tenantId = user?.tenantId || (req.headers['x-tenant-id'] as string) || 'default';
     const role = (user?.role || (user?.roles && user.roles[0]) || 'ANONYMOUS').toUpperCase();
 
     // 2. Mapeamento de Papéis para Níveis Máximos de Sensibilidade Padrão (RBAC)
@@ -91,6 +93,7 @@ export class SecurityMiddleware implements NestMiddleware {
     // 5. Instancia o contexto de segurança do request
     const context: UserSecurityContext = {
       userId,
+      tenantId,
       role,
       sensitivityLevel,
       ipAddress,
