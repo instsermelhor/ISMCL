@@ -7,16 +7,17 @@ import { Injectable, PipeTransform, ArgumentMetadata, BadRequestException, Logge
 const XSS_PATTERNS = [
   /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
   /<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi,
+  /<object[\s\S]*?>[\s\S]*?<\/object>/gi,
+  /<embed[\s\S]*?>[\s\S]*?<\/embed>/gi,
+  /<style[\s\S]*?>[\s\S]*?<\/style>/gi,
+  /<form[\s\S]*?>[\s\S]*?<\/form>/gi,
+  /<[^>]*\bon\w+\s*=[^>]*>/gi,          // <img src=x onerror=...>, <body onload=...>
+  /<\s*img[^>]*>/gi,
   /javascript\s*:/gi,
-  /on\w+\s*=\s*["']?[^"'>]*/gi,       // onload=, onclick=, onerror= etc.
+  /on\w+\s*=\s*["']?[^"'>]*/gi,
   /data\s*:\s*text\s*\/\s*html/gi,
-  /<\s*img[^>]+src\s*=\s*["']?\s*data:/gi,
   /vbscript\s*:/gi,
-  /expression\s*\(/gi,                  // CSS Expression injection
-  /<\s*object[\s\S]*?>/gi,
-  /<\s*embed[\s\S]*?>/gi,
-  /<\s*form[\s\S]*?>/gi,
-  /<\s*input[\s\S]*?>/gi,
+  /expression\s*\(/gi,
 ];
 
 const SQLI_PATTERNS = [
