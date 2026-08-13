@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'async_hooks';
 
 export interface UserSecurityContext {
   userId: string;
+  tenantId: string;
   role: string;
   sensitivityLevel: number; // Nível máximo que o usuário pode acessar por padrão (0 a 4)
   ipAddress: string;
