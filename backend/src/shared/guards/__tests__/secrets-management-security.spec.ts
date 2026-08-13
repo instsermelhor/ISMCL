@@ -5,9 +5,10 @@ describe('AURA SECRETS MANAGEMENT & SCANNING SPEC (PROMPT 203)', () => {
   const repoRoot = path.resolve(__dirname, '../../../../../');
 
   it('deve garantir que nenhum arquivo no código-fonte contenha segredos reais hardcoded', () => {
+    // JavaScript regex: use /pattern/i flag instead of (?i) PCRE inline flag
     const suspiciousPatterns = [
-      /(?i)cora_sec_live_[0-9a-zA-Z_]{10,}/,
-      /(?i)postgres:\/\/aura:aura_k8s_prod_secure_password@/,
+      /cora_sec_live_[0-9a-zA-Z_]{10,}/i,
+      /postgres:\/\/aura:aura_k8s_prod_secure_password@/i,
       /-----BEGIN RSA PRIVATE KEY-----/,
     ];
 
