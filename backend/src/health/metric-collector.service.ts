@@ -24,6 +24,11 @@ export class MetricCollectorService {
   private durations: number[] = [];
   private securityViolationsCount = 0;
 
+  // ── SLO Metrics (PROMPT 206) ────────────────────────────────────────
+  // SLO Target: 99.9% availability (max 0.1% error rate)
+  private readonly SLO_TARGET = 0.999;
+  private serverErrorRequests = 0;  // HTTP 5xx counter
+
   constructor() {
     MetricCollectorService.instance = this;
   }
@@ -39,6 +44,11 @@ export class MetricCollectorService {
     this.totalRequests++;
     this.methodCounts.set(method, (this.methodCounts.get(method) ?? 0) + 1);
     this.statusCounts.set(statusCode, (this.statusCounts.get(statusCode) ?? 0) + 1);
+
+    // Track 5xx errors for SLO availability calculation
+    if (statusCode >= 500) {
+      this.serverErrorRequests++;
+    }
 
     this.durations.push(durationMs);
     // Limite de 2000 observações para cálculo de percentis (janela deslizante)
@@ -65,6 +75,20 @@ export class MetricCollectorService {
     const p50 = this.getQuantile(0.5);
     const p95 = this.getQuantile(0.95);
     const p99 = this.getQuantile(0.99);
+
+    // ── SLO Calculations (PROMPT 206) ────────────────────────────────
+    const availabilityRatio = this.totalRequests > 0
+      ? (this.totalRequests - this.serverErrorRequests) / this.totalRequests
+      : 1.0; // 100% se não houver requisições ainda
+
+    const errorBudgetRemaining = Math.max(
+      0,
+      (availabilityRatio - this.SLO_TARGET) / (1 - this.SLO_TARGET),
+    );
+
+    const burnRate = this.totalRequests > 0
+      ? (1 - availabilityRatio) / (1 - this.SLO_TARGET)
+      : 0;
 
     let metrics = `# HELP aura_uptime_seconds Tempo de atividade da aplicacao em segundos\n`;
     metrics += `# TYPE aura_uptime_seconds gauge\n`;
@@ -95,7 +119,24 @@ export class MetricCollectorService {
 
     metrics += `# HELP aura_security_violations_total Total de tentativas de violacao de seguranca detectadas\n`;
     metrics += `# TYPE aura_security_violations_total counter\n`;
-    metrics += `aura_security_violations_total ${this.securityViolationsCount}\n`;
+    metrics += `aura_security_violations_total ${this.securityViolationsCount}\n\n`;
+
+    // ── SLO Metrics ───────────────────────────────────────────────────
+    metrics += `# HELP aura_slo_availability_ratio Disponibilidade atual da plataforma (SLO Target: 0.999)\n`;
+    metrics += `# TYPE aura_slo_availability_ratio gauge\n`;
+    metrics += `aura_slo_availability_ratio{slo="availability",target="0.999"} ${availabilityRatio.toFixed(6)}\n\n`;
+
+    metrics += `# HELP aura_error_budget_remaining_ratio Fracao do Error Budget de disponibilidade ainda restante\n`;
+    metrics += `# TYPE aura_error_budget_remaining_ratio gauge\n`;
+    metrics += `aura_error_budget_remaining_ratio{slo="availability"} ${errorBudgetRemaining.toFixed(6)}\n\n`;
+
+    metrics += `# HELP aura_slo_burn_rate Taxa de consumo do Error Budget (1.0 = consumo no ritmo exato)\n`;
+    metrics += `# TYPE aura_slo_burn_rate gauge\n`;
+    metrics += `aura_slo_burn_rate{window="instant"} ${burnRate.toFixed(6)}\n\n`;
+
+    metrics += `# HELP aura_server_error_requests_total Total de requisicoes com erro de servidor HTTP 5xx\n`;
+    metrics += `# TYPE aura_server_error_requests_total counter\n`;
+    metrics += `aura_server_error_requests_total ${this.serverErrorRequests}\n`;
 
     return metrics;
   }
