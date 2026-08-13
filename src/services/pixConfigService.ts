@@ -97,10 +97,10 @@ export const DEFAULT_PIX_CONFIG: PixInstitutionalConfig = {
   merchantCity: 'SAO PAULO',
   environment: 'production',
   clientId: 'cora_client_prod_09040440',
-  clientSecret: 'cora_sec_live_09040440000147_aura',
+  clientSecret: '', // Injetado em runtime via Secrets Manager (AURA_PIX_CLIENT_SECRET)
   mtlsConfigured: true,
   webhookUrl: 'https://api.aura.org.br/v1/webhooks/pix/cora',
-  webhookSecret: 'whsec_cora_09040440_v1',
+  webhookSecret: '', // Injetado em runtime via Secrets Manager (AURA_PIX_WEBHOOK_SECRET)
   defaultExpirationSeconds: 3600, // 1 hora
   autoReceiptEnabled: true,
   autoReconciliationEnabled: true,
