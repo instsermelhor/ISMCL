@@ -1,4 +1,4 @@
-import { Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
+import { Controller, Get, VERSION_NEUTRAL, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
   HealthCheckService,
@@ -8,20 +8,23 @@ import {
   DiskHealthIndicator,
 } from '@nestjs/terminus';
 import { PrismaClient } from '@prisma/client';
+import { FastifyReply } from 'fastify';
 import { Public } from '../shared/decorators/public.decorator';
+import { MetricCollectorService } from './metric-collector.service';
 
 /**
- * HealthController — Endpoints de Saúde da Plataforma Aura
+ * HealthController — Endpoints de Saúde e Telemetria da Plataforma Aura
  *
- * Implementa os três padrões de health check para Kubernetes:
+ * Implementa os três padrões de health check para Kubernetes e exportador OpenMetrics:
  * - GET /health       → Liveness Probe (está vivo?)
  * - GET /health/ready → Readiness Probe (pronto para tráfego?)
  * - GET /health/startup → Startup Probe (inicializou corretamente?)
+ * - GET /metrics      → Exportador de Métricas OpenMetrics / Prometheus
  *
- * Referências: P117 (AEOSMRP), P127 (AECP), P131 (AFPI)
+ * Referências: P117 (AEOSMRP), P127 (AECP), P131 (AFPI), OpenMetrics RFC
  */
 @ApiTags('Health')
-@Controller({ path: 'health', version: VERSION_NEUTRAL })
+@Controller({ path: '', version: VERSION_NEUTRAL })
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -29,14 +32,14 @@ export class HealthController {
     private readonly disk: DiskHealthIndicator,
     private readonly prismaHealth: PrismaHealthIndicator,
     private readonly prisma: PrismaClient,
+    private readonly metricCollector: MetricCollectorService,
   ) {}
 
   /**
    * Liveness Probe — Verifica se o processo está vivo.
    * Kubernetes reinicia o pod se este endpoint falhar.
-   * Verificações: memória heap e memória RSS.
    */
-  @Get()
+  @Get('health')
   @Public()
   @HealthCheck()
   @ApiOperation({
@@ -55,9 +58,8 @@ export class HealthController {
   /**
    * Readiness Probe — Verifica se o serviço está pronto para receber tráfego.
    * Kubernetes remove o pod do load balancer se este endpoint falhar.
-   * Verificações: banco de dados, memória e disco.
    */
-  @Get('ready')
+  @Get('health/ready')
   @Public()
   @HealthCheck()
   @ApiOperation({
@@ -78,9 +80,8 @@ export class HealthController {
 
   /**
    * Startup Probe — Verifica se a aplicação inicializou corretamente.
-   * Kubernetes aguarda este endpoint antes de iniciar liveness/readiness.
    */
-  @Get('startup')
+  @Get('health/startup')
   @Public()
   @HealthCheck()
   @ApiOperation({ summary: 'Startup Probe' })
@@ -88,5 +89,19 @@ export class HealthController {
     return this.health.check([
       () => this.prismaHealth.pingCheck('database', this.prisma),
     ]);
+  }
+
+  /**
+   * Exportador Prometheus / OpenMetrics
+   */
+  @Get('metrics')
+  @Public()
+  @ApiOperation({
+    summary: 'Prometheus / OpenMetrics Exporter',
+    description: 'Retorna métricas em formato textual OpenMetrics para scraping do Prometheus e Grafana.',
+  })
+  getMetrics(@Res() res: FastifyReply) {
+    const rawMetrics = this.metricCollector.toOpenMetrics();
+    void res.header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8').send(rawMetrics);
   }
 }
