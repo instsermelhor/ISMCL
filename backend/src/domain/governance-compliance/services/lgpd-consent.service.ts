@@ -261,7 +261,7 @@ export class LgpdConsentService {
         purposes: c.purposes,
         legalBasis: c.legalBasis,
         isActive: c.isActive,
-        grantedAt: c.grantedAt,
+        grantedAt: c.createdAt,
         withdrawnAt: c.withdrawnAt,
       })),
       subjectRequests: requests.map((r) => ({
