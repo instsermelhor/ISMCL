@@ -63,7 +63,12 @@ export class PolicyEngine {
     const evaluatedAt = new Date().toISOString();
 
     // 1. Regra Absoluta: Multi-tenant Isolation
-    if (subject.tenantId !== resource.tenantId && !subject.roles.includes(AuraRole.SUPER_ADMIN)) {
+    // SUPER_ADMIN e SUPER_USER_UNIVERSAL possuem acesso global auditado (Break-Glass)
+    const isGlobalSuperUser =
+      subject.roles.includes(AuraRole.SUPER_ADMIN) ||
+      subject.roles.includes(AuraRole.SUPER_USER_UNIVERSAL);
+
+    if (subject.tenantId !== resource.tenantId && !isGlobalSuperUser) {
       this.logger.warn(
         `[PolicyEngine] DENY: Tenant mismatch. Subject Tenant: ${subject.tenantId}, Resource Tenant: ${resource.tenantId}`,
       );
@@ -115,11 +120,13 @@ export class PolicyEngine {
     const hasExplicitPermission =
       subject.permissions.includes(requiredPermission) ||
       subject.permissions.includes('*') ||
+      subject.permissions.includes('*:*') ||
       subject.permissions.includes(`${resource.type}:*`);
 
-    // 6. Avaliação por Role (SUPER_ADMIN / ADMIN)
+    // 6. Avaliação por Role (SUPER_ADMIN / SUPER_USER_UNIVERSAL / ADMIN)
     const isMasterAdmin =
       subject.roles.includes(AuraRole.SUPER_ADMIN) ||
+      subject.roles.includes(AuraRole.SUPER_USER_UNIVERSAL) ||
       subject.roles.includes(AuraRole.ADMIN);
 
     // 7. Próprio Dono do Recurso (Self Access)
