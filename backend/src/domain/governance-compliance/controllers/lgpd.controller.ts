@@ -111,6 +111,16 @@ export class LgpdController {
     return this.lgpdService.getDataSubjectRequests(entityId, tenantId ?? 'default');
   }
 
+  @Get('portability/:entityId')
+  @ApiOperation({ summary: 'Exportar dados do titular para portabilidade (LGPD Art. 18, V)' })
+  @ApiResponse({ status: 200, description: 'Pacote de dados portável em formato JSON' })
+  async exportPortability(
+    @Param('entityId') entityId: string,
+    @Query('tenantId') tenantId: string,
+  ) {
+    return this.lgpdService.exportDataPortability(entityId, tenantId ?? 'default');
+  }
+
   @Post('requests/:id/process-erasure')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Executar processo de anonimização para solicitação de esquecimento (GAP-P2-06)' })
