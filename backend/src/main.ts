@@ -1,3 +1,6 @@
+// ── OpenTelemetry DEVE ser importado ANTES de qualquer módulo NestJS ─────────
+import './shared/telemetry/otel.instrumentation';
+
 import { NestFactory } from '@nestjs/core';
 import {
   FastifyAdapter,
