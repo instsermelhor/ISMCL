@@ -1,0 +1,92 @@
+groups:
+  - name: aura_slo_alerts
+    interval: 30s
+    rules:
+
+      # ── SLO Burn Rate CRÍTICO (> 14.4x em 1h → budget esgota em < 2h) ───────
+      - alert: AuraSLOBurnRateCritical
+        expr: |
+          aura_slo_burn_rate{window="instant"} > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          team: sre
+          slo: availability
+        annotations:
+          summary: "🔴 [AURA] SLO Burn Rate CRÍTICO — Error Budget se esgota em < 2h"
+          description: |
+            Burn rate atual: {{ $value | humanize }}x (threshold: 14.4x)
+            Error budget restante: consumo acelerado detectado.
+            Ação imediata requerida — checar logs de erro e traces.
+          runbook_url: "https://wiki.ismcl.com.br/runbooks/slo-burn-rate-critical"
+
+      # ── SLO Burn Rate WARNING (> 6x em 6h → budget esgota em < 5 dias) ──────
+      - alert: AuraSLOBurnRateWarning
+        expr: |
+          aura_slo_burn_rate{window="instant"} > 6
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+          slo: availability
+        annotations:
+          summary: "🟠 [AURA] SLO Burn Rate WARNING — Error Budget se esgota em < 5 dias"
+          description: |
+            Burn rate: {{ $value | humanize }}x (threshold: 6x)
+            Investigar incremento de erros antes que se torne crítico.
+
+      # ── Alta Taxa de Erros 5xx ────────────────────────────────────────────────
+      - alert: AuraHighErrorRate
+        expr: |
+          aura_slo_availability_ratio{slo="availability"} < 0.99
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "🔴 [AURA] Alta taxa de erros 5xx — Disponibilidade abaixo de 99%"
+          description: |
+            Disponibilidade atual: {{ $value | humanizePercentage }}
+            SLO target: 99.9%
+
+      # ── Latência P99 Elevada ─────────────────────────────────────────────────
+      - alert: AuraHighLatencyP99
+        expr: |
+          aura_http_request_duration_ms{quantile="0.99"} > 2000
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "🟠 [AURA] Latência P99 acima de 2000ms por 10 minutos"
+          description: |
+            P99 atual: {{ $value }}ms
+            SLO target: P99 ≤ 2000ms em 99% das requisições
+
+      # ── Serviço Indisponível ──────────────────────────────────────────────────
+      - alert: AuraServiceDown
+        expr: |
+          up{job="aura-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "🔴 [AURA] BACKEND INDISPONÍVEL — Nenhuma instância respondendo"
+          description: |
+            O serviço aura-backend não responde ao scrape do Prometheus.
+            Verificar pods EKS, logs de container e health checks.
+
+      # ── Error Budget Crítico (< 25% restante) ────────────────────────────────
+      - alert: AuraErrorBudgetCritical
+        expr: |
+          aura_error_budget_remaining_ratio{slo="availability"} < 0.25
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "🟠 [AURA] Error Budget < 25% restante — FREEZE de deployments recomendado"
+          description: |
+            Error budget restante: {{ $value | humanizePercentage }}
+            Política: abaixo de 25%, deployments de feature devem ser aprovados pelo SRE.
