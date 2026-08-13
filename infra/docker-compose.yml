@@ -86,6 +86,92 @@ services:
       com.aura.service: "mail"
       com.aura.environment: "development"
 
+  # ── PROMPT 206: OBSERVABILITY STACK ─────────────────────────────────────────
+
+  # ── Jaeger (Distributed Tracing — OTLP HTTP + UI) ──────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: aura_jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      LOG_LEVEL: warn
+    ports:
+      - "16686:16686"   # Jaeger UI → http://localhost:16686
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP (usado pelo OTel SDK da API)
+    networks:
+      - aura-network
+    labels:
+      com.aura.service: "tracing"
+      com.aura.environment: "development"
+
+  # ── Prometheus (Métricas) ────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: aura_prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"     # Prometheus UI → http://localhost:9090
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - aura_prometheus_data:/prometheus
+    networks:
+      - aura-network
+    labels:
+      com.aura.service: "metrics"
+      com.aura.environment: "development"
+
+  # ── Loki (Log Aggregation) ───────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.7
+    container_name: aura_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"     # Loki API
+    volumes:
+      - aura_loki_data:/loki
+    networks:
+      - aura-network
+    labels:
+      com.aura.service: "logs"
+      com.aura.environment: "development"
+
+  # ── Grafana (Dashboards & Alertas) ───────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: aura_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-aura_grafana_dev}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_INSTALL_PLUGINS: "grafana-clock-panel"
+    ports:
+      - "3003:3000"     # Grafana UI → http://localhost:3003
+    volumes:
+      - aura_grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+    networks:
+      - aura-network
+    labels:
+      com.aura.service: "dashboards"
+      com.aura.environment: "development"
+
 # ── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
   aura_postgres_data:
@@ -96,6 +182,18 @@ volumes:
     driver: local
     labels:
       com.aura.volume: "redis-data"
+  aura_prometheus_data:
+    driver: local
+    labels:
+      com.aura.volume: "prometheus-data"
+  aura_loki_data:
+    driver: local
+    labels:
+      com.aura.volume: "loki-data"
+  aura_grafana_data:
+    driver: local
+    labels:
+      com.aura.volume: "grafana-data"
 
 # ── Networks ─────────────────────────────────────────────────────────────────
 networks:
