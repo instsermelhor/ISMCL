@@ -3,34 +3,15 @@ import { AiAssistantService } from './ai-assistant.service';
 import { RagKnowledgeService } from './rag-knowledge.service';
 import { PromptGovernanceService } from './prompt-governance.service';
 import { AiGatewayService } from './ai-gateway.service';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { EventBusService } from '../../../events/event-bus.service';
+import { AssistantRole } from '../dto/ai.dto';
 
 describe('Advanced Product & Innovation Test Suite (PROMPT 200 — FASE E)', () => {
   let assistantService: AiAssistantService;
   let ragService: RagKnowledgeService;
-  let gatewayService: AiGatewayService;
-  let prisma: any;
   let eventBus: any;
 
   beforeEach(async () => {
-    prisma = {
-      aiAssistantInteraction: {
-        create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'int-1', ...data })),
-      },
-      knowledgeArticle: {
-        findMany: jest.fn().mockResolvedValue([
-          {
-            id: 'art-1',
-            title: 'POP Atendimento de Crise e Prevencao ao Suicidio',
-            content: 'Diretrizes clinicas para avaliacao imediata de risco e encaminhamento CAPS.',
-            module: 'CLINICAL',
-            tags: ['CRISIS', 'SUICIDE_PREVENTION', 'URGENCY'],
-          },
-        ]),
-      },
-    };
-
     eventBus = {
       publish: jest.fn().mockResolvedValue(undefined),
     };
@@ -43,60 +24,65 @@ describe('Advanced Product & Innovation Test Suite (PROMPT 200 — FASE E)', () 
         {
           provide: AiGatewayService,
           useValue: {
-            generateContent: jest.fn().mockResolvedValue({
-              content: 'Relatório clínico estruturado: Subjetivo: Paciente relata ansiedade. Objetivo: Orientado. Avaliação: CID F41.0. Plano: Psicoterapia semanal.',
-              model: 'gemini-1.5-pro',
-              tokensUsed: 142,
-              durationMs: 380,
+            generateCompletion: jest.fn().mockResolvedValue({
+              content: 'Relatório estruturado: Paciente apresenta evolução positiva.',
+              provider: 'google-vertex-gemini',
+              modelName: 'gemini-1.5-pro',
+              tokensPrompt: 45,
+              tokensCompletion: 80,
+              latencyMs: 250,
             }),
           },
         },
-        { provide: PrismaService, useValue: prisma },
         { provide: EventBusService, useValue: eventBus },
       ],
     }).compile();
 
     assistantService = module.get<AiAssistantService>(AiAssistantService);
     ragService = module.get<RagKnowledgeService>(RagKnowledgeService);
-    gatewayService = module.get<AiGatewayService>(AiGatewayService);
   });
 
-  describe('Pilar 1: Copiloto Clínico IA RAG com Sanitização PII', () => {
-    it('deve invocar assistente de IA, sanitizar dados sensíveis e estruturar resposta', async () => {
-      const response = await assistantService.invokeAssistant(
+  describe('Pilar 1: Copiloto Clínico IA RAG com Sanitização PII e IA Responsável', () => {
+    it('deve invocar assistente de IA, sanitizar dados sensíveis e adicionar aviso de IA responsável', async () => {
+      const response = await assistantService.invoke(
         {
-          role: 'CLINICAL_SPECIALIST' as any,
-          userPrompt: 'Gerar nota SOAP para o atendimento do paciente João da Silva CPF 123.456.789-00',
-          temperature: 0.2,
+          assistantRole: AssistantRole.PSYCHOLOGIST,
+          userPrompt: 'Gerar nota SOAP para o paciente João da Silva CPF 123.456.789-00',
+          enableRag: true,
         },
         'user-prof-1',
         'tenant-aura',
       );
 
       expect(response).toBeDefined();
-      expect(response.response).toContain('Subjetivo');
-      expect(response.response).toContain('Avaliação');
+      expect(response.assistantRole).toBe(AssistantRole.PSYCHOLOGIST);
+      expect(response.requiresHumanReview).toBe(true);
+      expect(response.responseContent).toContain('⚠️ *Aviso de IA Responsável');
 
-      // Validação de publicação no barramento de eventos para auditoria
+      // Validação de publicação no barramento de eventos
       expect(eventBus.publish).toHaveBeenCalledWith(
-        'aura.ai.interaction.logged.v1',
+        'aura.ai.assistant.invoked.v1',
         expect.objectContaining({
-          role: 'CLINICAL_SPECIALIST',
+          assistantRole: AssistantRole.PSYCHOLOGIST,
           userId: 'user-prof-1',
         }),
         'tenant-aura',
       );
     });
 
-    it('deve buscar artigos corporativos na base vetorial RAG', async () => {
-      const ragResults = await ragService.queryKnowledge({
-        query: 'atendimento de crise',
-        maxResults: 3,
-      });
+    it('deve buscar artigos corporativos na base vetorial RAG com citação de fontes', async () => {
+      const ragResults = await ragService.queryRag(
+        {
+          query: 'crise psicológica acolhimento',
+          topK: 2,
+        },
+        'tenant-aura',
+      );
 
       expect(ragResults).toBeDefined();
-      expect(ragResults.articles.length).toBeGreaterThan(0);
-      expect(ragResults.articles[0].title).toContain('Crise');
+      expect(ragResults.retrievedDocuments.length).toBeGreaterThan(0);
+      expect(ragResults.sourcesUsed.length).toBeGreaterThan(0);
+      expect(ragResults.sourcesUsed[0]).toContain('POP-001');
     });
   });
 });
