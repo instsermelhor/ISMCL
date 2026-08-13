@@ -1,6 +1,8 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AuraThrottlerGuard } from './shared/guards/throttler.guard';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
@@ -252,6 +254,15 @@ import { EnterpriseAIGovernanceModule } from './domain/enterprise-ai-governance/
     EnterpriseObservabilityModule,
     EnterpriseHyperautomationModule,
     EnterpriseAIGovernanceModule,
+  ],
+  providers: [
+    // ── Global Rate Limiting Guard ────────────────────────────────────────────
+    // Aplica AuraThrottlerGuard a TODOS os endpoints da plataforma.
+    // Ref: AURA-RBAC-001, OWASP A07 (Authentication Failures)
+    {
+      provide: APP_GUARD,
+      useClass: AuraThrottlerGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {
