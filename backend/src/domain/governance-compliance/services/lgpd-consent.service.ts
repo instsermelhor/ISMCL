@@ -222,6 +222,59 @@ export class LgpdConsentService {
   }
 
   /**
+   * Exporta dados completos do titular em formato JSON estruturado e portável.
+   * Atende ao Direito à Portabilidade de Dados — LGPD Art. 18, V.
+   */
+  async exportDataPortability(entityId: string, tenantId: string) {
+    const consents = await this.prisma.dataConsent.findMany({
+      where: { entityId, tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const requests = await this.prisma.dataSubjectRequest.findMany({
+      where: { entityId, tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Registra a operação de portabilidade no ROPA (Art. 37)
+    await this.logDataProcessing({
+      entityId,
+      entityType: 'BENEFICIARY',
+      tenantId,
+      operation: 'DATA_PORTABILITY_EXPORT',
+      resource: 'DataSubjectPackage',
+      purpose: 'Cumprimento de obrigacao legal do titular de dados (Art. 18, V)',
+      legalBasis: 'LGPD Art. 18, V — Direito a Portabilidade',
+    });
+
+    return {
+      exportMetadata: {
+        entityId,
+        tenantId,
+        exportedAt: new Date().toISOString(),
+        formatVersion: 'AURA-LGPD-PORTABILITY-v1.0',
+        legalBasis: 'Lei 13.709/2018 (LGPD) — Artigo 18, Inciso V',
+      },
+      consents: consents.map((c) => ({
+        id: c.id,
+        version: c.consentVersion,
+        purposes: c.purposes,
+        legalBasis: c.legalBasis,
+        isActive: c.isActive,
+        grantedAt: c.grantedAt,
+        withdrawnAt: c.withdrawnAt,
+      })),
+      subjectRequests: requests.map((r) => ({
+        id: r.id,
+        requestType: r.requestType,
+        status: r.status,
+        createdAt: r.createdAt,
+        dueDate: r.dueDate,
+      })),
+    };
+  }
+
+  /**
    * Registra log de processamento de dados (ROPA — Records of Processing Activities).
    * Exigido pelo LGPD Art. 37 e GDPR Art. 30.
    */
