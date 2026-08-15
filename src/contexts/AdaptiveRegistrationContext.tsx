@@ -137,8 +137,10 @@ function getVisibleQuestions(answers: RegistrationAnswers) {
 }
 
 function getStepsFromQuestions(questions: typeof adaptiveQuestions): number {
+  if (!questions || questions.length === 0) return 8;
   const steps = new Set(questions.map((q) => q.step));
-  return Math.max(...steps);
+  const max = Math.max(...steps);
+  return Number.isFinite(max) && max > 0 ? max : 8;
 }
 
 function getIIPLabel(score: number): string {
