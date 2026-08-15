@@ -13,6 +13,7 @@ import type {
   PriorityLevel,
   RegistrationActionType,
 } from '../types/adaptive-registration';
+import type { SpecialCategory } from '../contexts/SecurityContext';
 import { adaptiveQuestions } from '../data/adaptive-registration-mock';
 
 // ============================================================
@@ -33,6 +34,33 @@ interface AdaptiveRegistrationContextType {
   isSubmitting: boolean;
   iipLabel: string;
   priorityColor: string;
+  // Callbacks injetados da camada de segurança
+  vaultCallbacks?: VaultCallbacks;
+  setVaultCallbacks: (cb: VaultCallbacks) => void;
+}
+
+// Callbacks do SecurityContext injetados pelo componente raiz
+export interface VaultCallbacks {
+  addProfile: (data: {
+    beneficiaryName: string;
+    beneficiaryId: string;
+    sensitivityLevel: 0 | 1 | 2 | 3 | 4;
+    specialCategory: SpecialCategory;
+    riskScore: number;
+    guardians: [];
+    protectiveMeasures: [];
+    notes?: string;
+  }) => void;
+  logAction: (entry: {
+    userId: string;
+    userName: string;
+    action: 'VAULT_ACCESS' | 'EDIT';
+    targetCode?: string;
+    description: string;
+    ipAddress: string;
+    device: string;
+    sensitivityLevel?: 0 | 1 | 2 | 3 | 4;
+  }) => void;
 }
 
 // ============================================================
@@ -176,6 +204,49 @@ const initialSession: RegistrationSession = {
 };
 
 // ============================================================
+// Mapeamento: valor da instituição → SpecialCategory (SecurityContext)
+// ============================================================
+
+const INSTITUTION_TO_CATEGORY: Record<string, SpecialCategory> = {
+  pm: 'POLICIAL_MILITAR',
+  pc: 'POLICIAL_CIVIL',
+  pf: 'POLICIA_FEDERAL',
+  prf: 'POLICIA_RODOVIARIA_FEDERAL',
+  cb: 'BOMBEIRO_MILITAR',
+  gcm: 'GUARDA_CIVIL_MUNICIPAL',
+  pp: 'POLICIA_PENAL',
+  fa: 'MILITAR_FORCAS_ARMADAS',
+  other: 'AUTORIDADE_PUBLICA',
+};
+
+// ============================================================
+// Sanitização de dados sensíveis antes de persistir
+// ============================================================
+
+function sanitizeProtocolAnswers(answers: RegistrationAnswers): RegistrationAnswers {
+  const sanitized = { ...answers };
+  // Mascarar número funcional
+  if (sanitized['functional_id']) {
+    sanitized['functional_id'] = '[FUNCIONAL PROTEGIDO]';
+  }
+  // Mascarar CPF
+  if (typeof sanitized['cpf'] === 'string' && sanitized['cpf'].length > 4) {
+    sanitized['cpf'] = '***.***.***-**';
+  }
+  // Mascarar CPF do responsável
+  if (typeof sanitized['guardian_cpf'] === 'string' && sanitized['guardian_cpf'].length > 4) {
+    sanitized['guardian_cpf'] = '***.***.***-**';
+  }
+  // Substituir nomes de arquivos de upload por booleano
+  for (const field of ['rg_upload', 'cpf_card_upload', 'address_proof_upload', 'credential_upload', 'medication_prescription_upload']) {
+    if (sanitized[field] !== undefined && sanitized[field] !== null) {
+      sanitized[field] = sanitized[field] ? 'DOCUMENTO_ENVIADO' : null;
+    }
+  }
+  return sanitized;
+}
+
+// ============================================================
 // Context
 // ============================================================
 
@@ -184,6 +255,7 @@ const AdaptiveRegistrationContext = createContext<AdaptiveRegistrationContextTyp
 export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<RegistrationSession>(initialSession);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vaultCallbacks, setVaultCallbacks] = useState<VaultCallbacks | undefined>(undefined);
 
   const visibleQuestions = getVisibleQuestions(session.answers);
   const totalSteps = getStepsFromQuestions(visibleQuestions);
@@ -241,6 +313,11 @@ export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode
     // Simulate API call
     await new Promise((resolve) => resolve(null));
     
+    const isSecurityForces = session.answers['is_security_forces'] === 'yes';
+    const functionalId = session.answers['functional_id'] as string | undefined;
+    const hasVaultTrigger = isSecurityForces && !!functionalId?.trim();
+
+    // ── 1. Registrar paciente operacional (sem dados sensíveis em claro) ──
     try {
       const savedPatients = localStorage.getItem('patients_list');
       const list = savedPatients ? JSON.parse(savedPatients) : [];
@@ -258,7 +335,8 @@ export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode
         age: dob ? new Date().getFullYear() - new Date(dob).getFullYear() : 30,
         gender: String(session.answers['gender'] || 'Feminino'),
         birthDate: dob,
-        cpf: cpf,
+        // CPF mascarado no registro operacional
+        cpf: cpf.replace(/\d{3}\.\d{3}\.\d{3}/, '***.***.***'),
         rg: '**.***.***-*',
         status: 'Em avaliação',
         risk: session.priorityLevel === 'critical' || session.priorityLevel === 'high' ? 'high' : 'low',
@@ -274,18 +352,25 @@ export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode
         housing: String(session.answers['housing'] || 'owned'),
         education: 'Não informada',
         occupation: 'Não informada',
-        familyRenda: 'Até 1 SM'
+        familyRenda: 'Até 1 SM',
+        // Flag de proteção reforçada (não expõe o funcional)
+        hasDigitalVault: hasVaultTrigger,
+        isSecurityForces: isSecurityForces,
       };
       
       localStorage.setItem('patients_list', JSON.stringify([...list, newPatient]));
     } catch (err) {
-      console.error(err);
+      console.error('[ARE] Erro ao salvar paciente:', err);
     }
 
+    // ── 2. Dossier SATAI — sanitizado (sem dados sensíveis em claro) ──
     try {
       const savedDossiers = localStorage.getItem('satai_dossiers');
       const dossiersList = savedDossiers ? JSON.parse(savedDossiers) : [];
       
+      // Aplicar sanitização antes de persistir
+      const sanitizedAnswers = sanitizeProtocolAnswers({ ...session.answers });
+
       const newDossier = {
         id: `DOS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
         registrationId: session.id,
@@ -302,23 +387,87 @@ export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode
         attendanceMotives: (session.answers['attendance_motives'] as string[]) || [],
         factorsOfAttention: (session.answers['vulnerability_indicators'] as string[]) || [],
         alertsTriggered: session.iipScore > 50 ? ['sofrimento_agudo'] : [],
-        protocolAnswers: { ...session.answers },
+        // TRIAGEM: apenas dados sanitizados — sem número funcional, CPF ou documentos em claro
+        protocolAnswers: sanitizedAnswers,
         aiSummary: `Beneficiário cadastrado via Portal ARE com prioridade ${session.priorityLevel.toUpperCase()}.`,
         aiInconsistencies: [],
         aiRecommendedProtocols: ['Acolhimento Psicológico'],
         aiRiskFlags: session.priorityLevel === 'critical' ? ['🚨 RISCO CRÍTICO'] : [],
+        hasDigitalVault: hasVaultTrigger,
         status: 'pending_review',
         createdAt: new Date().toISOString()
       };
       
       localStorage.setItem('satai_dossiers', JSON.stringify([newDossier, ...dossiersList]));
     } catch (err) {
-      console.error(err);
+      console.error('[ARE] Erro ao salvar dossier SATAI:', err);
+    }
+
+    // ── 3. Cofre Digital: criar ProtectedProfile no SecurityContext ──
+    if (hasVaultTrigger && vaultCallbacks) {
+      try {
+        const institutionValue = String(session.answers['security_institution'] || 'other');
+        const specialCategory: SpecialCategory = INSTITUTION_TO_CATEGORY[institutionValue] ?? 'AUTORIDADE_PUBLICA';
+        const fullName = String(session.answers['full_name'] || 'Beneficiário ARE');
+        const beneficiaryId = `are-${Date.now()}`;
+
+        // Criar perfil de proteção nível 3 (Altamente Protegido)
+        vaultCallbacks.addProfile({
+          beneficiaryName: fullName,
+          beneficiaryId,
+          sensitivityLevel: 3,
+          specialCategory,
+          riskScore: Math.min(session.iipScore / 10, 10),
+          guardians: [],
+          protectiveMeasures: [],
+          notes: `Cadastro automático via ARE. Agente de segurança pública. Instituição: ${institutionValue.toUpperCase()}. Proteção reforçada ativada por Número Funcional.`,
+        });
+
+        // Gerar evento de auditoria
+        vaultCallbacks.logAction({
+          userId: 'system-are',
+          userName: 'Portal ARE (Sistema)',
+          action: 'VAULT_ACCESS',
+          description: `Cofre Digital criado automaticamente para agente de segurança pública. Categoria: ${specialCategory}. Nível de sensibilidade: 3.`,
+          ipAddress: '—',
+          device: navigator.userAgent.slice(0, 50),
+          sensitivityLevel: 3,
+        });
+      } catch (err) {
+        console.error('[ARE] Erro ao criar ProtectedProfile no SecurityContext:', err);
+      }
+    } else if (session.answers['enable_vault'] === 'yes' && vaultCallbacks) {
+      // Cofre ativado manualmente sem funcional → nível 2 (Protegido)
+      try {
+        const fullName = String(session.answers['full_name'] || 'Beneficiário ARE');
+        const beneficiaryId = `are-${Date.now()}`;
+        vaultCallbacks.addProfile({
+          beneficiaryName: fullName,
+          beneficiaryId,
+          sensitivityLevel: 2,
+          specialCategory: null,
+          riskScore: Math.min(session.iipScore / 10, 10),
+          guardians: [],
+          protectiveMeasures: [],
+          notes: 'Cofre Digital ativado pelo beneficiário via Portal ARE.',
+        });
+        vaultCallbacks.logAction({
+          userId: 'system-are',
+          userName: 'Portal ARE (Sistema)',
+          action: 'VAULT_ACCESS',
+          description: 'Cofre Digital ativado manualmente pelo beneficiário. Nível de sensibilidade: 2.',
+          ipAddress: '—',
+          device: navigator.userAgent.slice(0, 50),
+          sensitivityLevel: 2,
+        });
+      } catch (err) {
+        console.error('[ARE] Erro ao criar ProtectedProfile (vault manual):', err);
+      }
     }
 
     setSession((prev) => ({ ...prev, status: 'pending_review' }));
     setIsSubmitting(false);
-  }, [session]);
+  }, [session, vaultCallbacks]);
 
   const value: AdaptiveRegistrationContextType = {
     session,
@@ -334,6 +483,8 @@ export const AdaptiveRegistrationProvider = ({ children }: { children: ReactNode
     isSubmitting,
     iipLabel: getIIPLabel(session.iipScore),
     priorityColor: getPriorityColor(session.priorityLevel),
+    vaultCallbacks,
+    setVaultCallbacks,
   };
 
   return (
