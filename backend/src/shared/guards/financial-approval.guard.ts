@@ -14,10 +14,7 @@ export const FINANCIAL_AMOUNT_KEY = 'financial_amount_limit';
  * Ex: @FinancialLimit(10000) ou @FinancialLimit('amount')
  */
 export const FinancialLimit = (amountOrField: number | string) =>
-  (target: any, key?: string | symbol, descriptor?: any) => {
-    Reflector.prototype.get; // ensure import
-    SetMetadata(FINANCIAL_AMOUNT_KEY, amountOrField)(target, key, descriptor);
-  };
+  SetMetadata(FINANCIAL_AMOUNT_KEY, amountOrField);
 
 import { SetMetadata } from '@nestjs/common';
 
