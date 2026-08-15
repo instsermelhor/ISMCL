@@ -376,42 +376,45 @@ export default function PiaraveAcolhimento() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: themeColors.bg,
-      color: themeColors.textColor,
-      fontFamily: "'Inter', sans-serif",
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative'
-    }}>
+    <div
+      className="min-h-screen min-h-[100dvh] w-full safe-area-padding flex flex-col relative box-border"
+      style={{
+        background: themeColors.bg,
+        color: themeColors.textColor,
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
       {/* Top Header com Acessibilidade e Pânico */}
-      <header style={{
-        height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px', borderBottom: `1px solid ${themeColors.borderColor}`
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#14b8a6', fontWeight: 700 }}>
-          <Heart className="w-5 h-5 fill-current" />
+      <header
+        className="min-h-16 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b box-border"
+        style={{ borderColor: themeColors.borderColor }}
+      >
+        <div className="flex items-center gap-2 text-teal-400 font-bold text-sm sm:text-base">
+          <Heart className="w-5 h-5 fill-current shrink-0" />
           <span>PIARAVE — Acolhimento Especializado</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="flex items-center flex-wrap gap-2 sm:gap-3 ml-auto">
           {/* Controles de Acessibilidade */}
           <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.04)', padding: '4px', borderRadius: '8px' }}>
             <button
+              type="button"
               onClick={() => setFontSizeClass('text-normal')}
               style={{ padding: '4px 8px', border: 'none', background: fontSizeClass === 'text-normal' ? 'rgba(255,255,255,0.1)' : 'transparent', color: '#fff', fontSize: '12px', cursor: 'pointer', borderRadius: '4px' }}
             >A</button>
             <button
+              type="button"
               onClick={() => setFontSizeClass('text-large')}
               style={{ padding: '4px 8px', border: 'none', background: fontSizeClass === 'text-large' ? 'rgba(255,255,255,0.1)' : 'transparent', color: '#fff', fontSize: '14px', cursor: 'pointer', borderRadius: '4px' }}
             >A+</button>
             <button
+              type="button"
               onClick={() => setFontSizeClass('text-xlarge')}
               style={{ padding: '4px 8px', border: 'none', background: fontSizeClass === 'text-xlarge' ? 'rgba(255,255,255,0.1)' : 'transparent', color: '#fff', fontSize: '16px', cursor: 'pointer', borderRadius: '4px' }}
             >A++</button>
           </div>
           <button
+            type="button"
             onClick={() => setHighContrast(!highContrast)}
             style={{
               padding: '6px 12px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${themeColors.borderColor}`,
@@ -421,10 +424,11 @@ export default function PiaraveAcolhimento() {
 
           {/* Botão de Pânico */}
           <button
+            type="button"
             onClick={handleQuickExit}
             style={{
-              padding: '8px 16px', background: '#ef4444', color: '#fff',
-              border: 'none', borderRadius: '8px', fontWeight: 700,
+              padding: '8px 14px', background: '#ef4444', color: '#fff',
+              border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
               boxShadow: '0 4px 12px rgba(239,68,68,0.3)'
             }}
@@ -437,7 +441,7 @@ export default function PiaraveAcolhimento() {
       {/* Main Container */}
       <main style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '32px 24px'
+        padding: '24px 16px', boxSizing: 'border-box'
       }}>
         <div style={{
           width: '100%', maxWidth: '580px', background: themeColors.cardBg,
