@@ -160,6 +160,16 @@ export default function App() {
             </PublicRoute>
           }
         />
+        <Route
+          path="/iam-login"
+          element={
+            <PublicRoute>
+              <RouteErrorBoundary>
+                <IAMLogin />
+              </RouteErrorBoundary>
+            </PublicRoute>
+          }
+        />
 
         {/* Rota pública: Área Administrativa — Login exclusivo (Prompt 177 ETAPA 1 e 2) */}
         <Route
@@ -173,10 +183,14 @@ export default function App() {
           }
         />
 
-        {/* Rota pública: Cadastro Inteligente Adaptativo */}
+        {/* Rota pública: Cadastro Inteligente Adaptativo (ARE) */}
         <Route
           path="/registro"
           element={<RouteErrorBoundary><AdaptiveRegistration /></RouteErrorBoundary>}
+        />
+        <Route
+          path="/cadastro"
+          element={<Navigate to="/registro" replace />}
         />
 
         {/* Rota pública: Triagem/Acolhimento Inteligente (SATAI) */}
@@ -185,9 +199,13 @@ export default function App() {
           element={<RouteErrorBoundary><SataiWizard /></RouteErrorBoundary>}
         />
 
-        {/* Rota pública: PIARAVE Acolhimento (Biblioteca migrada para área autenticada — Prompt 179) */}
+        {/* Rota pública: PIARAVE Acolhimento */}
         <Route
           path="/piarave/acolhimento"
+          element={<RouteErrorBoundary><PiaraveAcolhimento /></RouteErrorBoundary>}
+        />
+        <Route
+          path="/piarave-acolhimento"
           element={<RouteErrorBoundary><PiaraveAcolhimento /></RouteErrorBoundary>}
         />
 
@@ -196,11 +214,23 @@ export default function App() {
           path="/doe"
           element={<RouteErrorBoundary><DonationPublic /></RouteErrorBoundary>}
         />
+        <Route
+          path="/donate"
+          element={<RouteErrorBoundary><DonationPublic /></RouteErrorBoundary>}
+        />
+        <Route
+          path="/doacao"
+          element={<Navigate to="/doe" replace />}
+        />
 
         {/* Rota pública: Central de Privacidade LGPD — P12 */}
         <Route
           path="/privacy"
           element={<RouteErrorBoundary><PrivacyCenter /></RouteErrorBoundary>}
+        />
+        <Route
+          path="/privacidade"
+          element={<Navigate to="/privacy" replace />}
         />
 
         {/* Rota pública: Programas Sociais do Instituto */}
@@ -219,6 +249,7 @@ export default function App() {
             <Route path="patients" element={<RouteErrorBoundary><Patients /></RouteErrorBoundary>} />
             <Route path="patients/new" element={<RouteErrorBoundary><TriageForm /></RouteErrorBoundary>} />
             <Route path="patients/:id" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><PatientRecord /></Suspense></RouteErrorBoundary>} />
+            <Route path="patient-record" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><PatientRecord /></Suspense></RouteErrorBoundary>} />
             <Route path="professionals" element={<RouteErrorBoundary><Professionals /></RouteErrorBoundary>} />
             <Route path="professionals/:id" element={<RouteErrorBoundary><Suspense fallback={<RouteSuspenseFallback />}><ProfessionalProfile /></Suspense></RouteErrorBoundary>} />
             <Route path="calendar" element={<RouteErrorBoundary><Calendar /></RouteErrorBoundary>} />
