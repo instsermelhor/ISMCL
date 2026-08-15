@@ -365,7 +365,7 @@ const SataiWizard: React.FC = () => {
               <div style={{ background: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '8px' }}>
                 <span style={{ fontSize: '11px', color: themeColors.subText }}>CATEGORIA PRINCIPAL</span>
                 <div style={{ fontSize: '15px', fontWeight: 700, marginTop: '4px' }}>
-                  {areSession.profile === 'security_forces' ? 'Saúde Mental Militar' : 'Acolhimento Clínico'}
+                  {areSession.profile === 'security_forces' ? 'Saúde Mental — Forças de Segurança (CAFS)' : 'Acolhimento Clínico'}
                 </div>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '8px' }}>
