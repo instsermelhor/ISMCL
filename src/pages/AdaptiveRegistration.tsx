@@ -178,26 +178,46 @@ const QuestionField: React.FC<{ question: AdaptiveQuestion }> = ({ question }) =
 
     case 'file_upload':
       return (
-        <div style={{
-          border: '2px dashed rgba(255,255,255,0.2)',
-          borderRadius: '12px',
-          padding: '28px',
-          textAlign: 'center',
-          cursor: 'pointer',
-          background: 'rgba(255,255,255,0.03)',
-          color: '#94a3b8',
-          fontSize: '14px',
-        }}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>📎</div>
-          <div>Clique para selecionar ou arraste o arquivo</div>
-          <div style={{ fontSize: '12px', marginTop: '6px', color: '#64748b' }}>
-            PDF, JPG ou PNG — máximo 10MB
-          </div>
-          {currentValue && (
-            <div style={{ marginTop: '10px', color: '#6366f1', fontSize: '13px', fontWeight: 600 }}>
-              ✓ Arquivo selecionado
+        <div>
+          <input
+            id={`file-input-${question.id}`}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleChange(file.name);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => document.getElementById(`file-input-${question.id}`)?.click()}
+            style={{
+              width: '100%',
+              border: '2px dashed rgba(255,255,255,0.2)',
+              borderRadius: '12px',
+              padding: '24px 16px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              background: 'rgba(255,255,255,0.03)',
+              color: '#94a3b8',
+              fontSize: '14px',
+              display: 'block',
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}>📎</div>
+            <div style={{ color: '#e2e8f0', fontWeight: 600 }}>
+              {currentValue ? `Arquivo: ${String(currentValue)}` : 'Clique para selecionar ou enviar o arquivo'}
             </div>
-          )}
+            <div style={{ fontSize: '12px', marginTop: '6px', color: '#64748b' }}>
+              PDF, JPG ou PNG — máximo 10MB
+            </div>
+            {currentValue && (
+              <div style={{ marginTop: '10px', color: '#10b981', fontSize: '13px', fontWeight: 600 }}>
+                ✓ Documento selecionado com sucesso
+              </div>
+            )}
+          </button>
         </div>
       );
 
@@ -477,28 +497,32 @@ const WizardStep: React.FC = () => {
 // ============================================================
 
 const AdaptiveRegistrationInner: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      padding: '40px 20px',
-      fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    }}>
-      {/* Painel lateral — informativo */}
-      <div style={{
-        width: '300px',
-        flexShrink: 0,
-        marginRight: '32px',
-        position: 'sticky',
-        top: '40px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
+    <div
+      className="min-h-screen min-h-[100dvh] w-full flex flex-col lg:flex-row items-center lg:items-start justify-center p-4 sm:p-6 lg:p-10 safe-area-padding"
+      style={{
+        background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)',
+        fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
-        className="hide-on-mobile"
+    >
+      {/* Cabeçalho mobile com navegação rápida */}
+      <div className="w-full max-w-2xl lg:hidden mb-4 flex items-center justify-between">
+        <button
+          onClick={() => navigate('/login')}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-teal-400 transition-colors bg-transparent border-none cursor-pointer py-2"
+        >
+          ← Voltar ao Início
+        </button>
+        <span className="text-xs font-bold text-teal-400">
+          Instituto Ser Melhor · ARE
+        </span>
+      </div>
+
+      {/* Painel lateral — informativo (visível em telas grandes, oculto em mobile) */}
+      <div
+        className="hide-on-mobile w-72 shrink-0 mr-8 sticky top-10 flex flex-col gap-4"
       >
         {/* Logo */}
         <div style={{ marginBottom: '8px' }}>
@@ -516,7 +540,7 @@ const AdaptiveRegistrationInner: React.FC = () => {
           <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 600, marginTop: '8px' }}>
             Instituto Ser Melhor
           </div>
-          <div style={{ color: '#64748b', fontSize: '12px' }}>Cadastro Institucional</div>
+          <div style={{ color: '#64748b', fontSize: '12px' }}>Cadastro Institucional Adaptativo</div>
         </div>
 
         {/* Garantias */}
@@ -558,15 +582,9 @@ const AdaptiveRegistrationInner: React.FC = () => {
       </div>
 
       {/* Formulário Principal */}
-      <div style={{
-        flex: 1,
-        maxWidth: '640px',
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        borderRadius: '20px',
-        padding: '36px',
-        backdropFilter: 'blur(20px)',
-      }}>
+      <div
+        className="w-full max-w-2xl bg-white/[0.04] border border-white/[0.09] rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-10 backdrop-blur-xl shadow-2xl box-border"
+      >
         <ProgressBar />
         <WizardStep />
       </div>
