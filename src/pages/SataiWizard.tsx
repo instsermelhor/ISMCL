@@ -458,14 +458,28 @@ const SataiWizard: React.FC = () => {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: themeColors.bg,
-      color: themeColors.textColor,
-      fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      padding: '40px 20px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center'
-    }}>
+    <div
+      className="min-h-screen min-h-[100dvh] w-full safe-area-padding p-4 sm:p-6 lg:p-10 flex flex-col items-center box-border"
+      style={{
+        background: themeColors.bg,
+        color: themeColors.textColor,
+        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+      }}
+    >
+      {/* Botão voltar ao início no mobile */}
+      <div className="w-full max-w-[600px] mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/login')}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-teal-400 transition-colors bg-transparent border-none cursor-pointer py-1"
+        >
+          ← Voltar ao Portal
+        </button>
+        <span className="text-xs font-bold text-teal-400">
+          SATAI · Acolhimento
+        </span>
+      </div>
+
       {/* Header de Acessibilidade */}
       <div style={{
         width: '100%', maxWidth: '600px', display: 'flex', justifyContent: 'space-between',
