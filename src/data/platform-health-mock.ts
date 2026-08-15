@@ -213,7 +213,7 @@ export const MOCK_JOURNEYS: E2eJourney[] = [
     steps: [
       { id: 's2-01', stepIndex: 1, name: 'Cadastro protegido com dados mascarados', module: 'ARE', action: 'Preencher formulário de segurança pública', status: 'pending', assertions: ['Dados de risco mascarados automaticamente (MCSI)', 'IIP calculado para perfil CAFS'] },
       { id: 's2-02', stepIndex: 2, name: 'Cofre Digital ativado e criptografado', module: 'MCSI', action: 'Armazenar dados de localização e vínculos no cofre', status: 'pending', assertions: ['Cofre criptografado AES-256', 'Acesso apenas por SuperAdmin'] },
-      { id: 's2-03', stepIndex: 3, name: 'Protocolo SATAI especializado carregado', module: 'SATAI', action: 'Iniciar triagem com protocolo Saúde Mental Militar', status: 'pending', assertions: ['Protocolo correto resolvido para perfil CAFS', 'Perguntas adaptadas ao contexto'] },
+      { id: 's2-03', stepIndex: 3, name: 'Protocolo SATAI especializado carregado', module: 'SATAI', action: 'Iniciar triagem com protocolo Saúde Mental — Forças de Segurança (CAFS)', status: 'pending', assertions: ['Protocolo correto resolvido para perfil CAFS', 'Perguntas adaptadas ao contexto'] },
       { id: 's2-04', stepIndex: 4, name: 'Atendimento registrado com segregação ABAC', module: 'PEL', action: 'Registrar evolução com controle de acesso', status: 'pending', assertions: ['Psiquiatra vê evolução completa', 'Outros perfis veem apenas dados permitidos'] },
       { id: 's2-05', stepIndex: 5, name: 'Trilha de auditoria verificada', module: 'MCSI', action: 'Verificar log imutável de acessos', status: 'pending', assertions: ['Todos os acessos rastreados', 'Nenhum dado sensível exposto fora do escopo'] },
     ],
