@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdaptiveRegistrationProvider, useAdaptiveRegistration } from '../contexts/AdaptiveRegistrationContext';
 import type { AdaptiveQuestion } from '../types/adaptive-registration';
+import { useSecurity } from '../contexts/SecurityContext';
 
 // ============================================================
 // Wizard Interno
@@ -64,6 +65,7 @@ const QuestionField: React.FC<{ question: AdaptiveQuestion }> = ({ question }) =
           {question.options?.map((opt) => (
             <button
               key={opt.value}
+              type="button"
               onClick={() => handleChange(opt.value)}
               style={{
                 padding: '13px 18px',
@@ -78,6 +80,8 @@ const QuestionField: React.FC<{ question: AdaptiveQuestion }> = ({ question }) =
                 fontWeight: currentValue === opt.value ? 600 : 400,
                 cursor: 'pointer',
                 textAlign: 'left',
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
                 transition: 'all 0.2s',
               }}
             >
@@ -248,21 +252,77 @@ const QuestionField: React.FC<{ question: AdaptiveQuestion }> = ({ question }) =
         </div>
       );
 
-    default:
+    default: {
+      const isFunctionalId = question.id === 'functional_id';
       return (
-        <input
-          type={question.type === 'date' ? 'date' : question.type === 'email' ? 'email' : 'text'}
-          style={inputBase}
-          value={typeof currentValue === 'string' ? currentValue : ''}
-          placeholder={
-            question.type === 'cpf' ? '000.000.000-00' :
-            question.type === 'phone' ? '(00) 00000-0000' : ''
-          }
-          onChange={(e) => handleChange(e.target.value)}
+        <FunctionalOrTextInput
+          question={question}
+          isFunctionalId={isFunctionalId}
+          inputBase={inputBase}
+          currentValue={typeof currentValue === 'string' ? currentValue : ''}
+          handleChange={handleChange}
         />
       );
+    }
   }
 };
+
+// Campo com suporte a mascaramento (funcional) ou texto livre
+const FunctionalOrTextInput: React.FC<{
+  question: AdaptiveQuestion;
+  isFunctionalId: boolean;
+  inputBase: React.CSSProperties;
+  currentValue: string;
+  handleChange: (val: string | string[] | number | null) => void;
+}> = ({ question, isFunctionalId, inputBase, currentValue, handleChange }) => {
+  const [showFunctional, setShowFunctional] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type={
+          isFunctionalId
+            ? (showFunctional ? 'text' : 'password')
+            : question.type === 'date' ? 'date'
+            : question.type === 'email' ? 'email'
+            : 'text'
+        }
+        style={{ ...inputBase, paddingRight: isFunctionalId ? '48px' : undefined }}
+        value={currentValue}
+        placeholder={
+          question.type === 'cpf' ? '000.000.000-00' :
+          question.type === 'phone' ? '(00) 00000-0000' :
+          isFunctionalId ? 'Ex: 123456-PM' : ''
+        }
+        autoComplete={isFunctionalId ? 'off' : undefined}
+        onChange={(e) => handleChange(e.target.value)}
+      />
+      {isFunctionalId && (
+        <button
+          type="button"
+          onClick={() => setShowFunctional((v) => !v)}
+          style={{
+            position: 'absolute',
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'none',
+            border: 'none',
+            color: '#64748b',
+            cursor: 'pointer',
+            fontSize: '16px',
+            padding: '4px',
+            lineHeight: 1,
+          }}
+          aria-label={showFunctional ? 'Ocultar número funcional' : 'Mostrar número funcional'}
+        >
+          {showFunctional ? '🙈' : '👁️'}
+        </button>
+      )}
+    </div>
+  );
+};
+
+
 
 // ---- Barra de Progresso ----
 
@@ -303,6 +363,37 @@ const ProgressBar: React.FC = () => {
   );
 };
 
+// ---- Banner de Proteção Especial (Cofre Digital) ----
+
+const VaultActivationBanner: React.FC = () => (
+  <div style={{
+    background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))',
+    border: '1px solid rgba(99,102,241,0.35)',
+    borderRadius: '14px',
+    padding: '18px 20px',
+    marginBottom: '24px',
+    animation: 'fadeIn 0.4s ease',
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+      <span style={{ fontSize: '22px' }}>🛡️</span>
+      <span style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '14px', letterSpacing: '0.5px' }}>
+        PROTEÇÃO ESPECIAL DE DADOS — COFRE DIGITAL AURA
+      </span>
+    </div>
+    <p style={{ color: '#c7d2fe', fontSize: '13px', lineHeight: 1.7, margin: 0, marginBottom: '10px' }}>
+      Como você informou seu <strong style={{ color: '#e0e7ff' }}>Número Funcional (matrícula/RE)</strong>,
+      seu cadastro será encaminhado ao <strong style={{ color: '#e0e7ff' }}>Cofre Digital AURA</strong> —
+      ambiente de proteção reforçada destinado exclusivamente a agentes das forças de segurança.
+    </p>
+    <ul style={{ color: '#94a3b8', fontSize: '12px', lineHeight: 1.8, margin: '0 0 0 16px', padding: 0 }}>
+      <li>Seus dados receberão <strong style={{ color: '#c7d2fe' }}>controles adicionais de acesso e auditoria</strong>.</li>
+      <li>O tratamento continuará sujeito às regras da <strong style={{ color: '#c7d2fe' }}>LGPD</strong>.</li>
+      <li>A existência do Cofre Digital <strong style={{ color: '#c7d2fe' }}>não elimina seus direitos</strong> como titular.</li>
+      <li>Existem controles de acesso excepcionais e auditáveis, inclusive para administração autorizada.</li>
+    </ul>
+  </div>
+);
+
 // ---- Passo do Wizard ----
 
 const WizardStep: React.FC = () => {
@@ -335,7 +426,15 @@ const WizardStep: React.FC = () => {
     8: 'Quase lá! Vamos garantir a proteção dos seus dados.',
   };
 
+  // Mostrar banner de proteção especial quando funcional preenchido na Etapa 1
+  const showVaultBanner =
+    session.currentStep === 1 &&
+    session.answers['is_security_forces'] === 'yes' &&
+    typeof session.answers['functional_id'] === 'string' &&
+    (session.answers['functional_id'] as string).trim().length > 0;
+
   if (session.status === 'pending_review') {
+
     return (
       <div style={{ textAlign: 'center', padding: '40px 20px' }}>
         <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
@@ -403,6 +502,7 @@ const WizardStep: React.FC = () => {
 
       {/* Perguntas */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '32px' }}>
+        {showVaultBanner && <VaultActivationBanner />}
         {currentStepQuestions.map((q) => (
           <div key={q.id}>
             <label style={{ display: 'block', fontWeight: 600, color: '#e2e8f0', fontSize: '15px', marginBottom: '6px' }}>
@@ -498,6 +598,15 @@ const WizardStep: React.FC = () => {
 
 const AdaptiveRegistrationInner: React.FC = () => {
   const navigate = useNavigate();
+  const { setVaultCallbacks } = useAdaptiveRegistration();
+  const { addProfile, logAction } = useSecurity();
+
+  useEffect(() => {
+    setVaultCallbacks({
+      addProfile: (data) => addProfile(data),
+      logAction: (entry) => logAction(entry),
+    });
+  }, [setVaultCallbacks, addProfile, logAction]);
 
   return (
     <div
