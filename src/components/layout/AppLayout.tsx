@@ -33,6 +33,8 @@ import {
   Rocket,
   Brain,
   Cpu,
+  Menu,
+  X,
 } from 'lucide-react';
 import { cn } from '../../utils';
 import { QuickExitButton } from '../QuickExitButton';
@@ -99,6 +101,7 @@ export function AppLayout() {
   const { currentUser, aiSuggestions } = useIAM();
   const navigate = useNavigate();
   const [showRoles, setShowRoles] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const pendingAI = aiSuggestions.filter(s => s.status === 'pending').length;
   const iamRoles = currentUser?.roles ?? [];
@@ -120,18 +123,56 @@ export function AppLayout() {
   });
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen min-h-[100dvh] bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900 overflow-hidden">
       <ImpersonationBanner />
+
+      {/* Header Mobile */}
+      <header className="lg:hidden h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0 safe-area-top z-30">
+        <div className="flex items-center gap-2 text-teal-600 font-semibold tracking-tight text-sm">
+          <Heart className="w-4 h-4 fill-current" />
+          <span>Projeto Aura</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent"
+          aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+        >
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </header>
+
+      {/* Backdrop para mobile */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:static lg:w-64 lg:translate-x-0',
+          mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        )}
+      >
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-slate-100">
           <div className="flex items-center gap-2 text-teal-600 font-semibold tracking-tight">
             <Heart className="w-5 h-5 fill-current" />
             <span>Projeto Aura</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden ml-auto p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 bg-transparent border-none cursor-pointer"
+            aria-label="Fechar menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
           {isAdmin && (
-            <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-semibold border border-teal-200">
+            <span className="hidden lg:inline-flex ml-auto items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-semibold border border-teal-200">
               <ShieldCheck className="w-3 h-3" />
               Admin
             </span>
@@ -148,6 +189,7 @@ export function AppLayout() {
               <NavLink
                 key={item.name}
                 to={item.href}
+                onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
                   cn(
                     'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
@@ -183,6 +225,7 @@ export function AppLayout() {
                   <NavLink
                     key={item.name}
                     to={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
                       cn(
                         'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
