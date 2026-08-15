@@ -169,10 +169,12 @@ function AuraLandingColumn() {
         {content.quickActions.map(action => (
           <button
             key={action.id}
+            type="button"
             onClick={() => navigate(action.route)}
-            className={`px-4 py-3 rounded-xl font-semibold text-xs transition-all text-center active:scale-[0.98] ${action.colorClass}`}
+            className={`min-h-[44px] px-4 py-3 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer ${action.colorClass}`}
           >
-            {action.emoji} {action.label}
+            <span className="text-base leading-none">{action.emoji}</span>
+            <span>{action.label}</span>
           </button>
         ))}
       </div>
