@@ -20,13 +20,13 @@ export class SecurityMiddleware implements NestMiddleware {
       if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         try {
-          const decoded = jose.decodeJwt(token);
-          if (decoded && (decoded.sub || (decoded as any).id)) {
+          const decoded = jose.decodeJwt(token) as any;
+          if (decoded && (decoded.sub || decoded.id)) {
             const roles = (decoded.roles as string[]) || (decoded.realm_access?.roles as string[]) || [];
             user = {
-              id: decoded.sub || (decoded as any).id,
-              tenantId: (decoded as any).tenantId || (decoded as any).tenant_id || 'default',
-              role: (decoded as any).role || roles[0] || 'VOLUNTEER',
+              id: decoded.sub || decoded.id,
+              tenantId: decoded.tenantId || decoded.tenant_id || 'default',
+              role: decoded.role || roles[0] || 'VOLUNTEER',
               roles,
             };
           }
